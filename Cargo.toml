@@ -1,0 +1,12 @@
+[package]
+name = "libreda-db"
+version = "0.0.0"
+authors = ["Thomas Kramer <code@tkramer.ch>"]
+edition = "2018"
+license = "AGPLv3"
+description = "Layout and netlist datastructures for chip design."
+
+[dependencies]
+itertools = "0.8.0"
+iron-shapes = {path = "../iron-shapes"}
+genawaiter = {version="0.99.1", default-features=false}

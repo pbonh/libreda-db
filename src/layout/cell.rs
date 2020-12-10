@@ -115,7 +115,7 @@ impl<C: CoordinateType> Cell<C> {
         if let Some(shapes) = self.shapes(layer_index) {
             shapes
         } else {
-            let shapes = Rc::new(Shapes::new());
+            let shapes = Shapes::new_rc();
             self.shapes_map.borrow_mut().insert(layer_index, shapes.clone());
             shapes
         }

@@ -24,7 +24,7 @@ use itertools::Itertools;
 use std::iter::FromIterator;
 
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::collections::hash_map::Values;
@@ -57,7 +57,12 @@ impl<T: CoordinateType> Shape<T> {
 #[derive(Clone, Debug, Default)]
 pub struct Shapes<T>
     where T: CoordinateType {
+    // Reference to this container itself.
+    self_reference: RefCell<Weak<Self>>,
+    // Reference to the cell where this shape collection lives. Can be none.
+    parent_cell: Weak<Cell<T>>,
     index_generator: RefCell<IndexGenerator<Shape<T>>>,
+    // Shape elements.
     shapes: RefCell<HashMap<Index<Shape<T>>, Rc<Shape<T>>>>,
 }
 
@@ -70,12 +75,30 @@ impl<T: CoordinateType> Deref for Shape<T> {
 }
 
 impl<T: CoordinateType> Shapes<T> {
-    pub fn new() -> Self {
-        Shapes {
+    pub fn new_rc() -> Rc<Self> {
+        let shapes = Shapes {
+            self_reference: Default::default(),
+            parent_cell: Default::default(),
             index_generator: Default::default(),
             shapes: Default::default(),
-        }
+        };
+
+        let rc_shapes = Rc::new(shapes);
+        // Store self-reference.
+        *rc_shapes.self_reference.borrow_mut() = Rc::downgrade(&rc_shapes);
+
+        rc_shapes
     }
+
+    /// Create a new `Shapes` object and populate it with the geometries from the iterator.
+    pub fn from_geometries<I: IntoIterator<Item=Geometry<T>>>(iter: I) -> Rc<Self> {
+        let shapes = Shapes::new_rc();
+        for s in iter.into_iter() {
+            shapes.insert(s);
+        }
+        shapes
+    }
+
 
     /// Add a shape to the collection.
     pub fn insert<I: Into<Geometry<T>>>(&self, shape: I) -> Rc<Shape<T>> {
@@ -149,25 +172,25 @@ impl<T: CoordinateType> Shapes<T> {
 //     }
 // }
 
-impl<'a, T: 'a + CoordinateType> FromIterator<&'a Geometry<T>> for Shapes<T> {
-    fn from_iter<I: IntoIterator<Item=&'a Geometry<T>>>(iter: I) -> Self {
-        let shapes = Shapes::new();
-        for s in iter.into_iter() {
-            shapes.insert(s.clone());
-        }
-        shapes
-    }
-}
-
-impl<T: CoordinateType> FromIterator<Geometry<T>> for Shapes<T> {
-    fn from_iter<I: IntoIterator<Item=Geometry<T>>>(iter: I) -> Self {
-        let shapes = Shapes::new();
-        for s in iter.into_iter() {
-            shapes.insert(s);
-        }
-        shapes
-    }
-}
+// impl<'a, T: 'a + CoordinateType> FromIterator<&'a Geometry<T>> for Shapes<T> {
+//     fn from_iter<I: IntoIterator<Item=&'a Geometry<T>>>(iter: I) -> Self {
+//         let shapes = Shapes::new();
+//         for s in iter.into_iter() {
+//             shapes.insert(s.clone());
+//         }
+//         shapes
+//     }
+// }
+//
+// impl<T: CoordinateType> FromIterator<Geometry<T>> for Shapes<T> {
+//     fn from_iter<I: IntoIterator<Item=Geometry<T>>>(iter: I) -> Self {
+//         let shapes = Shapes::new();
+//         for s in iter.into_iter() {
+//             shapes.insert(s);
+//         }
+//         shapes
+//     }
+// }
 
 impl<T: CoordinateType> TryBoundingBox<T> for Shapes<T> {
     fn try_bounding_box(&self) -> Option<Rect<T>> {

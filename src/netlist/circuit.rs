@@ -559,7 +559,6 @@ impl Circuit {
     /// Replace the circuit instance with its contents. Remove the circuit instance afterwards.
     /// Does not purge nets nor unconnected instances. So there could be unconnected nets or unconnected instances.
     pub fn flatten_circuit_instance(&self, circuit_instance: &Rc<CircuitInstance>) {
- 
         assert!(self.contains_instance(circuit_instance),
                 "Instance does not live in this circuit.");
 
@@ -872,7 +871,9 @@ impl Circuit {
 
     /// Gets a reference to the sub circuit with the given name.
     /// Returns `None` if there is no sub circuit with this name.
-    pub fn circuit_instance_by_name(&self, name: &String) -> Option<Rc<CircuitInstance>> {
+    pub fn circuit_instance_by_name<S: ?Sized>(&self, name: &S) -> Option<Rc<CircuitInstance>>
+        where String: Borrow<S>,
+              S: Hash + Eq {
         self.circuit_instances_by_name.borrow().get(name)
             .and_then(|i| self.circuit_instance_by_id(i))
     }

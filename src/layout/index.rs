@@ -22,11 +22,12 @@
 
 use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
+use std::cmp::Ordering;
 
-#[derive(Clone, Debug, PartialOrd, Ord)]
+#[derive(Clone, Debug)]
 pub struct Index<T> {
     index: usize,
-    phantom: PhantomData<T>
+    phantom: PhantomData<T>,
 }
 
 impl<T> Hash for Index<T> {
@@ -45,11 +46,23 @@ impl<T> PartialEq for Index<T> {
     }
 }
 
+impl<T> Ord for Index<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.index.cmp(&other.index)
+    }
+}
+
+impl<T> PartialOrd for Index<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.index.partial_cmp(&other.index)
+    }
+}
+
 impl<T> Index<T> {
     fn new(index: usize) -> Self {
         Index {
             index,
-            phantom: Default::default()
+            phantom: Default::default(),
         }
     }
 
@@ -61,7 +74,7 @@ impl<T> Index<T> {
 #[derive(Debug, Clone)]
 pub struct IndexGenerator<T> {
     counter: usize,
-    phantom: PhantomData<T>
+    phantom: PhantomData<T>,
 }
 
 impl<T> Default for IndexGenerator<T> {
@@ -75,7 +88,7 @@ impl<T> IndexGenerator<T> {
     pub fn new() -> Self {
         IndexGenerator {
             counter: 0,
-            phantom: Default::default()
+            phantom: Default::default(),
         }
     }
 

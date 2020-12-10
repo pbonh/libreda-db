@@ -19,29 +19,62 @@
  */
 use crate::prelude::*;
 
-use std::rc::Rc;
+use std::rc::Weak;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug)]
 pub struct CellInstance<C: CoordinateType> {
+    /// ID of the parent cell.
+    pub(super) parent_cell_id: CellIndex,
+    /// Identifier. Uniquely identifies the instance within the parent cell.
+    pub(super) id: CellInstId,
     /// Reference to the cell of which this is an instance.
-    cell: Rc<Cell<C>>,
+    pub(super) cell: Weak<Cell<C>>,
+    /// Cell where this instance lives in.
+    pub(super) parent_cell: Weak<Cell<C>>,
     /// Transformation to put the cell to the right place an into the right scale/rotation.
-    transform: SimpleTransform<C>
+    pub(super) transform: SimpleTransform<C>,
     // TODO: Repetition
 }
 
+impl<C: CoordinateType> Eq for CellInstance<C> {}
+
+impl<C: CoordinateType> PartialEq for CellInstance<C> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.parent_cell_id == other.parent_cell_id
+    }
+}
+
+impl<C: CoordinateType> Hash for CellInstance<C> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        self.parent_cell_id.hash(state);
+    }
+}
+
 impl<C: CoordinateType> CellInstance<C> {
-    /// Create a new cell instance.
-    pub fn new(cell_ref: Rc<Cell<C>>, transform: SimpleTransform<C>) -> Self {
-        CellInstance {
-            cell: cell_ref,
-            transform,
-        }
+
+    /// Get the ID of this cell instance.
+    pub fn id(&self) -> CellInstId {
+        self.id
     }
 
-    /// Get reference to the instantiated cell.
-    pub fn cell(&self) -> Rc<Cell<C>> {
+    /// Get reference to the template cell.
+    pub fn cell(&self) -> Weak<Cell<C>> {
         self.cell.clone()
+    }
+
+
+    /// Get ID of the template cell.
+    pub fn cell_id(&self) -> CellIndex {
+        // TODO: Include the ID in the struct?
+        self.cell.upgrade().unwrap().index()
+    }
+
+    /// Get reference to the cell where this instance lives in.
+    pub fn parent_cell(&self) -> Weak<Cell<C>> {
+        self.parent_cell.clone()
     }
 
     /// Get the transformation describing the location, orientation and magnification of this cell instance.

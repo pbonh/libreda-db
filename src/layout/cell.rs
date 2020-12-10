@@ -24,10 +24,11 @@ use super::prelude::*;
 use super::shape_collection::{Shapes, Shape};
 
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use genawaiter::rc::Gen;
+use std::hash::{Hash, Hasher};
 
 /// Mutable shared reference to a `Cell`.
 pub type CellReference<C> = Rc<RefCell<Cell<C>>>;
@@ -43,26 +44,59 @@ pub struct Cell<C: CoordinateType> {
     // /// The parent layout that holds this cell.
     // pub(crate) layout: Weak<Layout>,
     /// The index of this cell inside the layout. This is none if the cell does not belong to a layout.
-    index: std::cell::Cell<CellIndex>,
+    index: CellIndex,
     /// Child cells.
-    instances: RefCell<HashMap<CellInstId, Rc<CellInstance<C>>>>,
+    cell_instances: RefCell<HashMap<CellInstId, Rc<CellInstance<C>>>>,
     cell_instance_index_generator: RefCell<CellInstIndexdGenerator>,
     /// Mapping from layer indices to geometry data.
     shapes_map: RefCell<HashMap<LayerIndex, Rc<Shapes<C>>>>,
+
+    /// All the instances of this cell.
+    cell_references: RefCell<HashSet<Rc<CellInstance<C>>>>,
+    /// Set of cells that are dependencies of this cell.
+    /// Stored together with a weak reference and a counter of how many instances of the dependency are present.
+    /// This are the cells towards the leaves in the dependency tree.
+    dependencies: RefCell<HashMap<CellIndex, (Weak<Self>, usize)>>,
+    /// Cells that use an instance of this cell.
+    /// This are the cells towards the root in the dependency tree.
+    dependent_cells: RefCell<HashMap<CellIndex, (Weak<Self>, usize)>>,
+}
+
+impl<C: CoordinateType> Eq for Cell<C> {}
+
+impl<C: CoordinateType> PartialEq for Cell<C> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+        // TODO: Compare parent layouts somehow.
+    }
+}
+
+impl<C: CoordinateType> Hash for Cell<C> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.index.hash(state);
+    }
 }
 
 impl<C: CoordinateType> Cell<C> {
     /// Create a new and empty cell.
-    pub(crate) fn new(name: Option<String>, index: CellIndex) -> Self {
+    pub(super) fn new(name: Option<String>, index: CellIndex) -> Self {
         Cell {
             name: RefCell::new(name),
             self_reference: RefCell::default(),
             // layout: Weak::new(),
-            instances: Default::default(),
-            index: std::cell::Cell::new(index),
+            cell_instances: Default::default(),
+            index: index,
             shapes_map: Default::default(),
             cell_instance_index_generator: Default::default(),
+            cell_references: Default::default(),
+            dependencies: Default::default(),
+            dependent_cells: Default::default(),
         }
+    }
+
+    /// Get index of this cell.
+    pub fn index(&self) -> CellIndex {
+        self.index
     }
 
     /// Return the cell name if it is defined.
@@ -83,7 +117,7 @@ impl<C: CoordinateType> Cell<C> {
 
     /// Remove all instances from this cell.
     pub fn clear_insts(&self) -> () {
-        self.instances.borrow_mut().clear();
+        self.cell_instances.borrow_mut().clear();
     }
 
     /// Remove all shapes and instances from this cell.
@@ -98,14 +132,153 @@ impl<C: CoordinateType> Cell<C> {
     }
 
     /// Insert a child cell instance.
-    /// TODO: Detect and deny recursion.
-    /// TODO: Change to 'create_instance'.
-    pub fn insert_instance(&self, cell_inst: CellInstance<C>) -> Rc<CellInstance<C>> {
-        let index = self.cell_instance_index_generator.borrow_mut().next();
-        let cell_inst = Rc::new(cell_inst);
-        self.instances.borrow_mut().insert(index, cell_inst.clone());
+    pub fn create_instance(&self, template_cell: &Rc<Cell<C>>, transform: SimpleTransform<C>) -> Rc<CellInstance<C>> {
+        {
+            // Check that creating this cell instance does not create a cycle in the dependency graph.
+            // There can be no recursive instances.
+            let mut stack: Vec<Rc<Cell<C>>> = vec![self.self_reference().upgrade().unwrap()];
+            while let Some(c) = stack.pop() {
+                if c.eq(&template_cell) {
+                    // The cell to be instantiated depends on the current cell.
+                    // This would insert a loop into the dependency tree.
+                    // TODO: Don't panic but return an `Err`.
+                    panic!("Cannot create recursive instances.");
+                }
+                // Follow the dependent cells towards the root.
+                c.dependent_cells.borrow().values()
+                    .map(|(dep, _)| dep.upgrade().unwrap()) // By construction this references should always be defined.
+                    .for_each(|dep| stack.push(dep));
+            }
+        }
 
-        cell_inst
+        // Generate fresh instance index.
+        let index = self.cell_instance_index_generator.borrow_mut().next();
+        let cell_inst = CellInstance {
+            id: index,
+            parent_cell_id: self.index(),
+            cell: Rc::downgrade(template_cell),
+            parent_cell: self.self_reference.borrow().clone(),
+            transform,
+        };
+        let rc_cell_inst = Rc::new(cell_inst);
+        self.cell_instances.borrow_mut().insert(index, rc_cell_inst.clone());
+
+
+        // Remember dependency.
+        {
+            let mut dependencies = self.dependencies.borrow_mut();
+            dependencies.entry(template_cell.index())
+                .and_modify(|(_, c)| *c += 1)
+                .or_insert((Rc::downgrade(template_cell), 1)); // First entry: Save weak reference with counter = 1.
+        }
+
+        // Remember dependency.
+        {
+            let mut dependent = template_cell.dependent_cells.borrow_mut();
+            dependent.entry(self.index())
+                .and_modify(|(_, c)| *c += 1)
+                .or_insert((self.self_reference(), 1));// First entry: Save weak reference with counter = 1.
+        }
+
+        // Create an entry in the template cell.
+        let was_not_present = template_cell.cell_references.borrow_mut()
+            .insert(rc_cell_inst.clone());
+        debug_assert!(was_not_present, "Cell instance with this index already existed!");
+
+        // Sanity checks.
+        #[cfg(debug_assertions)] {
+            debug_assert_eq!(self.num_references(), self.dependent_cells.borrow().values()
+                .map(|(_, n)| n).sum(), "self.num_references() is not consistent with the number of dependent cell.");
+            debug_assert_eq!(template_cell.num_references(), template_cell.dependent_cells.borrow().values()
+                .map(|(_, n)| n).sum(), "cell.num_references() is not consistent with the number of dependent cells.");
+
+            // Check that dependencies are consistent.
+            let dependencies = self.dependencies.borrow()
+                .values()
+                .map(|(c, _)| c.upgrade().unwrap().index())
+                .sorted().collect_vec();
+
+            let dependencies_derived = self.each_inst()
+                .map(|c| c.cell_id())
+                .unique()
+                .sorted()
+                .collect_vec();
+
+            debug_assert_eq!(dependencies, dependencies_derived);
+        }
+
+        rc_cell_inst
+    }
+
+    /// Get the number of cell instances that reference this cell.
+    pub fn num_references(&self) -> usize {
+        self.cell_references.borrow().len()
+    }
+
+    /// Remove the given cell instance from this cell.
+     /// # Panics
+     /// Panics if the cell instance does not live in this cell.
+     /// TODO: Return an Err and let the user decide how to handle the error.
+    pub fn remove_cell_instance(&self, cell_instance: &Rc<CellInstance<C>>) -> () {
+        assert!(cell_instance.parent_cell().ptr_eq(&self.self_reference()),
+                "Cell instance does not live in this cell.");
+
+        // Remove dependency.
+        {
+            let mut dependencies = self.dependencies.borrow_mut();
+            let template_cell_id = cell_instance.cell_id();
+            // Decrement counter.
+            let (_, count) = dependencies.entry(template_cell_id)
+                .or_insert((Weak::new(), 0));
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                dependencies.remove(&template_cell_id);
+            }
+        }
+
+        // Remove dependency.
+        {
+            let template_cell = cell_instance.cell().upgrade().unwrap();
+
+            let mut dependent = template_cell.dependent_cells.borrow_mut();
+
+            // Decrement counter.
+            let (_, count) = dependent.entry(self.index())
+                .or_insert((Weak::new(), 0));
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                dependent.remove(&self.index());
+            }
+        }
+
+        // Remove the cell instance.
+        self.cell_instances.borrow_mut().remove(&cell_instance.id())
+            .unwrap();
+
+        // Remove entry in the template cell.
+        let remove_successful = cell_instance.cell().upgrade().unwrap()
+            .cell_references.borrow_mut()
+            .remove(cell_instance);
+        assert!(remove_successful, "Failed to remove cell instance from 'cell_references'.");
+
+        // Sanity checks.
+        #[cfg(debug_assertions)]
+            {
+                debug_assert_eq!(self.num_references(), self.dependent_cells.borrow().values()
+                    .map(|(_, n)| n).sum());
+                let instance_ref = cell_instance.cell().upgrade().unwrap();
+                debug_assert_eq!(instance_ref.num_references(), instance_ref.dependent_cells.borrow().values()
+                    .map(|(_, n)| n).sum());
+            }
+    }
+
+    /// Get reference to this cell.
+    pub fn self_reference(&self) -> Weak<Self> {
+        self.self_reference.borrow().clone()
     }
 
     /// Get the shapes object for the given layer.
@@ -151,7 +324,7 @@ impl<C: CoordinateType> Cell<C> {
         // Using a generator makes it possible to return an iterator over a value
         // borrowed from a `RefCell`.
         let generator = Gen::new(|co| async move {
-            for i in self.instances.borrow().values().cloned() {
+            for i in self.cell_instances.borrow().values().cloned() {
                 co.yield_(i).await;
             }
         });
@@ -160,7 +333,7 @@ impl<C: CoordinateType> Cell<C> {
 
     /// Returns true if this cell does not contain any other cell instances.
     pub fn is_leaf(&self) -> bool {
-        self.instances.borrow().is_empty()
+        self.cell_instances.borrow().is_empty()
     }
 }
 

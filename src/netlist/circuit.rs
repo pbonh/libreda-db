@@ -557,7 +557,8 @@ impl Circuit {
     }
 
     /// Replace the circuit instance with its contents. Remove the circuit instance afterwards.
-    /// Does not purge nets nor unconnected instances. So there could be unconnected nets or unconnected instances.
+    /// Does not purge nets nor unconnected instances.
+    /// So there could be unconnected nets or unconnected instances.
     ///
     /// Nets keep their names if possible. If the net name already exists in this circuit, the name will
     /// be set to `None`.

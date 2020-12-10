@@ -20,6 +20,8 @@
 //! `iron-db` is a database for VLSI physical design. The core components are data structures for efficient
 //! representation of geometries and circuit netlists for chip layouts.
 
+extern crate log;
+
 pub extern crate iron_shapes;
 extern crate itertools;
 extern crate genawaiter;

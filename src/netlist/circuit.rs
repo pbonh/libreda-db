@@ -498,6 +498,11 @@ impl Circuit {
         self.circuit_references.borrow().len()
     }
 
+    /// Test if the circuit has references.
+    pub fn has_references(&self) -> bool {
+        !self.circuit_references.borrow().is_empty()
+    }
+
     /// Iterate over all circuit instances that reference this circuit.
     pub fn each_reference(&self) -> impl Iterator<Item=Rc<CircuitInstance>> + '_ {
         let generator = Gen::new(|co| async move {

@@ -31,6 +31,8 @@ use std::fmt;
 use itertools::Itertools;
 use std::ops::Deref;
 
+use log::debug;
+
 /// Data type used for identifying a circuit instance (sub circuit).
 #[derive(Copy, Clone, Debug, Hash, PartialOrd, PartialEq, Ord, Eq)]
 pub struct CircuitInstIndex {
@@ -165,6 +167,53 @@ impl Netlist {
     pub fn each_circuit_top_down(&self) -> () {
         unimplemented!()
     }
+
+    /// Flatten all instances of this circuit by replacing them with their content.
+    /// Remove the circuit from the netlist afterwards.
+    /// For top level circuits this is equivalent to removing them.
+    pub fn flatten_circuit(&mut self, circuit: &Rc<Circuit>) {
+        debug!("Flatten circuit {}.", circuit.name());
+        // TODO: Assert that the circuit lives in this netlist.
+        // Get all instances of the circuit.
+        let references: Vec<_> = circuit.references().iter().cloned().collect();
+        // Flatten all instances of the circuit.
+        for r in references {
+            let parent = r.parent_circuit().upgrade().unwrap();
+            parent.flatten_circuit_instance(&r)
+        }
+
+        debug_assert!(!circuit.has_references(), "Circuit should not have any references anymore.");
+
+        // Remove the circuit.
+        self.remove_circuit(circuit);
+    }
+
+    // /// Flatten all circuits of this netlist.
+    // /// Only top level circuits will remain.
+    // pub fn flatten(&mut self) {
+    //     // Get all circuits.
+    //     // TODO: Sort them by hierarchy for more efficient flattening.
+    //     let all_circuits: Vec<_> = self.each_circuit()
+    //         // Convert to weak references because some circuits might get removed
+    //         // from the netlist during the flattening process.
+    //         .map(Rc::downgrade)
+    //         .take(1)
+    //         .collect();
+    //
+    //     debug!("Flattening {} circuits.", all_circuits.len());
+    //
+    //     // Flatten all the circuits.
+    //     for circuit in all_circuits {
+    //         if let Some(circuit) = circuit.upgrade() {
+    //             // Flatten only non-top circuits.
+    //             if circuit.has_references() {
+    //                 self.flatten_circuit(&circuit)
+    //             }
+    //         } else {
+    //             debug!("Weak reference.")
+    //         }
+    //     }
+    // }
 
     /// Delete all floating nets in all circuits.
     /// Return number of purged nets.

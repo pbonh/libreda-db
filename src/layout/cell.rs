@@ -26,7 +26,7 @@ use super::shape_collection::{Shapes, Shape};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use genawaiter::rc::Gen;
 
 /// Mutable shared reference to a `Cell`.
@@ -38,6 +38,8 @@ pub type CellReference<C> = Rc<RefCell<Cell<C>>>;
 pub struct Cell<C: CoordinateType> {
     /// Cell name.
     name: RefCell<Option<String>>,
+    /// Reference to this cell itself.
+    pub(super) self_reference: RefCell<Weak<Self>>,
     // /// The parent layout that holds this cell.
     // pub(crate) layout: Weak<Layout>,
     /// The index of this cell inside the layout. This is none if the cell does not belong to a layout.
@@ -54,6 +56,7 @@ impl<C: CoordinateType> Cell<C> {
     pub(crate) fn new(name: Option<String>, index: CellIndex) -> Self {
         Cell {
             name: RefCell::new(name),
+            self_reference: RefCell::default(),
             // layout: Weak::new(),
             instances: Default::default(),
             index: std::cell::Cell::new(index),
@@ -115,7 +118,9 @@ impl<C: CoordinateType> Cell<C> {
         if let Some(shapes) = self.shapes(layer_index) {
             shapes
         } else {
-            let shapes = Shapes::new_rc();
+            // Create a shapes object with a reference to this cell.
+            let shapes = Shapes::new_rc_with_parent(self.self_reference.borrow().clone());
+            // Associate the shape object with the layer index.
             self.shapes_map.borrow_mut().insert(layer_index, shapes.clone());
             shapes
         }

@@ -21,7 +21,6 @@ use crate::prelude::*;
 use super::index::{Index, IndexGenerator};
 
 use itertools::Itertools;
-use std::iter::FromIterator;
 
 use std::collections::HashMap;
 use std::rc::{Rc, Weak};
@@ -60,7 +59,7 @@ pub struct Shapes<T>
     // Reference to this container itself.
     self_reference: RefCell<Weak<Self>>,
     // Reference to the cell where this shape collection lives. Can be none.
-    parent_cell: Weak<Cell<T>>,
+    pub(super) parent_cell: Weak<Cell<T>>,
     index_generator: RefCell<IndexGenerator<Shape<T>>>,
     // Shape elements.
     shapes: RefCell<HashMap<Index<Shape<T>>, Rc<Shape<T>>>>,
@@ -75,10 +74,18 @@ impl<T: CoordinateType> Deref for Shape<T> {
 }
 
 impl<T: CoordinateType> Shapes<T> {
+
+    /// Create a new shapes object.
+    /// It is not associated with any cell.
     pub fn new_rc() -> Rc<Self> {
+        Self::new_rc_with_parent(Weak::default())
+    }
+
+    /// Create a new shapes object which is linked to the parent cell.
+    pub(super) fn new_rc_with_parent(parent_cell: Weak<Cell<T>>) -> Rc<Self> {
         let shapes = Shapes {
             self_reference: Default::default(),
-            parent_cell: Default::default(),
+            parent_cell,
             index_generator: Default::default(),
             shapes: Default::default(),
         };
@@ -148,6 +155,11 @@ impl<T: CoordinateType> Shapes<T> {
         where F: FnMut(&Rc<Shape<T>>),
     {
         self.shapes.borrow().values().for_each(f)
+    }
+
+    /// Get weak reference to the parent cell if there is any.
+    pub fn parent_cell(&self) -> Weak<Cell<T>> {
+        self.parent_cell.clone()
     }
 }
 

@@ -145,3 +145,27 @@ fn test_rename_net() {
     assert_eq!(None, top.net_by_name("Net1"));
 
 }
+
+#[test]
+fn test_flatten_circuit_instance() {
+    let mut netlist = Netlist::new();
+    let top = netlist.create_circuit("top", vec![Pin::new_input("A")]);
+    let a = netlist.create_circuit("a", vec![Pin::new_input("A")]);
+    let b = netlist.create_circuit("b", vec![Pin::new_input("A")]);
+    let a_inst = top.create_circuit_instance(&a, "a_inst");
+    let b_inst = a.create_circuit_instance(&b, "b_inst");
+
+    let net1 = top.create_net(Some("Net1"));
+    top.connect_pin_by_id(0, net1.clone());
+    a_inst.connect_pin_by_id(0, &net1);
+
+    let net2 = a.create_net(Some("Net2"));
+    a.connect_pin_by_id(0, net2.clone());
+    b_inst.connect_pin_by_id(0, &net2);
+
+    // Flatten the middle circuit.
+    top.flatten_circuit_instance(&a_inst);
+    assert_eq!(top.num_instances(), 1);
+    assert!(top.circuit_instance_by_name("a_inst").is_none());
+    assert!(top.circuit_instance_by_name("b_inst").is_some());
+}

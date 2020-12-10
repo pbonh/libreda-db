@@ -557,15 +557,85 @@ impl Circuit {
     }
 
     /// Replace the circuit instance with its contents. Remove the circuit instance afterwards.
-    pub fn flatten_circuit_instance(&self, _circuit_instance: &Rc<CircuitInstance>) {
-        // TODO: Implement circuit flattening.
-        unimplemented!()
+    /// Does not purge nets nor unconnected instances. So there could be unconnected nets or unconnected instances.
+    pub fn flatten_circuit_instance(&self, circuit_instance: &Rc<CircuitInstance>) {
+ 
+        assert!(self.contains_instance(circuit_instance),
+                "Instance does not live in this circuit.");
+
+        // Get the template circuit.
+        let template = circuit_instance.circuit_ref().upgrade().unwrap();
+
+        // Mapping from old to new nets.
+        let mut net_mapping: HashMap<Rc<Net>, Rc<Net>> = HashMap::new();
+
+        // Get or create a new net as an equivalent of the old.
+        let mut get_new_net = |old_net: Rc<Net>| -> Rc<Net> {
+            if let Some(net_net) = net_mapping.get(&old_net) {
+                net_net.clone()
+            } else {
+                let new_net = self.create_net(old_net.name());
+                net_mapping.insert(old_net.clone(), new_net.clone());
+                new_net
+            }
+        };
+
+        // Copy all sub instances into this circuit.
+        // And connect their pins to copies of the original nets.
+        for sub in template.each_instance() {
+            let sub_template = sub.circuit_ref().upgrade().unwrap();
+            let new_inst = self.create_circuit_instance(&sub_template,
+                                                        sub.name().unwrap());
+
+            // Re-connect pins to copies of the original nets.
+            // Loop over old/new pin instances.
+            for (old_pin, new_pin)
+            in sub.each_pin_instance()
+                .zip(new_inst.each_pin_instance()) {
+                // Get net on old pin.
+                if let Some(old_net) = old_pin.net() {
+                    let new_net = get_new_net(old_net);
+                    new_pin.connect_net(&new_net);
+                }
+            }
+        }
+
+        // Connect the newly created sub-instances and nets to this circuit
+        // according to the old connections to the instance which is about to be flattened.
+        for old_pin in circuit_instance.each_pin_instance() {
+            let outer_old_net = old_pin.net();
+            let inner_old_net = old_pin.pin().internal_net();
+            // If the pin was either not connected on the outside or not connected inside, nothing
+            // needs to be done.
+            if let (Some(outer_net), Some(inner_old_net)) = (outer_old_net, inner_old_net) {
+                // Get the new copy of the inner net.
+                let inner_new_net = get_new_net(inner_old_net);
+                // Attach the new inner net to the outer net (by replacement).
+                self.replace_net(&inner_new_net, &outer_net);
+            }
+        }
+
+        // Remove old instance.
+        self.remove_circuit_instance(circuit_instance);
+
+        // TODO: Clean-up.
+        // self.purge_nets();
+        // Remove unconnected instances.
     }
 
     /// Get the ID of this circuit.
     /// The ID uniquely identifies a circuit within the netlist.
     pub fn id(&self) -> CircuitIndex {
         self.id
+    }
+
+    /// Check if the instance is a child of this cell.
+    pub fn contains_instance(&self, circuit_instance: &Rc<CircuitInstance>) -> bool {
+        if let Some(parent) = circuit_instance.parent_circuit().upgrade() {
+            self.eq(&parent)
+        } else {
+            false
+        }
     }
 
     /// Return the number of defined nets in this circuit.

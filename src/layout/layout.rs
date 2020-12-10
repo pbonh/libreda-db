@@ -95,6 +95,8 @@ impl Layout {
 
         let cell = Cell::new(cell_name.to_owned(), cell_index);
         let cell = Rc::new(cell);
+        // Store reference to cell itself.
+        *cell.self_reference.borrow_mut() = Rc::downgrade(&cell);
 
         self.cells.insert(cell_index, cell);
         if let Some(cell_name) = cell_name {

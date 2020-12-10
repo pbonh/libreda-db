@@ -558,6 +558,9 @@ impl Circuit {
 
     /// Replace the circuit instance with its contents. Remove the circuit instance afterwards.
     /// Does not purge nets nor unconnected instances. So there could be unconnected nets or unconnected instances.
+    ///
+    /// Nets keep their names if possible. If the net name already exists in this circuit, the name will
+    /// be set to `None`.
     pub fn flatten_circuit_instance(&self, circuit_instance: &Rc<CircuitInstance>) {
         assert!(self.contains_instance(circuit_instance),
                 "Instance does not live in this circuit.");
@@ -573,7 +576,30 @@ impl Circuit {
             if let Some(net_net) = net_mapping.get(&old_net) {
                 net_net.clone()
             } else {
-                let new_net = self.create_net(old_net.name());
+                // Get the name of the net.
+                let net_name = old_net.name();
+                // Resolve net name collisions.
+                // It is possible that the net name already exists in this circuit.
+                let net_name = if let Some(net_name) = net_name {
+                    // Check if net name already exists.
+                    if let Some(_) = self.net_index_by_name(&net_name) {
+                        // Net name already exists in this circuit.
+                        // Don't use it.
+                        // TODO: Create a qualified name?
+                        None
+                    } else {
+                        // Net name does not yet exist.
+                        // We can use the original one.
+                        Some(net_name)
+                    }
+                } else {
+                    // No net name was given.
+                    None
+                };
+
+                // Create the new net.
+                let new_net = self.create_net(net_name);
+                // Remember the mapping old_net -> net_net.
                 net_mapping.insert(old_net.clone(), new_net.clone());
                 new_net
             }
@@ -583,8 +609,13 @@ impl Circuit {
         // And connect their pins to copies of the original nets.
         for sub in template.each_instance() {
             let sub_template = sub.circuit_ref().upgrade().unwrap();
+
+            // TODO: Avoid instance name collisions.
+            // It is possible that the instance name already exists in this circuit.
+
+            let instance_name = sub.name().unwrap();
             let new_inst = self.create_circuit_instance(&sub_template,
-                                                        sub.name().unwrap());
+                                                        instance_name);
 
             // Re-connect pins to copies of the original nets.
             // Loop over old/new pin instances.

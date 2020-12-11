@@ -567,6 +567,8 @@ impl Circuit {
     ///
     /// Nets keep their names if possible. If the net name already exists in this circuit, the name will
     /// be set to `None`.
+    ///
+    /// The content of the circuit instance will be renamed by appending the names like a path.
     pub fn flatten_circuit_instance(&self, circuit_instance: &Rc<CircuitInstance>) {
         assert!(self.contains_instance(circuit_instance),
                 "Instance does not live in this circuit.");

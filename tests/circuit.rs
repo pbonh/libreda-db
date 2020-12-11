@@ -167,7 +167,7 @@ fn test_flatten_circuit_instance() {
     top.flatten_circuit_instance(&a_inst);
     assert_eq!(top.num_instances(), 1);
     assert!(top.circuit_instance_by_name("a_inst").is_none());
-    assert!(top.circuit_instance_by_name("b_inst").is_some());
+    assert!(top.circuit_instance_by_name("a_inst:b_inst").is_some());
 
     assert_eq!(net1.num_terminals(), 2);
 }

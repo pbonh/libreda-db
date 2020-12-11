@@ -611,6 +611,9 @@ impl Circuit {
             }
         };
 
+        // Name of the instance to be flattened.
+        let inst_name = circuit_instance.name().unwrap();
+
         // Copy all sub instances into this circuit.
         // And connect their pins to copies of the original nets.
         for sub in template.each_instance() {
@@ -619,9 +622,21 @@ impl Circuit {
             // TODO: Avoid instance name collisions.
             // It is possible that the instance name already exists in this circuit.
 
-            let instance_name = sub.name().unwrap();
+            let sub_instance_name = sub.name().unwrap();
+            // Construct name for the new sub instance.
+            // Something like: INSTANCE_TO_BE_FLATTENED:SUB_INSTANCE{_COUNTER}
+            let new_name = {
+                let mut new_name = format!("{}:{}", inst_name, sub_instance_name);
+                let mut i = 0;
+                // If this name too already exists, append a counter.
+                while self.circuit_instances_by_name.borrow().contains_key(&new_name) {
+                    new_name = format!("{}:{}_{}", inst_name, sub_instance_name, i);
+                    i += 1;
+                }
+                new_name
+            };
             let new_inst = self.create_circuit_instance(&sub_template,
-                                                        instance_name);
+                                                        new_name);
 
             // Re-connect pins to copies of the original nets.
             // Loop over old/new pin instances.

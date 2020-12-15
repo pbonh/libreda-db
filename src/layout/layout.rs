@@ -25,6 +25,8 @@ use super::errors::LayoutDbError;
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::hash::Hash;
+use std::borrow::Borrow;
 
 
 /// Data structure which holds cells and cell instances.
@@ -79,9 +81,10 @@ impl Layout {
     /// use libreda_db::prelude::*;
     /// let mut layout = Layout::new();
     /// // Create a cell and get it's index.
-    /// let top_cell_index: CellIndex = layout.create_cell(Some("Top".into()));
+    /// let top_cell_index: CellIndex = layout.create_cell(Some("Top"));
     /// ```
-    pub fn create_cell(&mut self, cell_name: Option<String>) -> CellIndex {
+    pub fn create_cell<S: Into<String>>(&mut self, cell_name: Option<S>) -> CellIndex {
+        let cell_name = cell_name.map(|n| n.into());
         // Check for cell name collisions.
         if let Some(cell_name) = &cell_name {
             // TODO: what if cell name already exists?
@@ -116,9 +119,9 @@ impl Layout {
     /// let mut layout = Layout::new();
     ///
     /// // Create a cell and directly get the index.
-    /// let top_cell_ref = layout.create_and_get_cell(Some("Top".into()));
+    /// let top_cell_ref = layout.create_and_get_cell(Some("Top"));
     /// ```
-    pub fn create_and_get_cell(&mut self, cell_name: Option<String>) -> Rc<Cell<Coord>> {
+    pub fn create_and_get_cell<S: Into<String>>(&mut self, cell_name: Option<S>) -> Rc<Cell<Coord>> {
         let idx = self.create_cell(cell_name);
         self.cell_by_index(idx).unwrap() // This unwrap should succeed, otherwise there is a bug in this module.
     }
@@ -126,7 +129,9 @@ impl Layout {
     /// Find a cell index by the cell name.
     /// Returns `None` if the cell name does not exist.
     #[inline(always)]
-    pub fn cell_index_by_name(&self, cell_name: &str) -> Option<CellIndex> {
+    pub fn cell_index_by_name<S: ?Sized>(&self, cell_name: &S) -> Option<CellIndex>
+        where String: Borrow<S>,
+              S: Hash + Eq {
         self.cells_by_name.get(cell_name).copied()
     }
 
@@ -137,7 +142,7 @@ impl Layout {
     /// use libreda_db::prelude::*;
     /// let mut layout = Layout::new();
     /// // Create a cell and get it's index.
-    /// let top_cell_index: CellIndex = layout.create_cell(Some("Top".into()));
+    /// let top_cell_index: CellIndex = layout.create_cell(Some("Top"));
     /// // Get the reference to the cell by the index.
     /// let top_cell_ref = layout.cell_by_index(top_cell_index).unwrap();
     /// // Access the cell by the reference.
@@ -155,13 +160,15 @@ impl Layout {
     /// use libreda_db::prelude::*;
     /// let mut layout = Layout::new();
     /// // Create a cell and get it's index.
-    /// let top_cell_index: CellIndex = layout.create_cell(Some("Top".into()));
+    /// let top_cell_index: CellIndex = layout.create_cell(Some("Top"));
     /// // Get the reference to the cell by the index.
     /// let top_cell_ref = layout.cell_by_name("Top").unwrap();
     /// // Access the cell by the reference.
     /// assert_eq!(top_cell_ref.name().unwrap(), "Top");
     /// ```
-    pub fn cell_by_name(&self, cell_name: &str) -> Option<Rc<Cell<Coord>>> {
+    pub fn cell_by_name<S: ?Sized>(&self, cell_name: &S) -> Option<Rc<Cell<Coord>>>
+        where String: Borrow<S>,
+              S: Hash + Eq {
         self.cell_index_by_name(cell_name)
             // This `unwrap` should not fail if the indices are kept consistent.
             .map(|i| self.cell_by_index(i).unwrap())
@@ -175,8 +182,8 @@ impl Layout {
     /// use libreda_db::prelude::*;
     /// let mut layout = Layout::new();
     /// // Create a cell and get it's index.
-    /// let a_cell_index: CellIndex = layout.create_cell(Some("A".into()));
-    /// layout.rename_cell(a_cell_index, Some("B".into()));
+    /// let a_cell_index: CellIndex = layout.create_cell(Some("A"));
+    /// layout.rename_cell(a_cell_index, Some("B"));
     /// // Now a cell with name `A` does not exist anymore.
     /// assert!(layout.cell_by_name("A").is_none());
     /// // Get the reference to the cell by the index.
@@ -184,7 +191,9 @@ impl Layout {
     /// // Access the cell by the reference.
     /// assert_eq!(top_cell_ref.name().unwrap(), "B");
     /// ```
-    pub fn rename_cell(&mut self, cell_index: CellIndex, new_name: Option<String>) -> Result<(), LayoutDbError> {
+    pub fn rename_cell<S: Into<String>>(&mut self, cell_index: CellIndex, new_name: Option<S>) -> Result<(), LayoutDbError> {
+        let new_name = new_name.map(|n| n.into());
+
         let cell = self.cell_by_index(cell_index).ok_or(LayoutDbError::CellIndexNotFound)?;
 
         // Get old name.
@@ -220,7 +229,7 @@ impl Layout {
     pub fn get_or_create_cell_by_name(&mut self, cell_name: &str) -> CellIndex {
         match self.cell_index_by_name(cell_name) {
             Some(c) => c,
-            None => self.create_cell(Some(cell_name.into()))
+            None => self.create_cell(Some(cell_name))
         }
     }
 

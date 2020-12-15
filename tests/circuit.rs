@@ -1,6 +1,4 @@
 
-extern crate libreda_db;
-
 use libreda_db::netlist::prelude::*;
 use itertools::Itertools;
 

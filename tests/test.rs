@@ -1,6 +1,4 @@
 
-extern crate libreda_db;
-
 use std::fs::File;
 use std::io::Read;
 use std::io::BufReader;

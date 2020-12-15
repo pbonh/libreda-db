@@ -255,7 +255,9 @@ impl Layout {
     // }
 
     /// Returns true iff a cell with this name exists.
-    pub fn has_cell(&self, cell_name: &str) -> bool {
+    pub fn has_cell<S: ?Sized>(&self, cell_name: &S) -> bool
+        where String: Borrow<S>,
+              S: Hash + Eq {
         self.cells_by_name.contains_key(cell_name)
     }
 
@@ -265,7 +267,9 @@ impl Layout {
     }
 
     /// Find layer index by the name of the layer.
-    pub fn find_layer_by_name(&self, name: &str) -> Option<LayerIndex> {
+    pub fn find_layer_by_name<S: ?Sized>(&self, name: &S) -> Option<LayerIndex>
+        where String: Borrow<S>,
+              S: Hash + Eq {
         self.layers_by_name.get(name).copied()
     }
 

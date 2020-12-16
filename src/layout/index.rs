@@ -23,6 +23,8 @@
 use std::marker::PhantomData;
 use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
+use std::fmt;
+use std::fmt::Formatter;
 
 #[derive(Clone, Debug)]
 pub struct Index<T> {
@@ -55,6 +57,12 @@ impl<T> Ord for Index<T> {
 impl<T> PartialOrd for Index<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.index.partial_cmp(&other.index)
+    }
+}
+
+impl<T> fmt::Display for Index<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.index)
     }
 }
 

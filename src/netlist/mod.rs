@@ -30,3 +30,4 @@ pub mod port;
 pub mod pin;
 pub mod pin_instance;
 pub mod terminal_ref;
+pub mod traits;

@@ -246,6 +246,65 @@ impl Netlist {
     }
 }
 
+impl Clone for Netlist {
+    fn clone(&self) -> Self {
+        // Create new netlist.
+        let mut netlist = Self::new();
+
+        // Clone all circuits.
+        let circuit_map = {
+            let mut circuit_map = HashMap::new();
+            for old_circuit in self.each_circuit() {
+                let pins = old_circuit.each_pin()
+                    .map(|p| Pin::new(p.name(), p.direction()))
+                    .collect();
+                let new_circuit = netlist.create_circuit(old_circuit.name(), pins);
+                circuit_map.insert(old_circuit.clone(), new_circuit);
+            }
+            circuit_map
+        };
+
+        // Clone all instances.
+        for old_circuit in self.each_circuit() {
+            let new_circuit = circuit_map[old_circuit].clone();
+
+            // Clone nets.
+            let net_map = {
+                let mut net_map = HashMap::new();
+                for old_net in old_circuit.each_net() {
+                    let new_net = new_circuit.create_net(old_net.name());
+                    net_map.insert(old_net, new_net);
+                }
+                net_map
+            };
+
+            // Connect circuit pins.
+            for old_pin in old_circuit.each_pin() {
+                let new_net = old_pin.internal_net()
+                    .map(|n| net_map[&n].clone());
+                new_circuit.connect_pin_by_id(old_pin.id, new_net);
+            }
+
+            // Clone instances and connect them to the nets.
+            for old_inst in old_circuit.each_instance() {
+                let new_inst = new_circuit.create_circuit_instance(
+                    &circuit_map[&old_inst.circuit_ref().upgrade().unwrap()],
+                    old_inst.name().unwrap(),
+                );
+
+                // Connect pins to right nets.
+                for (old_pin_inst, new_pin_inst) in old_inst.each_pin_instance()
+                    .zip(new_inst.each_pin_instance()) {
+                    let new_net = old_pin_inst.net()
+                        .map(|n| net_map[&n].clone());
+                    new_pin_inst.connect_net(new_net.as_ref());
+                }
+            }
+        }
+
+        netlist
+    }
+}
 
 #[test]
 fn test_create_pin() {
@@ -345,4 +404,47 @@ fn test_netlist_circuit_remove_net() {
     assert_eq!(net1.num_terminals(), 0);
     assert_eq!(top.net_for_pin(0), None);
     assert_eq!(inst_sub.net_for_pin(0), None);
+}
+
+
+#[test]
+fn test_netlist_clone() {
+    let netlist = {
+        let mut netlist = Netlist::new();
+        let pins = vec![Pin::new("TOP_A", Direction::Input)];
+        let top = netlist.create_circuit("TOP", pins);
+        let pins = vec![Pin::new("SUB_A", Direction::Input)];
+        let sub = netlist.create_circuit("SUB", pins);
+
+        // Create a new nets.
+        let net1 = top.create_net(Some("net1"));
+
+        // Create instance of SUB.
+        let inst_sub = top.create_circuit_instance(&sub, "INST_SUB1");
+
+        // Connect pin to net1.
+        inst_sub.connect_pin_by_id(0, &net1);
+
+        // Connect net1 to the pin A of the TOP circuit.
+        top.connect_pin_by_id(0, net1.clone());
+
+        netlist
+    };
+
+    let netlist_clone = netlist.clone();
+
+    assert_eq!(netlist_clone.top_circuit_count(), 1);
+    let top = netlist_clone.circuit_by_name("TOP").unwrap();
+    let _sub = netlist_clone.circuit_by_name("SUB").unwrap();
+
+    assert_eq!(top.net_count(), 1);
+    assert_eq!(top.num_instances(), 1);
+
+    let net1 = top.net_by_name("net1").unwrap();
+    assert_eq!(net1.num_terminals(), 2);
+
+    let inst_sub = top.circuit_instance_by_name("INST_SUB1").unwrap();
+
+    assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
+
 }

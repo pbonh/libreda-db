@@ -31,13 +31,13 @@ pub type Coord = i32;
 
 /// Data type used for identifying a layer.
 pub type LayerIndex = Index<LayerInfo>;
-pub type LayerIndexGenerator = IndexGenerator<LayerInfo>;
+pub(crate) type LayerIndexGenerator = IndexGenerator<LayerInfo>;
 
 /// Data type used for identifying a cell.
 pub type CellIndex = Index<Cell<Coord>>;
-pub type CellIndexGenerator = IndexGenerator<Cell<Coord>>;
+pub(crate) type CellIndexGenerator = IndexGenerator<Cell<Coord>>;
 
 /// Data type used for identifying a cell instance.
 pub type CellInstId = Index<CellInstance<Coord>>;
-pub type CellInstIndexGenerator = IndexGenerator<CellInstance<Coord>>;
+pub(crate) type CellInstIndexGenerator = IndexGenerator<CellInstance<Coord>>;
 

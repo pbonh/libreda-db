@@ -47,7 +47,7 @@ pub struct Cell<C: CoordinateType> {
     index: CellIndex,
     /// Child cells.
     cell_instances: RefCell<HashMap<CellInstId, Rc<CellInstance<C>>>>,
-    cell_instance_index_generator: RefCell<CellInstIndexdGenerator>,
+    cell_instance_index_generator: RefCell<CellInstIndexGenerator>,
     /// Mapping from layer indices to geometry data.
     shapes_map: RefCell<HashMap<LayerIndex, Rc<Shapes<C>>>>,
 

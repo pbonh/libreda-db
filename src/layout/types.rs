@@ -39,5 +39,5 @@ pub type CellIndexGenerator = IndexGenerator<Cell<Coord>>;
 
 /// Data type used for identifying a cell instance.
 pub type CellInstId = Index<CellInstance<Coord>>;
-pub type CellInstIndexdGenerator = IndexGenerator<CellInstance<Coord>>;
+pub type CellInstIndexGenerator = IndexGenerator<CellInstance<Coord>>;
 

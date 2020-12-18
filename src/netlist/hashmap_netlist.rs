@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//! Alternative netlist implementaion. Not currently used, nor complete.
+//! Alternative netlist implementation. Not currently used, nor complete.
 
 use std::collections::{HashSet, HashMap};
 use std::rc::Rc;
@@ -25,21 +25,28 @@ use itertools::Itertools;
 use std::borrow::Borrow;
 use std::hash::Hash;
 
+/// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CircuitId(usize);
 
+/// Circuit instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CircuitInstId(usize);
 
+/// Pin identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PinId(usize);
 
+/// Pin instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct PinInstId(usize);
 
+/// Either a pin or pin instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TerminalId {
+    /// Terminal is a pin.
     Pin(PinId),
+    /// Terminal is a pin instance.
     PinInst(PinInstId),
 }
 
@@ -55,10 +62,12 @@ impl From<&PinInstId> for TerminalId {
     }
 }
 
+/// Net identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NetId(usize);
 
-
+/// A circuit is defined by an interface (pins) and
+/// a content which consists of interconnected circuit instances.
 #[derive(Debug, Clone, Default)]
 pub struct Circuit {
     /// Name of the circuit.
@@ -73,36 +82,53 @@ pub struct Circuit {
     pub parents: HashSet<CircuitId>,
 }
 
+/// Instance of a circuit.
 #[derive(Debug, Clone)]
 pub struct CircuitInst {
+    /// The ID of the template circuit.
     pub circuit: CircuitId,
+    /// The ID of the parent circuit where this instance lives in.
     pub parent: CircuitId,
+    /// List of pins of this instance.
     pub pins: Vec<PinInstId>,
 }
 
+/// Single bit wire pin.
 #[derive(Debug, Clone)]
 pub struct Pin {
+    /// Name of the pin.
     pub name: String,
+    /// Parent circuit of this pin.
     pub circuit: CircuitId,
+    /// Net that is connected to this pin.
     pub net: Option<NetId>,
 }
 
+/// Instance of a pin.
 #[derive(Debug, Clone)]
 pub struct PinInst {
+    /// ID of the template pin.
     pub pin: PinId,
+    /// Circuit instance where this pin instance lives in.
     pub circuit_inst: CircuitInstId,
+    /// Net connected to this pin instance.
     pub net: Option<NetId>,
 }
 
-
+/// A net represents an electric potential or a wire.
 #[derive(Debug, Clone)]
 pub struct Net {
+    /// Name of the net.
     pub name: Rc<String>,
+    /// Parent circuit of the net.
     pub parent: CircuitId,
+    /// Pins connected to this net.
     pub pins: HashSet<PinId>,
+    /// Pin instances connected to this net.
     pub pin_instances: HashSet<PinInstId>,
 }
 
+/// A netlist is the container of circuits.
 #[derive(Debug, Default)]
 pub struct Netlist {
     circuits: HashMap<CircuitId, Circuit>,
@@ -121,57 +147,70 @@ pub struct Netlist {
 }
 
 impl Netlist {
+    /// Create an empty netlist.
     pub fn new() -> Self {
         Default::default()
     }
 
+    /// Find a circuit by its name.
     pub fn circuit_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CircuitId>
         where String: Borrow<S> {
         self.circuits_by_name.get(name).copied()
     }
 
+    /// Get a circuit reference by its ID.
     pub fn circuit(&self, id: &CircuitId) -> &Circuit {
         &self.circuits[id]
     }
 
+    /// Get a mutable reference to the circuit by its ID.
     fn circuit_mut(&mut self, id: &CircuitId) -> &mut Circuit {
         self.circuits.get_mut(id).unwrap()
     }
 
+    /// Get a reference to a circuit instance.
     pub fn circuit_inst(&self, id: &CircuitInstId) -> &CircuitInst {
         &self.circuit_instances[id]
     }
 
+    /// Get a reference to a net by its ID.
     pub fn net(&self, id: &NetId) -> &Net {
         &self.nets[id]
     }
 
+    /// Get a mutable reference to a net by its ID.
     fn net_mut(&mut self, id: &NetId) -> &mut Net {
         self.nets.get_mut(id).unwrap()
     }
 
+    /// Get a reference to a pin by its ID.
     pub fn pin(&self, id: &PinId) -> &Pin {
         &self.pins[id]
     }
 
+    /// Get a mutable reference to a pin by its ID.
     fn pin_mut(&mut self, id: &PinId) -> &mut Pin {
         self.pins.get_mut(id).unwrap()
     }
 
+    /// Get a reference to a pin instance by its ID.
     pub fn pin_inst(&self, id: &PinInstId) -> &PinInst {
         &self.pin_instances[id]
     }
 
+    /// Get a mutable reference to a pin instance by its ID.
     fn pin_inst_mut(&mut self, id: &PinInstId) -> &mut PinInst {
         self.pin_instances.get_mut(id).unwrap()
     }
 
+    /// Get the value of a counter and increment the counter afterwards.
     fn next_id_counter(ctr: &mut usize) -> usize {
         let c = *ctr;
         *ctr += 1;
         c
     }
 
+    /// Append a new pin to the `parent` circuit.
     fn create_pin(&mut self, parent: CircuitId, name: String) -> PinId {
         let id = PinId(Netlist::next_id_counter(&mut self.id_counter_pin));
         let pin = Pin {
@@ -183,6 +222,7 @@ impl Netlist {
         id
     }
 
+    /// Insert a new pin instance to a circuit instance.
     fn create_pin_inst(&mut self, circuit: CircuitInstId, pin: PinId) -> PinInstId {
         let id = PinInstId(Netlist::next_id_counter(&mut self.id_counter_pin_inst));
         let pin = PinInst {
@@ -194,6 +234,7 @@ impl Netlist {
         id
     }
 
+    /// Create a new net in the `parent` circuit.
     pub fn create_net<S: Into<String>>(&mut self, parent: CircuitId, name: S) -> NetId {
         let name = Rc::new(name.into());
         let id = NetId(Netlist::next_id_counter(&mut self.id_counter_net));
@@ -208,6 +249,7 @@ impl Netlist {
         id
     }
 
+    /// Create a new circuit with a given list of pins.
     pub fn create_circuit<S: Into<String>>(&mut self, name: S, pins: Vec<S>) -> CircuitId {
         let name = name.into();
         assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
@@ -232,6 +274,7 @@ impl Netlist {
         id
     }
 
+    /// Create a new instance of `circuit_template` in the `parent` circuit.
     pub fn create_circuit_instance(&mut self, parent: CircuitId, circuit_template: CircuitId) -> CircuitInstId {
         let id = CircuitInstId(Netlist::next_id_counter(&mut self.id_counter_circuit_inst));
 
@@ -282,6 +325,7 @@ impl Netlist {
             .flat_map(move |p| self.pin_inst(p).net)
     }
 
+    /// Iterate over all pin instances of the circuit instance.
     pub fn each_pin_instance(&self, circuit_inst_id: &CircuitInstId) -> impl Iterator<Item=PinInstId> + '_ {
         self.circuit_inst(circuit_inst_id).pins.iter().copied()
     }
@@ -291,14 +335,17 @@ impl Netlist {
         self.circuit(circuit_id).pins.iter().copied()
     }
 
+    /// Iterate over all pins connected to a net.
     pub fn pins_for_net(&self, net: &NetId) -> impl Iterator<Item=PinId> + '_ {
         self.net(net).pins.iter().copied()
     }
 
+    /// Iterate over all pin instances connected to a net.
     pub fn pins_instances_for_net(&self, net: &NetId) -> impl Iterator<Item=PinInstId> + '_ {
         self.net(net).pin_instances.iter().copied()
     }
 
+    /// Iterate over all pins and pin instances connected to a net.
     pub fn terminals_for_net(&self, net: &NetId) -> impl Iterator<Item=TerminalId> + '_ {
         self.pins_for_net(net).map(|p| TerminalId::Pin(p))
             .chain(self.pins_instances_for_net(net).map(|p| TerminalId::PinInst(p)))
@@ -334,6 +381,7 @@ impl Netlist {
         num
     }
 
+    /// Remove a circuit instance after disconnecting it from the nets.
     pub fn remove_circuit_instance(&mut self, circuit_inst_id: &CircuitInstId) {
         // Disconnect all pins first.
         for pin in self.circuit_inst(circuit_inst_id).pins.clone() {
@@ -370,6 +418,7 @@ impl Netlist {
         self.circuits.remove(&circuit_id).unwrap();
     }
 
+    /// Connect the pin to a net.
     pub fn connect_pin<T: Into<TerminalId>>(&mut self, pin: T, net: Option<NetId>) {
         let t = pin.into();
 
@@ -392,6 +441,7 @@ impl Netlist {
         }
     }
 
+    /// Disconnect a pin from the net if it was connected.
     pub fn disconnect_pin<T: Into<TerminalId>>(&mut self, pin: T) {
         self.connect_pin(pin, None);
     }
@@ -403,6 +453,7 @@ impl Netlist {
             .count()
     }
 
+    /// Iterate over all circuits.
     pub fn each_circuit(&self) -> impl Iterator<Item=CircuitId> + '_ {
         self.circuits.keys().copied()
     }

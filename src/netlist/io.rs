@@ -22,6 +22,7 @@
 use std::io::{Read, Write};
 use super::netlist::Netlist;
 
+/// Read a netlist from a byte stream.
 pub trait NetlistReader {
     /// Type of error that could happen while reading a netlist.
     type Error;
@@ -38,6 +39,7 @@ pub trait NetlistReader {
 
 }
 
+/// Write a netlist to a byte stream.
 pub trait NetlistWriter {
     /// Type of error that could happen while writing a netlist.
     type Error;

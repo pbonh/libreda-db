@@ -58,7 +58,9 @@ pub struct Layout {
 /// Meta-data of a layer.
 #[derive(Clone, Hash, PartialEq, Debug)]
 pub struct LayerInfo {
+    /// Identifier of the layer.
     pub index: UInt,
+    /// Identifier of the layer.
     pub datatype: UInt,
     /// Name of the layer.
     pub name: Option<String>,

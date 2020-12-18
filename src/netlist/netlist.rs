@@ -80,6 +80,7 @@ impl fmt::Display for Netlist {
 }
 
 impl Netlist {
+    /// Create a new empty netlist.
     pub fn new() -> Self {
         Netlist {
             circuits: Default::default(),

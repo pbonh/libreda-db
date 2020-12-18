@@ -18,15 +18,24 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+//! The type of a pin is specified by a signal direction.
+
 /// Signal type for pins.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Direction {
+    /// No direction specified.
     None,
+    /// Data input.
     Input,
+    /// Data output.
     Output,
+    /// Input and output.
     InOut,
+    /// Clock input.
     Clock,
+    /// Power VDD.
     Supply,
+    /// Power ground.
     Ground,
 }
 

@@ -22,6 +22,7 @@
 use std::io::{Read, Write};
 use super::layout::Layout;
 
+/// Trait for reading a layout from a byte stream.
 pub trait LayoutStreamReader {
     /// Type of error that could happen while reading a layout.
     type Error;
@@ -29,6 +30,7 @@ pub trait LayoutStreamReader {
     fn read_layout<R: Read>(&self, reader: &mut R, layout: &mut Layout) -> Result<(), Self::Error>;
 }
 
+/// Trait for writing a layout to a byte stream.
 pub trait LayoutStreamWriter {
     /// Type of error that could happen while writing a layout.
     type Error;

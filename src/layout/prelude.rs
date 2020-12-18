@@ -25,7 +25,6 @@ pub use super::cell_instance::*;
 pub use super::errors::*;
 pub use crate::index::*;
 pub use super::io::*;
-pub use super::layer::*;
 pub use super::layout::*;
 pub use super::shape_collection::*;
 pub use super::types::*;

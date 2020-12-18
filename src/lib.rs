@@ -17,8 +17,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//! `iron-db` is a database for VLSI physical design. The core components are data structures for efficient
+//! This crate is a database for VLSI physical design. The core components are data structures for efficient
 //! representation of geometries and circuit netlists for chip layouts.
+
+#![deny(missing_docs)]
 
 // Re-exports.
 pub use iron_shapes;

@@ -26,6 +26,8 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Formatter;
 
+/// An identifier for an arbitrary type `T`.
+/// This is a wrapper around `usize` which is bound to a type `T`.
 #[derive(Debug)]
 pub struct Index<T> {
     index: usize,
@@ -84,14 +86,11 @@ impl<T> Index<T> {
     pub fn value(&self) -> usize {
         self.index
     }
-
-    pub fn new_generator() -> IndexGenerator<T> {
-        IndexGenerator::<T>::new(0)
-    }
 }
 
+/// Generator for incrementing `Index<T>` values.
 #[derive(Debug, Clone)]
-pub struct IndexGenerator<T> {
+pub(crate) struct IndexGenerator<T> {
     counter: usize,
     phantom: PhantomData<T>,
 }

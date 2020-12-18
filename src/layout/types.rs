@@ -18,12 +18,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+//! Data types used in the data base.
+
 use crate::index::{Index, IndexGenerator};
 use super::cell::Cell;
 use super::cell_instance::CellInstance;
 use super::layout::LayerInfo;
 
+/// Default unsigned integer type.
 pub type UInt = u32;
+/// Default signed integer type.
 pub type SInt = i32;
 
 /// Integer coordinate type.
@@ -31,13 +35,16 @@ pub type Coord = i32;
 
 /// Data type used for identifying a layer.
 pub type LayerIndex = Index<LayerInfo>;
+/// Generator for layer indices.
 pub(crate) type LayerIndexGenerator = IndexGenerator<LayerInfo>;
 
 /// Data type used for identifying a cell.
 pub type CellIndex = Index<Cell<Coord>>;
+/// Generator for cell indices.
 pub(crate) type CellIndexGenerator = IndexGenerator<Cell<Coord>>;
 
 /// Data type used for identifying a cell instance.
 pub type CellInstId = Index<CellInstance<Coord>>;
+/// Generator for cell instance indices.
 pub(crate) type CellInstIndexGenerator = IndexGenerator<CellInstance<Coord>>;
 

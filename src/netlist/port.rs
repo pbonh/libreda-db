@@ -23,6 +23,7 @@ use super::prelude::Pin;
 use std::rc::{Rc, Weak};
 use crate::netlist::circuit::Circuit;
 
+/// A port is a group of pins that are treated as a multi-wire signal.
 #[derive(Clone, Debug)]
 pub struct Port {
     parent_circuit: Weak<Circuit>,

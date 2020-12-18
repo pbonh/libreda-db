@@ -17,11 +17,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+//! A cell instance is the effective usage of a cell.
+
 use crate::prelude::*;
 
 use std::rc::Weak;
 use std::hash::{Hash, Hasher};
 
+/// An actual instance of a cell.
 #[derive(Clone, Debug)]
 pub struct CellInstance<C: CoordinateType> {
     /// ID of the parent cell.

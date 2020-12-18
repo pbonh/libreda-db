@@ -17,9 +17,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+//! Data base error types.
+
+/// Error type that can be returned during data base operations.
 #[derive(Debug)]
 pub enum LayoutDbError {
+    /// Name conflict: This cell name already exists.
     CellNameAlreadyExists(String),
+    /// The cell name with this name could not be found.
     CellNameNotFound(String),
+    /// The given cell index could not be found.
     CellIndexNotFound
 }

@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+//! A shape collection represents a geometrical plane which contains geometrical shapes.
+
 use crate::prelude::*;
 use crate::index::{Index, IndexGenerator};
 
@@ -33,7 +36,9 @@ use genawaiter::rc::Gen;
 /// Wrapper around a `Geometry` struct.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Shape<T: CoordinateType> {
+    /// Identifier of this shape.
     index: Index<Self>,
+    /// The geometry of this shape.
     pub geometry: Geometry<T>,
 }
 

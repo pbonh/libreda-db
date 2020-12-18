@@ -18,6 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+//! Data structures for representation of circuit-level netlists.
+
 pub mod prelude;
 pub mod io;
 pub mod netlist;

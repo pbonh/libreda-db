@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 use crate::prelude::*;
-use super::index::{Index, IndexGenerator};
+use crate::index::{Index, IndexGenerator};
 
 use itertools::Itertools;
 

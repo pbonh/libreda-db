@@ -20,6 +20,7 @@
 //! Data structures for representation of netlists.
 
 use super::prelude::*;
+use crate::index::{Index, IndexGenerator};
 
 use std::rc::Rc;
 
@@ -34,22 +35,16 @@ use std::ops::Deref;
 use log::debug;
 
 /// Data type used for identifying a circuit instance (sub circuit).
-#[derive(Copy, Clone, Debug, Hash, PartialOrd, PartialEq, Ord, Eq)]
-pub struct CircuitInstIndex {
-    pub(super) index: usize
-}
+pub type CircuitInstIndex = Index<CircuitInstance>;
+pub(crate) type CircuitInstIndexGenerator = IndexGenerator<CircuitInstance>;
 
 /// Data type used for identifying a net.
-#[derive(Copy, Clone, Debug, Hash, PartialOrd, PartialEq, Ord, Eq)]
-pub struct NetIndex {
-    pub(super) index: usize
-}
+pub type NetIndex = Index<Net>;
+pub(crate) type NetIndexGenerator = IndexGenerator<Net>;
 
 /// Data type used for identifying a circuit.
-#[derive(Copy, Clone, Debug, Hash, PartialOrd, PartialEq, Ord, Eq)]
-pub struct CircuitIndex {
-    pub(super) index: usize
-}
+pub type CircuitIndex = Index<Circuit>;
+pub(crate) type CircuitIndexGenerator = IndexGenerator<Circuit>;
 
 /// Collection of circuits.
 pub struct Netlist {
@@ -57,8 +52,10 @@ pub struct Netlist {
     // self_reference: Weak<RefCell<NetlistImpl>>,
     /// Circuits defined in this circuit.
     circuits: HashMap<CircuitIndex, Rc<Circuit>>,
+    /// Circuits indexed by name.
     circuits_by_name: HashMap<String, CircuitIndex>,
-    circuit_index_counter: usize,
+    /// Generator for circuit indices.
+    circuit_index_generator: CircuitIndexGenerator,
 }
 
 impl fmt::Debug for Netlist {
@@ -87,7 +84,7 @@ impl Netlist {
         Netlist {
             circuits: Default::default(),
             circuits_by_name: Default::default(),
-            circuit_index_counter: 1,
+            circuit_index_generator: CircuitIndexGenerator::new(1), // Start at 1 because 0 is used as 'invalid'.
         }
     }
 
@@ -116,8 +113,7 @@ impl Netlist {
         }
 
         // Create new circuit index.
-        let circuit_id = CircuitIndex { index: self.circuit_index_counter };
-        self.circuit_index_counter += 1;
+        let circuit_id = self.circuit_index_generator.next();
 
         let circuit = Circuit::new(circuit_id, name, pins);
 

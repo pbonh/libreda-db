@@ -63,7 +63,7 @@ impl Net {
     pub fn create_name(&self) -> String {
         self.name()
             .unwrap_or_else(|| {
-                format!("__{}", self.id.index)
+                format!("__{}", self.id)
             })
     }
 

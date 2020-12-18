@@ -26,7 +26,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Formatter;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Index<T> {
     index: usize,
     phantom: PhantomData<T>,
@@ -38,7 +38,13 @@ impl<T> Hash for Index<T> {
     }
 }
 
-impl<T: Clone> Copy for Index<T> {}
+impl<T> Copy for Index<T> {}
+
+impl<T> Clone for Index<T> {
+    fn clone(&self) -> Self {
+        Self::new(self.index)
+    }
+}
 
 impl<T> Eq for Index<T> {}
 
@@ -67,15 +73,20 @@ impl<T> fmt::Display for Index<T> {
 }
 
 impl<T> Index<T> {
-    fn new(index: usize) -> Self {
+    pub(crate) fn new(index: usize) -> Self {
         Index {
             index,
             phantom: Default::default(),
         }
     }
 
+    /// Get the integer value of this index.
+    pub fn value(&self) -> usize {
+        self.index
+    }
+
     pub fn new_generator() -> IndexGenerator<T> {
-        IndexGenerator::<T>::new()
+        IndexGenerator::<T>::new(0)
     }
 }
 
@@ -87,17 +98,25 @@ pub struct IndexGenerator<T> {
 
 impl<T> Default for IndexGenerator<T> {
     fn default() -> Self {
-        Self::new()
+        Self::new(0)
     }
 }
 
 impl<T> IndexGenerator<T> {
     /// Create a new index generator.
-    pub fn new() -> Self {
+    pub fn new(start: usize) -> Self {
         IndexGenerator {
-            counter: 0,
+            counter: start,
             phantom: Default::default(),
         }
+    }
+
+    /// Jump forward with the counter.
+    /// # Panics
+    /// Panics when setting the counter to a smaller value.
+    pub fn set_counter(&mut self, value: usize) {
+        assert!(value >= self.counter, "Cannot set the counter to a previous value.");
+        self.counter = value;
     }
 
     /// Generate a new index.

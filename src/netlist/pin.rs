@@ -85,7 +85,7 @@ impl Pin {
             direction: Cell::new(direction),
             internal_net: Default::default(),
             parent_circuit: Default::default(),
-            parent_circuit_id: CircuitIndex { index: 0 },
+            parent_circuit_id: CircuitIndex::new(0),
             port: None
         }
     }

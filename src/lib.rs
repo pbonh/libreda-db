@@ -27,6 +27,7 @@ pub use iron_shapes;
 pub mod prelude;
 pub mod netlist;
 pub mod layout;
+pub mod index;
 
 // Private modules.
 // mod refset; // Not currently used.

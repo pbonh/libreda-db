@@ -23,7 +23,7 @@ pub use iron_shapes::prelude::*;
 pub use super::cell::*;
 pub use super::cell_instance::*;
 pub use super::errors::*;
-pub use super::index::*;
+pub use crate::index::*;
 pub use super::io::*;
 pub use super::layer::*;
 pub use super::layout::*;

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::index::{Index, IndexGenerator};
+use crate::index::{Index, IndexGenerator};
 use super::cell::Cell;
 use super::cell_instance::CellInstance;
 use super::layout::LayerInfo;

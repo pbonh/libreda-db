@@ -28,4 +28,3 @@ pub mod layer;
 pub mod layout;
 pub mod repetition;
 pub mod errors;
-pub mod index;

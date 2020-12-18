@@ -21,7 +21,7 @@
 //! of the circuit, sub-circuits that live inside the circuit and nets that do the internal connections.
 
 use super::prelude::*;
-use std::cell::{RefCell, Cell};
+use std::cell::RefCell;
 use std::rc::{Weak, Rc};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -48,15 +48,15 @@ pub struct Circuit {
     nets: RefCell<HashMap<NetIndex, Rc<Net>>>,
     /// Nets indexed by name.
     nets_by_name: RefCell<HashMap<String, NetIndex>>,
-    /// Counter for creating net IDs.
+    /// Generator for creating net IDs.
     /// Starts at 2 because 0 and 1 are reserved for constant LOW and HIGH nets.
-    net_index_counter: Cell<usize>,
+    net_index_generator: RefCell<NetIndexGenerator>,
     /// Sub-circuit instances.
     circuit_instances: RefCell<HashMap<CircuitInstIndex, Rc<CircuitInstance>>>,
     /// Sub-circuit instances indexed by name.
     circuit_instances_by_name: RefCell<HashMap<String, CircuitInstIndex>>,
-    /// Counter for creating sub-circuit instance IDs.
-    circuit_instance_index_counter: Cell<usize>,
+    /// Generator for creating sub-circuit instance IDs.
+    circuit_instance_index_generator: RefCell<CircuitInstIndexGenerator>,
     /// All the instances of this circuit.
     circuit_references: RefCell<HashSet<Rc<CircuitInstance>>>,
     /// Set of circuits that are dependencies of this circuit.
@@ -72,7 +72,7 @@ impl fmt::Debug for Circuit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Circuit")
             .field("name", &self.name)
-            .field("id", &self.id.index)
+            .field("id", &self.id.value())
             .field("pins", &self.pins.iter().map(|p| p.name()).collect_vec())
             // .field("nets", &self.nets)
             .finish()
@@ -95,7 +95,7 @@ impl fmt::Display for Circuit {
         for c in circuit_instances {
             // fmt::Debug::fmt(Rc::deref(&c), f)?;
             let sub_name = c.name().cloned()
-                .unwrap_or_else(|| format!("__{}", c.id.index));
+                .unwrap_or_else(|| format!("__{}", c.id));
             let sub_template = c.circuit_ref().upgrade().unwrap()
                 .name().clone();
             let nets = c.each_pin_instance()
@@ -149,10 +149,10 @@ impl Circuit {
             pins,
             nets: Default::default(),
             nets_by_name: Default::default(),
-            net_index_counter: Cell::new(2), // 0 and 1 are special nets.
+            net_index_generator: RefCell::new(NetIndexGenerator::new(2)), // 0 and 1 are special nets.
             circuit_instances: Default::default(),
             circuit_instances_by_name: Default::default(),
-            circuit_instance_index_counter: Default::default(),
+            circuit_instance_index_generator: Default::default(),
             circuit_references: Default::default(),
             dependencies: Default::default(),
             dependent_circuits: Default::default(),
@@ -217,7 +217,7 @@ impl Circuit {
 
     /// Get the net of the logical constant zero or one.
     fn net_of_logic_constant(&self, constant: usize) -> Rc<Net> {
-        let net_index = NetIndex { index: constant };
+        let net_index = NetIndex::new(constant);
         self.net_by_index(&net_index)
             .unwrap_or_else(|| {
                 // Create the new net.
@@ -253,8 +253,7 @@ impl Circuit {
         let name = name.map(|n| n.into());
 
         // Create a new ID.
-        let net_index = NetIndex { index: self.net_index_counter.get() };
-        self.net_index_counter.set(net_index.index + 1);
+        let net_index = self.net_index_generator.borrow_mut().next();
 
         // Check if the name is not already used and create a link between name and ID.
         if let Some(name) = &name {
@@ -328,8 +327,7 @@ impl Circuit {
             }
         }
 
-        let index = CircuitInstIndex { index: self.circuit_instance_index_counter.get() };
-        self.circuit_instance_index_counter.set(index.index + 1);
+        let index = self.circuit_instance_index_generator.borrow_mut().next();
 
         // Create pin instances.
         let pin_instances: Vec<_> = template_circuit.pins.iter()

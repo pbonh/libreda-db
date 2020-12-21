@@ -26,6 +26,8 @@ pub trait NetlistTrait {
     type NameType;
     /// Type for pin definitions.
     type PinType;
+    /// Pin identifier type.
+    type PinId;
     /// Circuit identifier type.
     type CircuitId;
     /// Circuit instance identifier type.

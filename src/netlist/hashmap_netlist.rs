@@ -467,10 +467,11 @@ impl HashMapNetlist {
 
 impl NetlistTrait for HashMapNetlist {
     type NameType = String;
-    type PinType = PinId;
+    type PinType = ();
     type CircuitId = CircuitId;
     type CircuitInstId = CircuitInstId;
     type NetId = NetId;
+    type PinId = PinId;
 
     fn new() -> Self {
         Self::new()

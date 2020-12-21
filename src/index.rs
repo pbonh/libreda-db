@@ -110,13 +110,13 @@ impl<T> IndexGenerator<T> {
         }
     }
 
-    /// Jump forward with the counter.
-    /// # Panics
-    /// Panics when setting the counter to a smaller value.
-    pub fn set_counter(&mut self, value: usize) {
-        assert!(value >= self.counter, "Cannot set the counter to a previous value.");
-        self.counter = value;
-    }
+    // /// Jump forward with the counter.
+    // /// # Panics
+    // /// Panics when setting the counter to a smaller value.
+    // pub fn set_counter(&mut self, value: usize) {
+    //     assert!(value >= self.counter, "Cannot set the counter to a previous value.");
+    //     self.counter = value;
+    // }
 
     /// Generate a new index.
     pub fn next(&mut self) -> Index<T> {

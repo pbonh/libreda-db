@@ -214,7 +214,7 @@ impl<T: CoordinateType> TryBoundingBox<T> for Shapes<T> {
         // TODO: Faster implementation by iterating over all points.
         self.with_shape_iter(|it| {
             it.filter_map(|s| s.try_bounding_box())
-                .fold1(|a, b| a.add_rect(b))
+                .fold1(|a, b| a.add_rect(&b))
         })
     }
 }

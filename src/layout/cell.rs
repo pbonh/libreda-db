@@ -344,7 +344,7 @@ impl<C: CoordinateType> TryBoundingBox<C> for Cell<C> {
         // Find the bounding box of all bounding boxes.
         let shapes_bbox = self.shapes_map.borrow().values()
             .filter_map(|shapes| shapes.try_bounding_box())
-            .fold1(|a, b| a.add_rect(b));
+            .fold1(|a, b| a.add_rect(&b));
 
         shapes_bbox
     }

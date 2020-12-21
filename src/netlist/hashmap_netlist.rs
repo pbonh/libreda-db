@@ -24,6 +24,7 @@ use std::rc::Rc;
 use itertools::Itertools;
 use std::borrow::Borrow;
 use std::hash::Hash;
+use super::traits::NetlistTrait;
 
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -130,7 +131,7 @@ pub struct Net {
 
 /// A netlist is the container of circuits.
 #[derive(Debug, Default)]
-pub struct Netlist {
+pub struct HashMapNetlist {
     circuits: HashMap<CircuitId, Circuit>,
     circuits_by_name: HashMap<String, CircuitId>,
     circuit_instances: HashMap<CircuitInstId, CircuitInst>,
@@ -146,7 +147,7 @@ pub struct Netlist {
     id_counter_net: usize,
 }
 
-impl Netlist {
+impl HashMapNetlist {
     /// Create an empty netlist.
     pub fn new() -> Self {
         Default::default()
@@ -212,7 +213,7 @@ impl Netlist {
 
     /// Append a new pin to the `parent` circuit.
     fn create_pin(&mut self, parent: CircuitId, name: String) -> PinId {
-        let id = PinId(Netlist::next_id_counter(&mut self.id_counter_pin));
+        let id = PinId(HashMapNetlist::next_id_counter(&mut self.id_counter_pin));
         let pin = Pin {
             name,
             circuit: parent,
@@ -224,7 +225,7 @@ impl Netlist {
 
     /// Insert a new pin instance to a circuit instance.
     fn create_pin_inst(&mut self, circuit: CircuitInstId, pin: PinId) -> PinInstId {
-        let id = PinInstId(Netlist::next_id_counter(&mut self.id_counter_pin_inst));
+        let id = PinInstId(HashMapNetlist::next_id_counter(&mut self.id_counter_pin_inst));
         let pin = PinInst {
             pin: pin,
             circuit_inst: circuit,
@@ -237,7 +238,7 @@ impl Netlist {
     /// Create a new net in the `parent` circuit.
     pub fn create_net<S: Into<String>>(&mut self, parent: CircuitId, name: S) -> NetId {
         let name = Rc::new(name.into());
-        let id = NetId(Netlist::next_id_counter(&mut self.id_counter_net));
+        let id = NetId(HashMapNetlist::next_id_counter(&mut self.id_counter_net));
         let net = Net {
             name: name.clone(),
             parent,
@@ -253,7 +254,7 @@ impl Netlist {
     pub fn create_circuit<S: Into<String>>(&mut self, name: S, pins: Vec<S>) -> CircuitId {
         let name = name.into();
         assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
-        let id = CircuitId(Netlist::next_id_counter(&mut self.id_counter_circuit));
+        let id = CircuitId(HashMapNetlist::next_id_counter(&mut self.id_counter_circuit));
 
         // Create pins.
         let pins = pins.into_iter()
@@ -276,7 +277,7 @@ impl Netlist {
 
     /// Create a new instance of `circuit_template` in the `parent` circuit.
     pub fn create_circuit_instance(&mut self, parent: CircuitId, circuit_template: CircuitId) -> CircuitInstId {
-        let id = CircuitInstId(Netlist::next_id_counter(&mut self.id_counter_circuit_inst));
+        let id = CircuitInstId(HashMapNetlist::next_id_counter(&mut self.id_counter_circuit_inst));
 
         // Check that there is no cycle.
         // Find root.
@@ -464,9 +465,49 @@ impl Netlist {
     }
 }
 
+impl NetlistTrait for HashMapNetlist {
+    type NameType = String;
+    type PinType = PinId;
+    type CircuitId = CircuitId;
+    type CircuitInstId = CircuitInstId;
+    type NetId = NetId;
+
+    fn new() -> Self {
+        Self::new()
+    }
+
+    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<Self::PinType>) -> Self::CircuitId {
+        unimplemented!()
+    }
+
+    fn remove_circuit(&mut self, circuit_id: Self::CircuitId) {
+        self.remove_circuit(&circuit_id)
+    }
+
+    fn create_circuit_instance(&mut self, parent_circuit: Self::CircuitId,
+                               template_circuit: Self::CircuitId,
+                               name: Self::NameType) -> Self::CircuitInstId {
+        let id = self.create_circuit_instance(parent_circuit, template_circuit);
+
+        id
+    }
+
+    fn remove_circuit_instance(&mut self, id: Self::CircuitInstId) {
+        self.remove_circuit_instance(&id)
+    }
+
+    fn create_net(&mut self, parent: Self::CircuitId, name: Self::NameType) -> Self::NetId {
+        self.create_net(parent, name)
+    }
+
+    fn remove_net(&mut self, net: Self::NetId) {
+        self.remove_net(&net)
+    }
+}
+
 #[test]
 fn test_create_populated_netlist() {
-    let mut netlist = Netlist::new();
+    let mut netlist = HashMapNetlist::new();
     let top = netlist.create_circuit("TOP", vec!["A", "B"]);
     assert_eq!(Some(top), netlist.circuit_by_name("TOP"));
 

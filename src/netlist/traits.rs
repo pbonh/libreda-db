@@ -24,7 +24,7 @@
 pub trait NetlistTrait {
     /// Type for names of circuits, instances, pins, etc.
     type NameType;
-    /// Pin identifier type.
+    /// Type for pin definitions.
     type PinType;
     /// Circuit identifier type.
     type CircuitId;
@@ -33,6 +33,9 @@ pub trait NetlistTrait {
     /// Net identifier type.
     type NetId;
 
+    /// Create a new empty netlist.
+    fn new() -> Self;
+
     /// Create a new and empty circuit.
     fn create_circuit(&mut self, name: Self::NameType, pins: Vec<Self::PinType>) -> Self::CircuitId;
 
@@ -40,7 +43,9 @@ pub trait NetlistTrait {
     fn remove_circuit(&mut self, circuit_id: Self::CircuitId);
 
     /// Create a new circuit instance.
-    fn create_circuit_instance(&mut self, template_circuit: Self::CircuitId,
+    fn create_circuit_instance(&mut self,
+                               parent_circuit: Self::CircuitId,
+                               template_circuit: Self::CircuitId,
                                name: Self::NameType) -> Self::CircuitInstId;
 
     /// Remove circuit instance if it exists.

@@ -24,6 +24,7 @@ use crate::prelude::*;
 
 use std::rc::Weak;
 use std::hash::{Hash, Hasher};
+use crate::property_storage::{WithProperties, PropertyStore};
 
 /// An actual instance of a cell.
 #[derive(Clone, Debug)]
@@ -58,7 +59,6 @@ impl<C: CoordinateType> Hash for CellInstance<C> {
 }
 
 impl<C: CoordinateType> CellInstance<C> {
-
     /// Get the ID of this cell instance.
     pub fn id(&self) -> CellInstId {
         self.id
@@ -84,5 +84,35 @@ impl<C: CoordinateType> CellInstance<C> {
     /// Get the transformation describing the location, orientation and magnification of this cell instance.
     pub fn get_transform(&self) -> SimpleTransform<C> {
         self.transform.clone()
+    }
+}
+
+
+impl<C: CoordinateType> WithProperties for CellInstance<C> {
+    type Key = String;
+
+    fn with_properties<F, R>(&self, f: F) -> R
+        where F: FnOnce(Option<&PropertyStore<Self::Key>>) -> R {
+        f(
+            // Get the property store from the parent cell.
+            self.parent_cell()
+                .upgrade()
+                .unwrap()
+                .instance_properties.borrow()
+                .get(&self.id())
+        )
+    }
+
+    fn with_properties_mut<F, R>(&self, f: F) -> R
+        where F: FnOnce(&mut PropertyStore<Self::Key>) -> R {
+        f(
+            // Get the property store from the parent cell.
+            self.parent_cell()
+                .upgrade()
+                .unwrap()
+                .instance_properties.borrow_mut()
+                .entry(self.id())
+                .or_insert(PropertyStore::default())
+        )
     }
 }

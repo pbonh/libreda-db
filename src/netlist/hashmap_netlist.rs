@@ -51,15 +51,15 @@ pub enum TerminalId {
     PinInst(PinInstId),
 }
 
-impl From<&PinId> for TerminalId {
-    fn from(id: &PinId) -> Self {
-        TerminalId::Pin(*id)
+impl From<PinId> for TerminalId {
+    fn from(id: PinId) -> Self {
+        TerminalId::Pin(id)
     }
 }
 
-impl From<&PinInstId> for TerminalId {
-    fn from(id: &PinInstId) -> Self {
-        TerminalId::PinInst(*id)
+impl From<PinInstId> for TerminalId {
+    fn from(id: PinInstId) -> Self {
+        TerminalId::PinInst(id)
     }
 }
 
@@ -303,6 +303,7 @@ impl NetlistTrait for HashMapNetlist {
     type PinType = ();
     type PinId = PinId;
     type PinInstId = PinInstId;
+    type TerminalId = TerminalId;
     type CircuitId = CircuitId;
     type CircuitInstId = CircuitInstId;
     type NetId = NetId;

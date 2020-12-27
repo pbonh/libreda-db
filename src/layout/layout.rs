@@ -27,6 +27,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::hash::Hash;
 use std::borrow::Borrow;
+use crate::property_storage::{PropertyStore, WithProperties};
+use std::cell::RefCell;
 
 
 /// Data structure which holds cells and cell instances.
@@ -41,6 +43,7 @@ use std::borrow::Borrow;
 pub struct Layout {
     /// Data-base unit. Pixels per micrometer.
     pub dbu: UInt,
+    /// All cell templates.
     cells: HashMap<CellIndex, Rc<Cell<Coord>>>,
     /// Counter for generating the next cell index.
     cell_index_generator: CellIndexGenerator,
@@ -52,7 +55,10 @@ pub struct Layout {
     layers_by_name: HashMap<String, LayerIndex>,
     /// Lookup table for finding layers by index/datatype numbers.
     layers_by_index_datatype: HashMap<(UInt, UInt), LayerIndex>,
+    /// Info structures for all layers.
     layer_info: HashMap<LayerIndex, LayerInfo>,
+    /// Property storage for properties related to this layout.
+    property_storage: RefCell<PropertyStore<String>>
 }
 
 /// Meta-data of a layer.
@@ -313,4 +319,27 @@ impl Layout {
             i.name = name
         }
     }
+}
+
+impl WithProperties for Layout {
+    type Key = String;
+
+    fn with_properties<F, R>(&self, f: F) -> R
+        where F: FnOnce(Option<&PropertyStore<Self::Key>>) -> R {
+        f(Some(&self.property_storage.borrow()))
+    }
+
+    fn with_properties_mut<F, R>(&self, f: F) -> R where F: FnOnce(&mut PropertyStore<Self::Key>) -> R {
+        f(&mut self.property_storage.borrow_mut())
+    }
+}
+
+#[test]
+fn test_layout_properties() {
+    // Test setting and getting a property.
+
+    let layout = Layout::default();
+
+    layout.set_property("my_string_property".to_string(), "string_value".to_string());
+    assert!(!layout.property_str("my_string_property").is_none());
 }

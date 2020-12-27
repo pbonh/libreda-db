@@ -29,6 +29,7 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use genawaiter::rc::Gen;
 use std::hash::{Hash, Hasher};
+use crate::property_storage::{PropertyStore, WithProperties};
 
 /// Mutable shared reference to a `Cell`.
 pub type CellReference<C> = Rc<RefCell<Cell<C>>>;
@@ -60,6 +61,11 @@ pub struct Cell<C: CoordinateType> {
     /// Cells that use an instance of this cell.
     /// This are the cells towards the root in the dependency tree.
     dependent_cells: RefCell<HashMap<CellIndex, (Weak<Self>, usize)>>,
+    /// Properties related to this cell.
+    cell_properties: RefCell<PropertyStore<String>>,
+    /// Properties related to the instances in this cell.
+    /// Instance properties are stored here for lower overhead of cell instances.
+    pub (super) instance_properties: RefCell<HashMap<CellInstId, PropertyStore<String>>>,
 }
 
 impl<C: CoordinateType> Eq for Cell<C> {}
@@ -91,6 +97,8 @@ impl<C: CoordinateType> Cell<C> {
             cell_references: Default::default(),
             dependencies: Default::default(),
             dependent_cells: Default::default(),
+            cell_properties: Default::default(),
+            instance_properties: Default::default(),
         }
     }
 
@@ -347,5 +355,20 @@ impl<C: CoordinateType> TryBoundingBox<C> for Cell<C> {
             .fold1(|a, b| a.add_rect(&b));
 
         shapes_bbox
+    }
+}
+
+
+impl<C: CoordinateType> WithProperties for Cell<C> {
+    type Key = String;
+
+    fn with_properties<F, R>(&self, f: F) -> R
+        where F: FnOnce(Option<&PropertyStore<Self::Key>>) -> R {
+        f(Some(&self.cell_properties.borrow()))
+    }
+
+    fn with_properties_mut<F, R>(&self, f: F) -> R
+        where F: FnOnce(&mut PropertyStore<Self::Key>) -> R {
+        f(&mut self.cell_properties.borrow_mut())
     }
 }

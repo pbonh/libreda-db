@@ -32,21 +32,43 @@ use std::ops::Deref;
 use std::collections::hash_map::Values;
 use genawaiter;
 use genawaiter::rc::Gen;
+use crate::property_storage::{PropertyStore, WithProperties};
 
 /// Wrapper around a `Geometry` struct.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Shape<T: CoordinateType> {
     /// Identifier of this shape.
     index: Index<Self>,
     /// The geometry of this shape.
     pub geometry: Geometry<T>,
+    /// Weak reference to container.
+    parent: Weak<Shapes<T>>,
+}
+
+impl<T: CoordinateType> PartialEq for Shape<T> {
+    fn eq(&self, other: &Self) -> bool {
+        // Compare by index and parent container.
+        let eq = self.index == other.index &&
+            self.parent.strong_count() > 0 && // Consider shapes without parent unequal.
+            self.parent.ptr_eq(&other.parent);
+        if eq {
+            // Sanity check:
+            debug_assert!(self.geometry == other.geometry,
+                          "Geometry must be identical when the shape objects are equal."
+            )
+        }
+        eq
+    }
 }
 
 impl<T: CoordinateType> Shape<T> {
-    fn new<I: Into<Geometry<T>>>(index: Index<Shape<T>>, shape: I) -> Self {
+    fn new<I: Into<Geometry<T>>>(index: Index<Shape<T>>,
+                                 shape: I,
+                                 parent: Weak<Shapes<T>>) -> Self {
         Shape {
             index,
             geometry: shape.into(),
+            parent,
         }
     }
 
@@ -68,6 +90,8 @@ pub struct Shapes<T>
     index_generator: RefCell<IndexGenerator<Shape<T>>>,
     /// Shape elements.
     shapes: RefCell<HashMap<Index<Shape<T>>, Rc<Shape<T>>>>,
+    /// Property stores for the shapes.
+    shape_properties: RefCell<HashMap<Index<Shape<T>>, PropertyStore<String>>>,
 }
 
 impl<T: CoordinateType> Deref for Shape<T> {
@@ -79,7 +103,6 @@ impl<T: CoordinateType> Deref for Shape<T> {
 }
 
 impl<T: CoordinateType> Shapes<T> {
-
     /// Create a new shapes object.
     /// It is not associated with any cell.
     pub fn new_rc() -> Rc<Self> {
@@ -93,6 +116,7 @@ impl<T: CoordinateType> Shapes<T> {
             parent_cell,
             index_generator: Default::default(),
             shapes: Default::default(),
+            shape_properties: Default::default(),
         };
 
         let rc_shapes = Rc::new(shapes);
@@ -115,7 +139,9 @@ impl<T: CoordinateType> Shapes<T> {
     /// Add a shape to the collection.
     pub fn insert<I: Into<Geometry<T>>>(&self, shape: I) -> Rc<Shape<T>> {
         let index = self.index_generator.borrow_mut().next();
-        let shape = Rc::new(Shape::new(index, shape));
+        let shape = Rc::new(Shape::new(index,
+                                       shape,
+                                       self.self_reference.borrow().clone()));
         self.shapes.borrow_mut().insert(index, Rc::clone(&shape));
         shape
     }
@@ -216,5 +242,34 @@ impl<T: CoordinateType> TryBoundingBox<T> for Shapes<T> {
             it.filter_map(|s| s.try_bounding_box())
                 .fold1(|a, b| a.add_rect(&b))
         })
+    }
+}
+
+impl<C: CoordinateType> WithProperties for Shape<C> {
+    type Key = String;
+
+    fn with_properties<F, R>(&self, f: F) -> R
+        where F: FnOnce(Option<&PropertyStore<Self::Key>>) -> R {
+        f(
+            // Get the property store from the parent cell.
+            self.parent
+                .upgrade()
+                .unwrap()
+                .shape_properties.borrow()
+                .get(&self.index())
+        )
+    }
+
+    fn with_properties_mut<F, R>(&self, f: F) -> R
+        where F: FnOnce(&mut PropertyStore<Self::Key>) -> R {
+        f(
+            // Get the property store from the parent cell.
+            self.parent
+                .upgrade()
+                .unwrap()
+                .shape_properties.borrow_mut()
+                .entry(self.index())
+                .or_insert(PropertyStore::default())
+        )
     }
 }

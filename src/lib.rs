@@ -34,3 +34,4 @@ pub mod index;
 // Private modules.
 // mod refset; // Not currently used.
 // mod ref_wrapper; // Not currently used.
+pub mod property_storage;

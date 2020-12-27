@@ -31,6 +31,8 @@ pub trait NetlistTrait {
     /// Pin instance identifier type.
     /// A pin instance is a pin of a circuit instance.
     type PinInstId;
+    /// Either a pin or a pin instance ID.
+    type TerminalId: From<Self::PinId> + From<Self::PinInstId>;
     /// Circuit identifier type.
     type CircuitId;
     /// Circuit instance identifier type.

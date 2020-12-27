@@ -61,12 +61,12 @@ impl<T: CoordinateType> Shape<T> {
 #[derive(Clone, Debug, Default)]
 pub struct Shapes<T>
     where T: CoordinateType {
-    // Reference to this container itself.
+    /// Reference to this container itself.
     self_reference: RefCell<Weak<Self>>,
-    // Reference to the cell where this shape collection lives. Can be none.
+    /// Reference to the cell where this shape collection lives. Can be none.
     pub(super) parent_cell: Weak<Cell<T>>,
     index_generator: RefCell<IndexGenerator<Shape<T>>>,
-    // Shape elements.
+    /// Shape elements.
     shapes: RefCell<HashMap<Index<Shape<T>>, Rc<Shape<T>>>>,
 }
 

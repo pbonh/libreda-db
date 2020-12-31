@@ -653,18 +653,34 @@ impl Circuit {
 
         // Connect the newly created sub-instances and nets to this circuit
         // according to the old connections to the instance which is about to be flattened.
-        for old_pin in circuit_instance.each_pin_instance() {
-            let outer_old_net = old_pin.net();
-            let inner_old_net = old_pin.pin().internal_net();
-            // If the pin was either not connected on the outside or not connected inside, nothing
-            // needs to be done.
-            if let (Some(outer_net), Some(inner_old_net)) = (outer_old_net, inner_old_net) {
-                // Get the new copy of the inner net.
-                let inner_new_net = get_new_net(inner_old_net);
-                // Attach the new inner net to the outer net (by replacement).
-                self.replace_net(&inner_new_net, &outer_net);
-            }
+        {
+            // First create a the mapping from inner nets to outer nets.
+            // This is necessary for the case when multiple internal pins are connected to the same
+            // internal net.
+            let net_replacement_mapping: HashMap<_, _> = circuit_instance.each_pin_instance()
+                .filter_map(|old_pin| {
+                    let outer_old_net = old_pin.net();
+                    let inner_old_net = old_pin.pin().internal_net();
+                    // If the pin was either not connected on the outside or not connected inside, nothing
+                    // needs to be done.
+                    if let (Some(outer_net), Some(inner_old_net)) = (outer_old_net, inner_old_net) {
+                        // Get the new copy of the inner net.
+                        let inner_new_net = get_new_net(inner_old_net);
+                        // Attach the new inner net to the outer net (by replacement).
+                        Some((inner_new_net, outer_net))
+                    } else {
+                        // Inner and outer pin were not connected, nothing needs to be done.
+                        None
+                    }
+                })
+                .collect();
+            // Make the net replacement.
+            net_replacement_mapping.iter()
+                .for_each(|(inner_new_net, outer_net)|
+                    self.replace_net(inner_new_net, outer_net)
+                );
         }
+
 
         // Remove old instance.
         self.remove_circuit_instance(circuit_instance);
@@ -765,6 +781,7 @@ impl Circuit {
 
     /// Remove the given net from this circuit and disconnect every pin connected to this net.
     pub fn remove_net(&self, net: &Rc<Net>) -> () {
+        assert!(self.nets.borrow().contains_key(&net.id), "Net does not exist in this circuit.");
         // Disconnect all pins that are attached to this net.
         for terminal in net.each_terminal().collect_vec() {
             match terminal {
@@ -826,6 +843,8 @@ impl Circuit {
         // Check that the nets live in this circuit.
         assert!(old_net.parent_circuit().ptr_eq(&self.self_reference()));
         assert!(new_net.parent_circuit().ptr_eq(&self.self_reference()));
+        assert!(self.nets.borrow().contains_key(&old_net.id), "Old net does not exist in this circuit.");
+        assert!(self.nets.borrow().contains_key(&new_net.id), "New net does not exist in this circuit.");
         // Get terminals connected to the old net.
         let terminals = old_net.each_terminal().collect_vec();
         // Connect each terminal to the new net.

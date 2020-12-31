@@ -33,6 +33,8 @@ use std::rc::Rc;
 pub enum PropertyValue {
     /// Property is a string.
     String(Rc<String>),
+    /// Property is a byte string.
+    Bytes(Vec<u8>),
     /// Property is a signed integer.
     SInt(i32),
     /// Property is an unsigned integer.
@@ -63,6 +65,12 @@ impl From<Rc<String>> for PropertyValue {
 impl From<&Rc<String>> for PropertyValue {
     fn from(v: &Rc<String>) -> Self {
         PropertyValue::String(v.clone())
+    }
+}
+
+impl From<Vec<u8>> for PropertyValue {
+    fn from(v: Vec<u8>) -> Self {
+        PropertyValue::Bytes(v)
     }
 }
 

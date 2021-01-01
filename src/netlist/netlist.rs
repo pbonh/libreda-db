@@ -33,6 +33,7 @@ use itertools::Itertools;
 use std::ops::Deref;
 
 use log::debug;
+use crate::netlist::traits::NetlistTrait;
 
 /// Data type used for identifying a circuit instance (sub circuit).
 pub type CircuitInstIndex = Index<CircuitInstance>;
@@ -286,7 +287,7 @@ impl Clone for Netlist {
             for old_inst in old_circuit.each_instance() {
                 let new_inst = new_circuit.create_circuit_instance(
                     &circuit_map[&old_inst.circuit_ref().upgrade().unwrap()],
-                    old_inst.name().unwrap(),
+                    old_inst.name(),
                 );
 
                 // Connect pins to right nets.
@@ -294,7 +295,7 @@ impl Clone for Netlist {
                     .zip(new_inst.each_pin_instance()) {
                     let new_net = old_pin_inst.net()
                         .map(|n| net_map[&n].clone());
-                    new_pin_inst.connect_net(new_net.as_ref());
+                    new_pin_inst.connect_net(new_net);
                 }
             }
         }
@@ -358,15 +359,15 @@ fn test_netlist_connect_pin() {
     let net1 = top.create_net(Some("net1"));
 
     // Create instance of SUB.
-    let inst_sub = top.create_circuit_instance(&sub, "INST_SUB1");
+    let inst_sub = top.create_circuit_instance(&sub, Some("INST_SUB1"));
     // Connect pin to net1.
-    inst_sub.connect_pin_by_id(0, &net1);
+    inst_sub.connect_pin_by_id(0, Some(net1.clone()));
 
     assert_eq!(net1.num_terminals(), 1);
     assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
 
     // Connect net1 to the pin A of the TOP circuit.
-    top.connect_pin_by_id(0, net1.clone());
+    top.connect_pin_by_id(0, Some(net1.clone()));
     assert_eq!(net1.num_terminals(), 2);
 }
 
@@ -382,19 +383,19 @@ fn test_netlist_circuit_remove_net() {
     let net1 = top.create_net(Some("net1"));
 
     // Create instance of SUB.
-    let inst_sub = top.create_circuit_instance(&sub, "INST_SUB1");
+    let inst_sub = top.create_circuit_instance(&sub, Some("INST_SUB1"));
 
     // Check that the circuit template is now referenced once by an instance.
     assert_eq!(sub.num_references(), 1);
 
     // Connect pin to net1.
-    inst_sub.connect_pin_by_id(0, &net1);
+    inst_sub.connect_pin_by_id(0, Some(net1.clone()));
 
     assert_eq!(net1.num_terminals(), 1);
     assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
 
     // Connect net1 to the pin A of the TOP circuit.
-    top.connect_pin_by_id(0, net1.clone());
+    top.connect_pin_by_id(0, Some(net1.clone()));
     assert_eq!(net1.num_terminals(), 2);
 
     top.remove_net(&net1);
@@ -417,13 +418,13 @@ fn test_netlist_clone() {
         let net1 = top.create_net(Some("net1"));
 
         // Create instance of SUB.
-        let inst_sub = top.create_circuit_instance(&sub, "INST_SUB1");
+        let inst_sub = top.create_circuit_instance(&sub, Some("INST_SUB1"));
 
         // Connect pin to net1.
-        inst_sub.connect_pin_by_id(0, &net1);
+        inst_sub.connect_pin_by_id(0, Some(net1.clone()));
 
         // Connect net1 to the pin A of the TOP circuit.
-        top.connect_pin_by_id(0, net1.clone());
+        top.connect_pin_by_id(0, Some(net1.clone()));
 
         netlist
     };
@@ -443,5 +444,87 @@ fn test_netlist_clone() {
     let inst_sub = top.circuit_instance_by_name("INST_SUB1").unwrap();
 
     assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
+}
 
+impl NetlistTrait for Netlist {
+    type NameType = String;
+    type PinType = ();
+    type PinId = Rc<Pin>;
+    type PinInstId = Rc<PinInstance>;
+    type TerminalId = ();
+    type CircuitId = Rc<Circuit>;
+    type CircuitInstId = Rc<CircuitInstance>;
+    type NetId = Rc<Net>;
+
+    fn new() -> Self {
+        Netlist::new()
+    }
+
+    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<Self::NameType>) -> Self::CircuitId {
+        unimplemented!()
+    }
+
+    fn remove_circuit(&mut self, circuit_id: &Self::CircuitId) {
+        Netlist::remove_circuit(self, circuit_id)
+    }
+
+    fn create_circuit_instance(&mut self, parent_circuit: &Self::CircuitId,
+                               template_circuit: &Self::CircuitId,
+                               name: Option<Self::NameType>) -> Self::CircuitInstId {
+        parent_circuit.create_circuit_instance(template_circuit, name)
+    }
+
+    fn remove_circuit_instance(&mut self, circuit_inst: &Self::CircuitInstId) {
+        circuit_inst.parent_circuit().upgrade()
+            .unwrap()
+            .remove_circuit_instance(circuit_inst)
+    }
+
+    fn create_net(&mut self, parent: Self::CircuitId, name: Option<Self::NameType>) -> Self::NetId {
+        parent.create_net(name)
+    }
+
+    fn remove_net(&mut self, net: &Self::NetId) {
+        net.parent_circuit().upgrade()
+            .unwrap().remove_net(net)
+    }
+
+    fn connect_pin(&mut self, pin: &Self::PinId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        pin.connect_net(net)
+    }
+
+    fn connect_pin_instance(&mut self, pin_inst: &Self::PinInstId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        pin_inst.connect_net(net)
+    }
+
+    fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
+        pin.internal_net()
+    }
+
+    fn net_of_pin_instance(&self, pin: &Self::PinInstId) -> Option<Self::NetId> {
+        pin.net()
+    }
+
+    fn each_circuit<'a>(&'a self) -> Box<dyn Iterator<Item=&Self::CircuitId> + 'a> {
+        Box::new(self.each_circuit())
+    }
+
+    fn each_pin<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
+        // Box::new(circuit.each_pin())
+        unimplemented!()
+    }
+
+    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=&Self::PinInstId> + 'a> {
+        // Box::new(circuit_instance.each_pin_instance())
+        unimplemented!()
+    }
+
+    fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
+        // Box::new(net.each_pin().map(|p| &p))
+        unimplemented!()
+    }
+
+    fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinInstId>> {
+        unimplemented!()
+    }
 }

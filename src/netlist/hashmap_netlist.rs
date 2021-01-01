@@ -120,7 +120,7 @@ pub struct PinInst {
 #[derive(Debug, Clone)]
 pub struct Net {
     /// Name of the net.
-    pub name: Rc<String>,
+    pub name: Option<Rc<String>>,
     /// Parent circuit of the net.
     pub parent: CircuitId,
     /// Pins connected to this net.
@@ -148,8 +148,6 @@ pub struct HashMapNetlist {
 }
 
 impl HashMapNetlist {
-
-
     /// Find a circuit by its name.
     pub fn circuit_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CircuitId>
         where String: Borrow<S> {
@@ -239,16 +237,6 @@ impl HashMapNetlist {
             .flat_map(move |p| self.pin_inst(p).net)
     }
 
-    /// Iterate over all pin instances of the circuit instance.
-    pub fn each_pin_instance(&self, circuit_inst_id: &CircuitInstId) -> impl Iterator<Item=PinInstId> + '_ {
-        self.circuit_inst(circuit_inst_id).pins.iter().copied()
-    }
-
-    /// Iterate over all pins of a circuit.
-    pub fn each_pin(&self, circuit_id: &CircuitId) -> impl Iterator<Item=PinId> + '_ {
-        self.circuit(circuit_id).pins.iter().copied()
-    }
-
     /// Iterate over all pins connected to a net.
     pub fn pins_for_net(&self, net: &NetId) -> impl Iterator<Item=PinId> + '_ {
         self.net(net).pins.iter().copied()
@@ -285,11 +273,6 @@ impl HashMapNetlist {
         self.circuits.values()
             .filter(|c| c.parents.len() == 0)
             .count()
-    }
-
-    /// Iterate over all circuits.
-    pub fn each_circuit(&self) -> impl Iterator<Item=CircuitId> + '_ {
-        self.circuits.keys().copied()
     }
 
     /// Iterate through all nets that are defined in the netlist.
@@ -369,14 +352,15 @@ impl NetlistTrait for HashMapNetlist {
     // }
 
     /// Create a new instance of `circuit_template` in the `parent` circuit.
-    fn create_circuit_instance(&mut self, parent: CircuitId,
-                               circuit_template: CircuitId) -> CircuitInstId {
+    fn create_circuit_instance(&mut self, parent: &CircuitId,
+                               circuit_template: &CircuitId,
+                               name: Option<Self::NameType>) -> CircuitInstId {
         let id = CircuitInstId(HashMapNetlist::next_id_counter(&mut self.id_counter_circuit_inst));
 
         // Check that there is no cycle.
         // Find root.
         {
-            let mut parents = vec![parent];
+            let mut parents = vec![*parent];
             loop {
                 if parents.is_empty() {
                     // Found a root, there is no cycle.
@@ -402,8 +386,8 @@ impl NetlistTrait for HashMapNetlist {
             .collect();
 
         let inst = CircuitInst {
-            circuit: circuit_template,
-            parent,
+            circuit: *circuit_template,
+            parent: *parent,
             pins,
         };
 
@@ -419,7 +403,7 @@ impl NetlistTrait for HashMapNetlist {
     fn remove_circuit_instance(&mut self, circuit_inst_id: &CircuitInstId) {
         // Disconnect all pins first.
         for pin in self.circuit_inst(circuit_inst_id).pins.clone() {
-            self.disconnect_pin_instance(pin);
+            self.disconnect_pin_instance(&pin);
         }
         // Remove the instance and all references.
         let parent = self.circuit_inst(&circuit_inst_id).parent;
@@ -430,8 +414,8 @@ impl NetlistTrait for HashMapNetlist {
     }
 
     /// Create a new net in the `parent` circuit.
-    fn create_net(&mut self, parent: CircuitId, name: Self::NameType) -> NetId {
-        let name = Rc::new(name);
+    fn create_net(&mut self, parent: CircuitId, name: Option<Self::NameType>) -> NetId {
+        let name = name.map(|name| Rc::new(name));
         let id = NetId(HashMapNetlist::next_id_counter(&mut self.id_counter_net));
         let net = Net {
             name: name.clone(),
@@ -440,7 +424,9 @@ impl NetlistTrait for HashMapNetlist {
             pin_instances: Default::default(),
         };
         self.nets.insert(id, net);
-        self.nets_by_name.insert(name, id);
+        if let Some(name) = name {
+            self.nets_by_name.insert(name, id);
+        }
         id
     }
 
@@ -450,33 +436,75 @@ impl NetlistTrait for HashMapNetlist {
         let pin_insts = self.pins_instances_for_net(net).collect_vec();
 
         for p in pins {
-            self.disconnect_pin(p);
+            self.disconnect_pin(&p);
         }
         for p in pin_insts {
-            self.disconnect_pin_instance(p);
+            self.disconnect_pin_instance(&p);
         }
         let name = self.net(&net).name.clone();
         self.nets.remove(&net).unwrap();
-        self.nets_by_name.remove(&name).unwrap();
+        if let Some(name) = &name {
+            self.nets_by_name.remove(name).unwrap();
+        }
     }
 
     /// Connect the pin to a net.
-    fn connect_pin(&mut self, pin: PinId, net: Option<NetId>) {
+    fn connect_pin(&mut self, pin: &PinId, net: Option<NetId>) -> Option<NetId> {
         if let Some(net) = net {
             assert_eq!(self.pin(&pin).circuit, self.net(&net).parent, "Pin and net do not live in the same circuit.");
-            self.net_mut(&net).pins.insert(pin);
+            self.net_mut(&net).pins.insert(*pin);
         }
-        self.pin_mut(&pin).net = net;
+        if let Some(net) = net {
+            self.pin_mut(&pin).net.replace(net)
+        } else {
+            self.pin_mut(&pin).net.take()
+        }
     }
 
     /// Connect the pin to a net.
-    fn connect_pin_instance(&mut self, pin: PinInstId, net: Option<NetId>) {
+    fn connect_pin_instance(&mut self, pin: &PinInstId, net: Option<NetId>) -> Option<Self::NetId> {
         if let Some(net) = net {
-            assert_eq!(self.circuit_inst(&self.pin_inst(&pin).circuit_inst).parent,
+            assert_eq!(self.circuit_inst(&self.pin_inst(pin).circuit_inst).parent,
                        self.net(&net).parent, "Pin and net do not live in the same circuit.");
-            self.net_mut(&net).pin_instances.insert(pin);
+            self.net_mut(&net).pin_instances.insert(*pin);
         }
-        self.pin_inst_mut(&pin).net = net;
+        if let Some(net) = net {
+            self.pin_inst_mut(pin).net.replace(net)
+        } else {
+            self.pin_inst_mut(pin).net.take()
+        }
+    }
+
+    /// Get the net connected to this pin.
+    fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
+        self.pin(pin).net
+    }
+
+    /// Get the net connected to this pin instance.
+    fn net_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Option<Self::NetId> {
+        self.pin_inst(pin_inst).net
+    }
+
+    /// Iterate over all circuits.
+    fn each_circuit(&self) -> Box<dyn Iterator<Item=&CircuitId> + '_> {
+        Box::new(self.circuits.keys())
+    }
+
+    /// Iterate over all pins of a circuit.
+    fn each_pin(&self, circuit_id: &CircuitId) -> Box<dyn Iterator<Item=&PinId> + '_> {
+        Box::new(self.circuit(circuit_id).pins.iter())
+    }
+
+    fn each_pin_instance<'a>(&'a self, circuit_inst: &Self::CircuitInstId) -> Box<dyn Iterator<Item=&Self::PinInstId> + 'a> {
+        Box::new(self.circuit_inst(circuit_inst).pins.iter())
+    }
+
+    fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
+        Box::new(self.net(net).pins.iter())
+    }
+
+    fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinInstId> + 'a> {
+        Box::new(self.net(net).pin_instances.iter())
     }
 }
 
@@ -495,20 +523,20 @@ fn test_create_populated_netlist() {
                                        vec!["A".to_string(), "B".to_string()],
     );
 
-    let inst_a = netlist.create_circuit_instance(top, sub_a);
-    let _inst_b = netlist.create_circuit_instance(top, sub_b);
+    let inst_a = netlist.create_circuit_instance(&top, &sub_a, None);
+    let _inst_b = netlist.create_circuit_instance(&top, &sub_b, None);
 
-    let net_a = netlist.create_net(top, "NetA".to_string());
-    let net_b = netlist.create_net(top, "NetB".to_string());
+    let net_a = netlist.create_net(top, Some("NetA".to_string()));
+    let net_b = netlist.create_net(top, Some("NetB".to_string()));
 
-    let pins_a = netlist.each_pin_instance(&inst_a).collect_vec();
-    let pins_top = netlist.each_pin(&top).collect_vec();
+    let pins_a = netlist.each_pin_instance(&inst_a).copied().collect_vec();
+    let pins_top = netlist.each_pin(&top).copied().collect_vec();
 
-    netlist.connect_pin_instance(pins_a[0], Some(net_a));
-    netlist.connect_pin_instance(pins_a[1], Some(net_b));
+    netlist.connect_pin_instance(&pins_a[0], Some(net_a));
+    netlist.connect_pin_instance(&pins_a[1], Some(net_b));
 
-    netlist.connect_pin(pins_top[0], Some(net_a));
-    netlist.connect_pin(pins_top[1], Some(net_b));
+    netlist.connect_pin(&pins_top[0], Some(net_a));
+    netlist.connect_pin(&pins_top[1], Some(net_b));
 
     dbg!(&netlist);
     dbg!(netlist.terminals_for_net(&net_a).collect_vec());

@@ -60,7 +60,7 @@ impl PinInstance {
     ///
     /// Returns the previously connected net.
     /// TODO: Remove this and use the `connect_pin` function on the parent circuit?
-    pub fn connect_net<'a, N: Into<Option<&'a Rc<Net>>>>(&self, net: N) -> Option<Rc<Net>> {
+    pub fn connect_net(&self, net: Option<Rc<Net>>) -> Option<Rc<Net>> {
         self.circuit_instance().upgrade()
             .expect("Cannot connect a pin instance to a net if the circuit instance does not exist anymore.")
             .connect_pin_by_id(self.id(), net)

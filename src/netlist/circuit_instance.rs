@@ -82,7 +82,7 @@ impl CircuitInstance {
     /// # Panics
     /// Panics if the supplied net does not exist in the parent circuit.
     /// Also panics if the referenced pin does not exist.
-    pub fn connect_pin_by_id<'a, N: Into<Option<&'a Rc<Net>>>>(&self, pin_instance_id: usize, net: N) -> Option<Rc<Net>> {
+    pub fn connect_pin_by_id(&self, pin_instance_id: usize, net: Option<Rc<Net>>) -> Option<Rc<Net>> {
         let pin = self.pin_instances.get(pin_instance_id).unwrap();
         self.connect_pin(pin, net)
     }
@@ -95,13 +95,11 @@ impl CircuitInstance {
     /// # Panics
     /// * Panics if the pin instance does not live in this circuit instance.
     /// * Panics if the net does not live in the same parent circuit as this circuit instance.
-    pub fn connect_pin<'a, N: Into<Option<&'a Rc<Net>>>>(&self, pin: &Rc<PinInstance>, net: N) -> Option<Rc<Net>> {
+    pub fn connect_pin(&self, pin: &Rc<PinInstance>, net: Option<Rc<Net>>) -> Option<Rc<Net>> {
 
         // Check that the pin instance lives in this circuit instance.
         assert!(self.eq(&pin.circuit_instance().upgrade().unwrap()),
                 "Pin does not live in this circuit instance.");
-
-        let net = net.into().cloned();
 
         // Check that the net lives in this circuit.
         if let Some(net) = &net {

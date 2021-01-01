@@ -127,7 +127,7 @@ impl Pin {
     /// # Panics
     /// Panics if the parent circuit does not exist anymore.
     /// TODO: Remove this and use the `connect_pin` function on the parent circuit?
-    pub fn connect_net<N: Into<Option<Rc<Net>>>>(&self, net: N) -> Option<Rc<Net>> {
+    pub fn connect_net(&self, net: Option<Rc<Net>>) -> Option<Rc<Net>> {
         self.parent_circuit().upgrade()
             .expect("Cannot connect a pin if its parent circuit does not exist.")
             .connect_pin_by_id(self.id, net)

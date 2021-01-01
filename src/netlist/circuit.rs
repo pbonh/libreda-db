@@ -171,7 +171,7 @@ impl Circuit {
     ///
     /// # Panics
     /// Panics if the pin with this ID does not exist.
-    pub fn connect_pin_by_id<N: Into<Option<Rc<Net>>>>(&self, pin_id: usize, net: N) -> Option<Rc<Net>> {
+    pub fn connect_pin_by_id(&self, pin_id: usize, net: Option<Rc<Net>>) -> Option<Rc<Net>> {
         // Find the pin.
         let pin = self.pins.get(pin_id).expect("Pin with this index does not exist.");
         self.connect_pin(&pin, net)
@@ -183,12 +183,10 @@ impl Circuit {
     ///
     /// # Panics
     /// Panics if the pin does not live in this circuit.
-    pub fn connect_pin<N: Into<Option<Rc<Net>>>>(&self, pin: &Rc<Pin>, net: N) -> Option<Rc<Net>> {
+    pub fn connect_pin(&self, pin: &Rc<Pin>, net: Option<Rc<Net>>) -> Option<Rc<Net>> {
         // Check that this pin actually lives in this circuit.
         assert_eq!(pin.parent_circuit_id, self.id, "Pin does not live in this circuit.");
         debug_assert!(pin.parent_circuit().ptr_eq(&self.self_reference()));
-
-        let net = net.into();
 
         // Check that the net lives in this circuit.
         if let Some(net) = &net {
@@ -302,11 +300,13 @@ impl Circuit {
     /// Create a new named instance of a given circuit.
     /// # Panics
     /// Panics if the instantiation is recursive.
-    pub fn create_circuit_instance<S: Into<String>>(&self, template_circuit: &Rc<Circuit>, name: S) -> Rc<CircuitInstance> {
-        let name = name.into();
+    pub fn create_circuit_instance<S: Into<String>>(&self, template_circuit: &Rc<Circuit>, name: Option<S>) -> Rc<CircuitInstance> {
+        let name = name.map(|s| s.into());
         // Check if name already exists.
-        if self.circuit_instances_by_name.borrow().contains_key(&name) {
-            panic!(format!("Instance with name '{}' already exists.", &name));
+        if let Some(name) = &name {
+            if self.circuit_instances_by_name.borrow().contains_key(name) {
+                panic!(format!("Instance with name '{}' already exists.", name));
+            }
         }
 
         {
@@ -341,7 +341,7 @@ impl Circuit {
             ).collect();
 
         let inst = CircuitInstance {
-            name: Some(name.clone()),
+            name: name.clone(),
             circuit: Rc::downgrade(template_circuit),
             circuit_id: template_circuit.id,
             parent_circuit: self.self_reference(),
@@ -357,8 +357,10 @@ impl Circuit {
         }
 
         // Create entry in name lookup table.
-        self.circuit_instances_by_name.borrow_mut()
-            .insert(name, index);
+        if let Some(name) = name {
+            self.circuit_instances_by_name.borrow_mut()
+                .insert(name, index);
+        }
 
         // Store circuit instance.
         self.circuit_instances.borrow_mut()
@@ -611,32 +613,30 @@ impl Circuit {
             }
         };
 
-        // Name of the instance to be flattened.
-        let inst_name = circuit_instance.name().unwrap();
-
         // Copy all sub instances into this circuit.
         // And connect their pins to copies of the original nets.
         for sub in template.each_instance() {
             let sub_template = sub.circuit_ref().upgrade().unwrap();
 
-            // TODO: Avoid instance name collisions.
-            // It is possible that the instance name already exists in this circuit.
-
-            let sub_instance_name = sub.name().unwrap();
-            // Construct name for the new sub instance.
-            // Something like: INSTANCE_TO_BE_FLATTENED:SUB_INSTANCE{_COUNTER}
-            let new_name = {
-                let mut new_name = format!("{}:{}", inst_name, sub_instance_name);
-                let mut i = 0;
-                // If this name too already exists, append a counter.
-                while self.circuit_instances_by_name.borrow().contains_key(&new_name) {
-                    new_name = format!("{}:{}_{}", inst_name, sub_instance_name, i);
-                    i += 1;
+            let new_name = if let (Some(sub_instance_name), Some(inst_name)) =
+                (sub.name(), circuit_instance.name()) {
+                // Construct name for the new sub instance.
+                // Something like: INSTANCE_TO_BE_FLATTENED:SUB_INSTANCE{_COUNTER}
+                {
+                    let mut new_name = format!("{}:{}", inst_name, sub_instance_name);
+                    let mut i = 0;
+                    // It is possible that the instance name already exists in this circuit.
+                    // If this name too already exists, append a counter.
+                    while self.circuit_instances_by_name.borrow().contains_key(&new_name) {
+                        new_name = format!("{}:{}_{}", inst_name, sub_instance_name, i);
+                        i += 1;
+                    }
+                    Some(new_name)
                 }
-                new_name
+            } else {
+                None
             };
-            let new_inst = self.create_circuit_instance(&sub_template,
-                                                        new_name);
+            let new_inst = self.create_circuit_instance(&sub_template, new_name);
 
             // Re-connect pins to copies of the original nets.
             // Loop over old/new pin instances.
@@ -646,7 +646,7 @@ impl Circuit {
                 // Get net on old pin.
                 if let Some(old_net) = old_pin.net() {
                     let new_net = get_new_net(old_net);
-                    new_pin.connect_net(&new_net);
+                    new_pin.connect_net(Some(new_net));
                 }
             }
         }
@@ -839,6 +839,7 @@ impl Circuit {
     }
 
     /// Take all terminals that are connected to `old_net` and connect them to `new_net` instead.
+    /// The old net is no longer used and removed.
     pub fn replace_net(&self, old_net: &Rc<Net>, new_net: &Rc<Net>) {
         // Check that the nets live in this circuit.
         assert!(old_net.parent_circuit().ptr_eq(&self.self_reference()));
@@ -850,8 +851,8 @@ impl Circuit {
         // Connect each terminal to the new net.
         for terminal in terminals {
             match terminal {
-                TerminalRef::Pin(p) => { p.connect_net(new_net.clone()); }
-                TerminalRef::PinInstance(p) => { p.connect_net(&new_net.clone()); }
+                TerminalRef::Pin(p) => { p.connect_net(Some(new_net.clone())); }
+                TerminalRef::PinInstance(p) => { p.connect_net(Some(new_net.clone())); }
             }
         }
         // Remove the now unused old net.
@@ -904,7 +905,7 @@ impl Circuit {
         }
 
         // Remove the subcircuit.
-        for name in circuit_instance.name() {
+        if let Some(name) = circuit_instance.name() {
             self.circuit_instances_by_name.borrow_mut().remove(name.as_str());
         }
         // Remove the subcircuit.

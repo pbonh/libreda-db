@@ -22,7 +22,7 @@ fn test_circuit_no_recursion_1() {
     let mut netlist = Netlist::new();
     let top = netlist.create_circuit("top", vec![]);
     // This should fail:
-    let _top_inst = top.create_circuit_instance(&top, "recursive_inst");
+    let _top_inst = top.create_circuit_instance(&top, Some("top_inst"));
 }
 
 #[test]
@@ -31,9 +31,9 @@ fn test_circuit_no_recursion_2() {
     let mut netlist = Netlist::new();
     let top = netlist.create_circuit("top", vec![]);
     let sub = netlist.create_circuit("sub", vec![]);
-    let _sub_inst = top.create_circuit_instance(&sub, "sub_inst");
+    let _sub_inst = top.create_circuit_instance(&sub, Some("sub_inst"));
     // This should fail:
-    let _top_inst = sub.create_circuit_instance(&top, "recursive_inst");
+    let _top_inst = sub.create_circuit_instance(&top, Some("recursive_inst"));
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn test_create_and_remove_instance() {
     let sub = netlist.create_circuit("sub", vec![]);
     assert_ne!(top.id(), sub.id());
 
-    let sub_inst = top.create_circuit_instance(&sub, "sub_inst");
+    let sub_inst = top.create_circuit_instance(&sub, Some("sub_inst"));
 
     assert_eq!(sub_inst.name(), Some(&"sub_inst".to_string()));
 
@@ -69,7 +69,7 @@ fn test_dependent_circuits() {
     let mut netlist = Netlist::new();
     let top = netlist.create_circuit("top", vec![]);
     let sub = netlist.create_circuit("sub", vec![]);
-    let sub_inst = top.create_circuit_instance(&sub, "sub_inst");
+    let sub_inst = top.create_circuit_instance(&sub, Some("sub_inst"));
 
     assert_eq!(sub.each_dependent_circuit().collect_vec(), vec![top.clone()]);
     assert_eq!(top.each_dependent_circuit().collect_vec(), vec![]);
@@ -89,17 +89,17 @@ fn test_simple_net() {
     let top = netlist.create_circuit("top", vec![Pin::new_input("A")]);
     let a = netlist.create_circuit("a", vec![Pin::new_input("A")]);
     let b = netlist.create_circuit("b", vec![Pin::new_input("A")]);
-    let a_inst = top.create_circuit_instance(&a, "a_inst");
-    let b_inst = top.create_circuit_instance(&b, "b_inst");
+    let a_inst = top.create_circuit_instance(&a, Some("a_inst"));
+    let b_inst = top.create_circuit_instance(&b, Some("b_inst"));
 
     let net1 = top.create_net(Some("Net1"));
     assert_eq!(net1.parent_circuit().upgrade(), Some(top.clone()));
 
     assert_eq!(Some(net1.clone()), top.net_by_name("Net1"));
 
-    top.connect_pin_by_id(0, net1.clone());
-    a_inst.connect_pin_by_id(0, &net1);
-    b_inst.connect_pin_by_id(0, &net1);
+    top.connect_pin_by_id(0, Some(net1.clone()));
+    a_inst.connect_pin_by_id(0, Some(net1.clone()));
+    b_inst.connect_pin_by_id(0, Some(net1.clone()));
 
     assert_eq!(net1.num_terminals(), 3);
     assert_eq!(net1.each_terminal().count(), 3);
@@ -150,16 +150,16 @@ fn test_flatten_circuit_instance() {
     let top = netlist.create_circuit("top", vec![Pin::new_input("A")]);
     let a = netlist.create_circuit("a", vec![Pin::new_input("A")]);
     let b = netlist.create_circuit("b", vec![Pin::new_input("A")]);
-    let a_inst = top.create_circuit_instance(&a, "a_inst");
-    let b_inst = a.create_circuit_instance(&b, "b_inst");
+    let a_inst = top.create_circuit_instance(&a, Some("a_inst"));
+    let b_inst = a.create_circuit_instance(&b, Some("b_inst"));
 
     let net1 = top.create_net(Some("Net1"));
-    top.connect_pin_by_id(0, net1.clone());
-    a_inst.connect_pin_by_id(0, &net1);
+    top.connect_pin_by_id(0, Some(net1.clone()));
+    a_inst.connect_pin_by_id(0, Some(net1.clone()));
 
     let net2 = a.create_net(Some("Net2"));
-    a.connect_pin_by_id(0, net2.clone());
-    b_inst.connect_pin_by_id(0, &net2);
+    a.connect_pin_by_id(0, Some(net2.clone()));
+    b_inst.connect_pin_by_id(0, Some(net2));
 
     // Flatten the middle circuit.
     top.flatten_circuit_instance(&a_inst);

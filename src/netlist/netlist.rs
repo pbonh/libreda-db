@@ -33,7 +33,7 @@ use itertools::Itertools;
 use std::ops::Deref;
 
 use log::debug;
-use crate::netlist::traits::NetlistTrait;
+use crate::netlist::traits::{NetlistTrait, NetlistEditTrait};
 
 /// Data type used for identifying a circuit instance (sub circuit).
 pub type CircuitInstIndex = Index<CircuitInstance>;
@@ -460,8 +460,68 @@ impl NetlistTrait for Netlist {
         Netlist::new()
     }
 
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<Self::NameType>) -> Self::CircuitId {
+    fn circuit_by_name<N: ?Sized>(&self, name: &N) -> Option<Rc<Circuit>>
+        where Self::NameType: Borrow<N>,
+              N: Hash + Eq {
+        Netlist::circuit_by_name(self, name)
+    }
+
+    fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
+        pin.internal_net()
+    }
+
+    fn net_of_pin_instance(&self, pin: &Self::PinInstId) -> Option<Self::NetId> {
+        pin.net()
+    }
+
+    fn net_zero(&self, parent_circuit: &Self::CircuitId) -> Self::NetId {
+        parent_circuit.net_zero()
+    }
+
+    fn net_one(&self, parent_circuit: &Self::CircuitId) -> Self::NetId {
+        parent_circuit.net_one()
+    }
+
+    fn each_circuit<'a>(&'a self) -> Box<dyn Iterator<Item=&Self::CircuitId> + 'a> {
+        Box::new(self.each_circuit())
+    }
+
+    fn each_pin<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
+        // Box::new(circuit.each_pin())
         unimplemented!()
+    }
+
+    /// Get a `Vec` with the IDs of all pins of this circuit.
+    fn each_pin_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::PinId> {
+        circuit.each_pin_vec()
+    }
+
+    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=&Self::PinInstId> + 'a> {
+        // Box::new(circuit_instance.each_pin_instance())
+        unimplemented!()
+    }
+
+    /// Get a `Vec` with the IDs of all pin instance of this circuit instance.
+    fn each_pin_instance_vec(&self, circuit_instance: &Self::CircuitInstId) -> Vec<Self::PinInstId> {
+        circuit_instance.each_pin_instance_vec()
+    }
+
+    fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
+        // Box::new(net.each_pin().map(|p| &p))
+        unimplemented!()
+    }
+
+    fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinInstId>> {
+        unimplemented!()
+    }
+}
+
+impl NetlistEditTrait for Netlist {
+    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CircuitId {
+        let pins = pins.into_iter()
+            .map(|(name, direction)| Pin::new(name, direction))
+            .collect();
+        Netlist::create_circuit(self, name, pins)
     }
 
     fn remove_circuit(&mut self, circuit_id: &Self::CircuitId) {
@@ -484,6 +544,10 @@ impl NetlistTrait for Netlist {
         parent.create_net(name)
     }
 
+    fn rename_net(&mut self, parent_circuit: &Self::CircuitId, net_id: &Self::NetId, new_name: Option<Self::NameType>) {
+        parent_circuit.rename_net(net_id.id, new_name);
+    }
+
     fn remove_net(&mut self, net: &Self::NetId) {
         net.parent_circuit().upgrade()
             .unwrap().remove_net(net)
@@ -495,36 +559,5 @@ impl NetlistTrait for Netlist {
 
     fn connect_pin_instance(&mut self, pin_inst: &Self::PinInstId, net: Option<Self::NetId>) -> Option<Self::NetId> {
         pin_inst.connect_net(net)
-    }
-
-    fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
-        pin.internal_net()
-    }
-
-    fn net_of_pin_instance(&self, pin: &Self::PinInstId) -> Option<Self::NetId> {
-        pin.net()
-    }
-
-    fn each_circuit<'a>(&'a self) -> Box<dyn Iterator<Item=&Self::CircuitId> + 'a> {
-        Box::new(self.each_circuit())
-    }
-
-    fn each_pin<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
-        // Box::new(circuit.each_pin())
-        unimplemented!()
-    }
-
-    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=&Self::PinInstId> + 'a> {
-        // Box::new(circuit_instance.each_pin_instance())
-        unimplemented!()
-    }
-
-    fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
-        // Box::new(net.each_pin().map(|p| &p))
-        unimplemented!()
-    }
-
-    fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinInstId>> {
-        unimplemented!()
     }
 }

@@ -19,15 +19,10 @@
  */
 //! A net represents an electric potential such as the one provided by a metal wire.
 
-use super::netlist::*;
-use super::terminal_ref::*;
-use super::circuit::Circuit;
+use super::prelude::*;
 use std::rc::{Weak, Rc};
 use std::cell::RefCell;
 use std::collections::HashSet;
-use crate::netlist::circuit_instance::CircuitInstance;
-use crate::netlist::pin::Pin;
-use crate::netlist::pin_instance::PinInstance;
 use genawaiter::rc::Gen;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;

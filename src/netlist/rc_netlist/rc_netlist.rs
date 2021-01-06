@@ -48,7 +48,7 @@ pub type CircuitIndex = Index<Circuit>;
 pub(crate) type CircuitIndexGenerator = IndexGenerator<Circuit>;
 
 /// Collection of circuits.
-pub struct Netlist {
+pub struct RcNetlist {
     // /// Weak reference to the netlist itself. This must be created by the netlist wrapper.
     // self_reference: Weak<RefCell<NetlistImpl>>,
     /// Circuits defined in this circuit.
@@ -59,7 +59,7 @@ pub struct Netlist {
     circuit_index_generator: CircuitIndexGenerator,
 }
 
-impl fmt::Debug for Netlist {
+impl fmt::Debug for RcNetlist {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut circuits = self.each_circuit().collect_vec();
         circuits.sort_by_key(|c| c.id());
@@ -69,7 +69,7 @@ impl fmt::Debug for Netlist {
     }
 }
 
-impl fmt::Display for Netlist {
+impl fmt::Display for RcNetlist {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut circuits = self.each_circuit().collect_vec();
         circuits.sort_by_key(|c| c.id());
@@ -80,10 +80,10 @@ impl fmt::Display for Netlist {
     }
 }
 
-impl Netlist {
+impl RcNetlist {
     /// Create a new empty netlist.
     pub fn new() -> Self {
-        Netlist {
+        RcNetlist {
             circuits: Default::default(),
             circuits_by_name: Default::default(),
             circuit_index_generator: CircuitIndexGenerator::new(1), // Start at 1 because 0 is used as 'invalid'.
@@ -96,7 +96,7 @@ impl Netlist {
     /// ```rust
     /// use libreda_db::netlist::prelude::*;
     ///
-    /// let mut netlist = Netlist::new();
+    /// let mut netlist = RcNetlist::new();
     /// let pins = vec![
     ///     Pin::new("Input_A", Direction::Input),
     ///     Pin::new("Output_B", Direction::Output)
@@ -244,7 +244,7 @@ impl Netlist {
     }
 }
 
-impl Clone for Netlist {
+impl Clone for RcNetlist {
     fn clone(&self) -> Self {
         // Create new netlist.
         let mut netlist = Self::new();
@@ -313,7 +313,7 @@ fn test_create_pin() {
 
 #[test]
 fn test_netlist_create_circuit() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let pins = vec![Pin::new("A", Direction::Input)];
     let top = netlist.create_circuit("TOP", pins);
     assert_eq!(top.each_pin().len(), 1);
@@ -323,7 +323,7 @@ fn test_netlist_create_circuit() {
 #[test]
 fn test_netlist_remove_circuit() {
     // Remove a circuit without any instances.
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let pins = vec![Pin::new("A", Direction::Input)];
     {
         let top = netlist.create_circuit("TOP", pins);
@@ -334,7 +334,7 @@ fn test_netlist_remove_circuit() {
 
 #[test]
 fn test_netlist_create_net() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let pins = vec![Pin::new("A", Direction::Input)];
     let top = netlist.create_circuit("TOP", pins);
 
@@ -349,7 +349,7 @@ fn test_netlist_create_net() {
 
 #[test]
 fn test_netlist_connect_pin() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let pins = vec![Pin::new("TOP_A", Direction::Input)];
     let top = netlist.create_circuit("TOP", pins);
     let pins = vec![Pin::new("SUB_A", Direction::Input)];
@@ -373,7 +373,7 @@ fn test_netlist_connect_pin() {
 
 #[test]
 fn test_netlist_circuit_remove_net() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let pins = vec![Pin::new("TOP_A", Direction::Input)];
     let top = netlist.create_circuit("TOP", pins);
     let pins = vec![Pin::new("SUB_A", Direction::Input)];
@@ -408,7 +408,7 @@ fn test_netlist_circuit_remove_net() {
 #[test]
 fn test_netlist_clone() {
     let netlist = {
-        let mut netlist = Netlist::new();
+        let mut netlist = RcNetlist::new();
         let pins = vec![Pin::new("TOP_A", Direction::Input)];
         let top = netlist.create_circuit("TOP", pins);
         let pins = vec![Pin::new("SUB_A", Direction::Input)];
@@ -446,7 +446,7 @@ fn test_netlist_clone() {
     assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
 }
 
-impl NetlistBase for Netlist {
+impl NetlistBase for RcNetlist {
     type NameType = String;
     type PinId = Rc<Pin>;
     type PinInstId = Rc<PinInstance>;
@@ -456,13 +456,13 @@ impl NetlistBase for Netlist {
     type NetId = Rc<Net>;
 
     fn new() -> Self {
-        Netlist::new()
+        RcNetlist::new()
     }
 
     fn circuit_by_name<N: ?Sized>(&self, name: &N) -> Option<Rc<Circuit>>
         where Self::NameType: Borrow<N>,
               N: Hash + Eq {
-        Netlist::circuit_by_name(self, name)
+        RcNetlist::circuit_by_name(self, name)
     }
 
     fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N)
@@ -524,11 +524,11 @@ impl NetlistBase for Netlist {
     }
 
     fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CircuitId) -> () {
-        Netlist::each_circuit(self).cloned().for_each(f)
+        RcNetlist::each_circuit(self).cloned().for_each(f)
     }
 
     fn each_circuit(&self) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
-        Box::new(Netlist::each_circuit(self).cloned())
+        Box::new(RcNetlist::each_circuit(self).cloned())
     }
 
     fn for_each_instance<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
@@ -574,16 +574,16 @@ impl NetlistBase for Netlist {
     }
 }
 
-impl NetlistEdit for Netlist {
+impl NetlistEdit for RcNetlist {
     fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CircuitId {
         let pins = pins.into_iter()
             .map(|(name, direction)| Pin::new(name, direction))
             .collect();
-        Netlist::create_circuit(self, name, pins)
+        RcNetlist::create_circuit(self, name, pins)
     }
 
     fn remove_circuit(&mut self, circuit_id: &Self::CircuitId) {
-        Netlist::remove_circuit(self, circuit_id)
+        RcNetlist::remove_circuit(self, circuit_id)
     }
 
     fn create_circuit_instance(&mut self, parent_circuit: &Self::CircuitId,

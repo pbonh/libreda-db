@@ -18,11 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-//! Data structures for representation of circuit-level netlists.
+//! The `prelude` helps to import most commonly used modules.
 
-pub mod prelude;
-pub mod io;
-pub mod rc_netlist;
-pub mod hashmap_netlist;
-pub mod direction;
-pub mod traits;
+pub use crate::netlist::prelude::Direction;
+pub use super::rc_netlist::*;
+pub use super::net::*;
+pub use super::circuit::*;
+pub use super::circuit_instance::*;
+pub use super::pin::*;
+pub use super::pin_instance::*;
+pub use super::port::*;
+pub use super::terminal_ref::*;

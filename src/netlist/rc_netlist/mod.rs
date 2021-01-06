@@ -1,7 +1,8 @@
+
 /*
  * Copyright (c) 2020-2020 Thomas Kramer.
  *
- * This file is part of LibrEDA 
+ * This file is part of LibrEDA
  * (see https://codeberg.org/libreda).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,15 +18,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//! A port is a multi-pin input or output connection of a circuit.
 
-use super::prelude::Pin;
-use std::rc::{Rc, Weak};
-use crate::netlist::circuit::Circuit;
+//! Data structures for representation of circuit-level netlists.
 
-/// A port is a group of pins that are treated as a multi-wire signal.
-#[derive(Clone, Debug)]
-pub struct Port {
-    parent_circuit: Weak<Circuit>,
-    pins: Vec<Rc<Pin>>
-}
+pub mod rc_netlist;
+pub mod prelude;
+pub mod circuit;
+pub mod circuit_instance;
+pub mod net;
+pub mod port;
+pub mod pin;
+pub mod pin_instance;
+pub mod terminal_ref;

@@ -6,7 +6,7 @@ use itertools::Itertools;
 // Test circuit equality.
 #[test]
 fn test_circuit_eq() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let a = netlist.create_circuit("a", vec![]);
     let b = netlist.create_circuit("b", vec![]);
     assert_eq!(a.clone(), a.clone());
@@ -19,7 +19,7 @@ fn test_circuit_eq() {
 #[test]
 #[should_panic(expected = "Cannot create recursive instances.")]
 fn test_circuit_no_recursion_1() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![]);
     // This should fail:
     let _top_inst = top.create_circuit_instance(&top, Some("top_inst"));
@@ -28,7 +28,7 @@ fn test_circuit_no_recursion_1() {
 #[test]
 #[should_panic(expected = "Cannot create recursive instances.")]
 fn test_circuit_no_recursion_2() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![]);
     let sub = netlist.create_circuit("sub", vec![]);
     let _sub_inst = top.create_circuit_instance(&sub, Some("sub_inst"));
@@ -38,7 +38,7 @@ fn test_circuit_no_recursion_2() {
 
 #[test]
 fn test_create_and_remove_instance() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![]);
     let sub = netlist.create_circuit("sub", vec![]);
     assert_ne!(top.id(), sub.id());
@@ -66,7 +66,7 @@ fn test_create_and_remove_instance() {
 
 #[test]
 fn test_dependent_circuits() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![]);
     let sub = netlist.create_circuit("sub", vec![]);
     let sub_inst = top.create_circuit_instance(&sub, Some("sub_inst"));
@@ -85,7 +85,7 @@ fn test_dependent_circuits() {
 
 #[test]
 fn test_simple_net() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![Pin::new_input("A")]);
     let a = netlist.create_circuit("a", vec![Pin::new_input("A")]);
     let b = netlist.create_circuit("b", vec![Pin::new_input("A")]);
@@ -124,7 +124,7 @@ fn test_simple_net() {
 
 #[test]
 fn test_rename_net() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![Pin::new_input("A")]);
 
     let net1 = top.create_net(Some("Net1"));
@@ -146,7 +146,7 @@ fn test_rename_net() {
 
 #[test]
 fn test_flatten_circuit_instance() {
-    let mut netlist = Netlist::new();
+    let mut netlist = RcNetlist::new();
     let top = netlist.create_circuit("top", vec![Pin::new_input("A")]);
     let a = netlist.create_circuit("a", vec![Pin::new_input("A")]);
     let b = netlist.create_circuit("b", vec![Pin::new_input("A")]);

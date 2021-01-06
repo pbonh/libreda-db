@@ -23,7 +23,7 @@ use std::cell::{RefCell, Cell};
 use std::rc::{Weak, Rc};
 use std::hash::{Hash, Hasher};
 use std::fmt;
-use crate::netlist::prelude::*;
+use super::prelude::*;
 
 /// Definition of a pin into a circuit.
 /// TODO: Make multi-bit capable.

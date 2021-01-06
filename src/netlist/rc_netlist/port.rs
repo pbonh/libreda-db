@@ -17,12 +17,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+//! A port is a multi-pin input or output connection of a circuit.
 
-//! Data structures for representation of circuit-level netlists.
+use super::prelude::{Circuit, Pin};
+use std::rc::{Rc, Weak};
 
-pub mod prelude;
-pub mod io;
-pub mod rc_netlist;
-pub mod hashmap_netlist;
-pub mod direction;
-pub mod traits;
+/// A port is a group of pins that are treated as a multi-wire signal.
+#[derive(Clone, Debug)]
+pub struct Port {
+    parent_circuit: Weak<Circuit>,
+    pins: Vec<Rc<Pin>>
+}

@@ -20,7 +20,7 @@
 //! Input and output interface definitions for netlists.
 
 use std::io::{Read, Write};
-use crate::netlist::traits::{NetlistEditTrait, NetlistTrait};
+use crate::netlist::traits::{NetlistEdit, NetlistBase};
 
 /// Read a netlist from a byte stream.
 pub trait NetlistReader {
@@ -28,10 +28,10 @@ pub trait NetlistReader {
     type Error;
 
     /// Read a netlist from a byte stream and populate the netlist data structure.
-    fn read_into_netlist<R: Read, N: NetlistEditTrait>(&self, reader: &mut R, netlist: &mut N) -> Result<(), Self::Error>;
+    fn read_into_netlist<R: Read, N: NetlistEdit>(&self, reader: &mut R, netlist: &mut N) -> Result<(), Self::Error>;
 
     /// Read a netlist from a byte stream.
-    fn read_netlist<R: Read, N: NetlistEditTrait>(&self, reader: &mut R) -> Result<N, Self::Error> {
+    fn read_netlist<R: Read, N: NetlistEdit>(&self, reader: &mut R) -> Result<N, Self::Error> {
         let mut netlist = N::new();
         self.read_into_netlist(reader, &mut netlist)?;
         Ok(netlist)
@@ -44,5 +44,5 @@ pub trait NetlistWriter {
     type Error;
 
     /// Write the netlist data structure to a byte stream.
-    fn write_netlist<W: Write, N: NetlistTrait>(&self, writer: &mut W, netlist: &N) -> Result<(), Self::Error>;
+    fn write_netlist<W: Write, N: NetlistBase>(&self, writer: &mut W, netlist: &N) -> Result<(), Self::Error>;
 }

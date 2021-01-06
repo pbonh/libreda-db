@@ -124,14 +124,17 @@ impl<C: CoordinateType> Cell<C> {
     }
 
     /// Remove all instances from this cell.
-    pub fn clear_insts(&self) -> () {
-        self.cell_instances.borrow_mut().clear();
+    pub fn clear_instances(&self) -> () {
+        let all_instances: Vec<_> = self.cell_instances.borrow().values().cloned().collect();
+        for inst in all_instances {
+            self.remove_cell_instance(&inst)
+        }
     }
 
     /// Remove all shapes and instances from this cell.
     pub fn clear(&self) -> () {
         self.clear_shapes();
-        self.clear_insts();
+        self.clear_instances();
     }
 
     /// Remove all shapes from the given layer.

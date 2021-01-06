@@ -33,7 +33,7 @@ use itertools::Itertools;
 use std::ops::Deref;
 
 use log::debug;
-use crate::netlist::traits::{NetlistTrait, NetlistEditTrait};
+use crate::netlist::traits::{NetlistBase, NetlistEdit};
 
 /// Data type used for identifying a circuit instance (sub circuit).
 pub type CircuitInstIndex = Index<CircuitInstance>;
@@ -446,9 +446,8 @@ fn test_netlist_clone() {
     assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
 }
 
-impl NetlistTrait for Netlist {
+impl NetlistBase for Netlist {
     type NameType = String;
-    type PinType = ();
     type PinId = Rc<Pin>;
     type PinInstId = Rc<PinInstance>;
     type TerminalId = ();
@@ -464,6 +463,31 @@ impl NetlistTrait for Netlist {
         where Self::NameType: Borrow<N>,
               N: Hash + Eq {
         Netlist::circuit_by_name(self, name)
+    }
+
+    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N)
+        -> Option<Self::CircuitInstId> where Self::NameType: Borrow<N> {
+        parent_circuit.circuit_instance_by_name(name)
+    }
+
+    fn template_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
+        circuit_instance.circuit_ref().upgrade().unwrap()
+    }
+
+    fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId {
+        pin_instance.pin().clone()
+    }
+
+    fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
+        circuit_instance.parent_circuit().upgrade().unwrap()
+    }
+
+    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CircuitId {
+        pin.parent_circuit().upgrade().unwrap()
+    }
+
+    fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CircuitInstId {
+        pin_inst.circuit_instance().upgrade().unwrap()
     }
 
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
@@ -482,13 +506,45 @@ impl NetlistTrait for Netlist {
         parent_circuit.net_one()
     }
 
-    fn each_circuit<'a>(&'a self) -> Box<dyn Iterator<Item=&Self::CircuitId> + 'a> {
-        Box::new(self.each_circuit())
+    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent: &Self::CircuitId, name: &N) -> Option<Self::NetId>
+        where Self::NameType: Borrow<N> {
+        parent.net_by_name(name)
     }
 
-    fn each_pin<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
-        // Box::new(circuit.each_pin())
+    fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType> {
+        net.name()
+    }
+
+    fn circuit_name(&self, circuit: &Self::CircuitId) -> Self::NameType {
+        circuit.name().clone()
+    }
+
+    fn circuit_instance_name(&self, circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType> {
+        circuit_inst.name().cloned()
+    }
+
+    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CircuitId) -> () {
+        Netlist::each_circuit(self).cloned().for_each(f)
+    }
+
+    fn each_circuit(&self) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
+        Box::new(Netlist::each_circuit(self).cloned())
+    }
+
+    fn for_each_instance<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
+        circuit.each_instance().for_each(f)
+    }
+
+    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
         unimplemented!()
+    }
+
+    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
+        unimplemented!()
+    }
+
+    fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> () {
+        circuit.each_pin().cloned().for_each(f)
     }
 
     /// Get a `Vec` with the IDs of all pins of this circuit.
@@ -496,9 +552,8 @@ impl NetlistTrait for Netlist {
         circuit.each_pin_vec()
     }
 
-    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=&Self::PinInstId> + 'a> {
-        // Box::new(circuit_instance.each_pin_instance())
-        unimplemented!()
+    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CircuitInstId, f: F) where F: FnMut(Self::PinInstId) -> () {
+        circuit_inst.each_pin_instance().cloned().for_each(f)
     }
 
     /// Get a `Vec` with the IDs of all pin instance of this circuit instance.
@@ -506,17 +561,20 @@ impl NetlistTrait for Netlist {
         circuit_instance.each_pin_instance_vec()
     }
 
-    fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinId> + 'a> {
-        // Box::new(net.each_pin().map(|p| &p))
-        unimplemented!()
+    fn for_each_internal_net<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::NetId) -> () {
+        circuit.each_net().for_each(f)
     }
 
-    fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=&Self::PinInstId>> {
-        unimplemented!()
+    fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> () {
+        net.each_pin().for_each(f)
+    }
+
+    fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinInstId) -> () {
+        net.each_pin_instance().for_each(f)
     }
 }
 
-impl NetlistEditTrait for Netlist {
+impl NetlistEdit for Netlist {
     fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CircuitId {
         let pins = pins.into_iter()
             .map(|(name, direction)| Pin::new(name, direction))
@@ -540,7 +598,7 @@ impl NetlistEditTrait for Netlist {
             .remove_circuit_instance(circuit_inst)
     }
 
-    fn create_net(&mut self, parent: Self::CircuitId, name: Option<Self::NameType>) -> Self::NetId {
+    fn create_net(&mut self, parent: &Self::CircuitId, name: Option<Self::NameType>) -> Self::NetId {
         parent.create_net(name)
     }
 

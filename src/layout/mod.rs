@@ -29,3 +29,4 @@ pub mod io;
 pub mod layout;
 pub mod repetition;
 pub mod errors;
+pub mod traits;

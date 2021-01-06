@@ -27,6 +27,8 @@ use std::hash::Hash;
 use super::traits::NetlistBase;
 use crate::netlist::direction::Direction;
 use crate::netlist::traits::NetlistEdit;
+use iron_shapes::point::Deref;
+use std::fmt::{Formatter, Debug};
 
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -69,12 +71,75 @@ impl From<PinInstId> for TerminalId {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NetId(usize);
 
+/// Resource counted string, used for names.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct RcString {
+    string: Rc<String>
+}
+
+impl std::fmt::Display for RcString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self.string.as_str(), f)
+    }
+}
+
+impl RcString {
+    /// Create a new resource counted string.
+    pub fn new(string: String) -> Self {
+        RcString { string: Rc::new(string) }
+    }
+}
+
+impl Deref for RcString {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        self.string.deref()
+    }
+}
+
+impl Borrow<str> for RcString {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Borrow<String> for RcString {
+    fn borrow(&self) -> &String {
+        self.string.deref()
+    }
+}
+
+impl From<String> for RcString {
+    fn from(string: String) -> Self {
+        Self::new(string)
+    }
+}
+
+impl From<Rc<String>> for RcString {
+    fn from(string: Rc<String>) -> Self {
+        Self { string }
+    }
+}
+
+impl From<&str> for RcString {
+    fn from(s: &str) -> Self {
+        Self::new(s.to_string())
+    }
+}
+
+impl Into<String> for RcString {
+    fn into(self) -> String {
+        self.string.to_string()
+    }
+}
+
 /// A circuit is defined by an interface (pins) and
 /// a content which consists of interconnected circuit instances.
 #[derive(Debug, Clone)]
 pub struct Circuit {
     /// Name of the circuit.
-    pub name: String,
+    pub name: RcString,
     /// Pin definitions.
     pub pins: Vec<PinId>,
     /// Instances inside this circuit.
@@ -83,6 +148,8 @@ pub struct Circuit {
     pub references: HashSet<CircuitInstId>,
     /// All circuits that have instances of this circuit.
     pub parents: HashSet<CircuitId>,
+    /// Nets IDs stored by name.
+    nets_by_name: HashMap<RcString, NetId>,
     /// Logic constant LOW net.
     net_low: NetId,
     /// Logic constant HIGH net.
@@ -104,7 +171,7 @@ pub struct CircuitInst {
 #[derive(Debug, Clone)]
 pub struct Pin {
     /// Name of the pin.
-    pub name: String,
+    pub name: RcString,
     /// Signal type/direction of the pin.
     pub direction: Direction,
     /// Parent circuit of this pin.
@@ -128,7 +195,7 @@ pub struct PinInst {
 #[derive(Debug, Clone)]
 pub struct Net {
     /// Name of the net.
-    pub name: Option<Rc<String>>,
+    pub name: Option<RcString>,
     /// Parent circuit of the net.
     pub parent: CircuitId,
     /// Pins connected to this net.
@@ -141,10 +208,9 @@ pub struct Net {
 #[derive(Debug, Default)]
 pub struct HashMapNetlist {
     circuits: HashMap<CircuitId, Circuit>,
-    circuits_by_name: HashMap<String, CircuitId>,
+    circuits_by_name: HashMap<RcString, CircuitId>,
     circuit_instances: HashMap<CircuitInstId, CircuitInst>,
     nets: HashMap<NetId, Net>,
-    nets_by_name: HashMap<Rc<String>, NetId>,
     pins: HashMap<PinId, Pin>,
     pin_instances: HashMap<PinInstId, PinInst>,
 
@@ -209,7 +275,7 @@ impl HashMapNetlist {
     }
 
     /// Append a new pin to the `parent` circuit.
-    fn create_pin(&mut self, parent: CircuitId, name: String, direction: Direction) -> PinId {
+    fn create_pin(&mut self, parent: CircuitId, name: RcString, direction: Direction) -> PinId {
         let id = PinId(HashMapNetlist::next_id_counter(&mut self.id_counter_pin));
         let pin = Pin {
             name,
@@ -284,7 +350,7 @@ impl HashMapNetlist {
 }
 
 impl NetlistBase for HashMapNetlist {
-    type NameType = String;
+    type NameType = RcString;
     type PinId = PinId;
     type PinInstId = PinInstId;
     type TerminalId = TerminalId;
@@ -303,8 +369,9 @@ impl NetlistBase for HashMapNetlist {
         self.circuits_by_name.get(name).copied()
     }
 
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N)
-                                                       -> Option<Self::CircuitInstId> where Self::NameType: Borrow<N> {
+    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, _parent_circuit: &Self::CircuitId, _name: &N)
+                                                       -> Option<Self::CircuitInstId>
+        where Self::NameType: Borrow<N> {
         unimplemented!()
     }
 
@@ -347,19 +414,20 @@ impl NetlistBase for HashMapNetlist {
         self.circuit(parent_circuit).net_high
     }
 
-    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::NetId> where Self::NameType: Borrow<N> {
-        unimplemented!()
+    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::NetId>
+        where Self::NameType: Borrow<N> {
+        self.circuit(parent_circuit).nets_by_name.get(name).copied()
     }
 
     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType> {
-        self.net(net).name.as_ref().map(|s| (s as &String).clone())
+        self.net(net).name.clone()
     }
 
     fn circuit_name(&self, circuit: &Self::CircuitId) -> Self::NameType {
         self.circuit(circuit).name.clone()
     }
 
-    fn circuit_instance_name(&self, circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType> {
+    fn circuit_instance_name(&self, _circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType> {
         None // Circuit instance don't have a name.
     }
 
@@ -378,11 +446,11 @@ impl NetlistBase for HashMapNetlist {
             .copied().for_each(f)
     }
 
-    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
+    fn each_circuit_dependency<'a>(&'a self, _circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
         unimplemented!()
     }
 
-    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
+    fn each_dependent_circuit<'a>(&'a self, _circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
         unimplemented!()
     }
 
@@ -434,7 +502,7 @@ impl NetlistEdit for HashMapNetlist {
 
         // Create pins.
         let pins = pins.into_iter()
-            .map(|(name, direction)| self.create_pin(id, name.into(), direction))
+            .map(|(name, direction)| self.create_pin(id, name, direction))
             .collect();
 
         let circuit = Circuit {
@@ -443,13 +511,22 @@ impl NetlistEdit for HashMapNetlist {
             instances: Default::default(),
             references: Default::default(),
             parents: Default::default(),
+            nets_by_name: Default::default(),
             // Create LOW and HIGH nets.
-            net_low: self.create_net(&id, None),
-            net_high: self.create_net(&id, None),
+            net_low: NetId(0),
+            net_high: NetId(0),
         };
 
         self.circuits.insert(id, circuit);
         self.circuits_by_name.insert(name, id);
+
+        // Create LOW and HIGH nets.
+        let net_low = self.create_net(&id, None);
+        let net_high = self.create_net(&id, None);
+
+        let c = self.circuit_mut(&id);
+        c.net_low = net_low;
+        c.net_high = net_high;
 
         id
     }
@@ -541,7 +618,8 @@ impl NetlistEdit for HashMapNetlist {
 
     /// Create a new net in the `parent` circuit.
     fn create_net(&mut self, parent: &CircuitId, name: Option<Self::NameType>) -> NetId {
-        let name = name.map(|name| Rc::new(name));
+        assert!(self.circuits.contains_key(parent));
+
         let id = NetId(HashMapNetlist::next_id_counter(&mut self.id_counter_net));
         let net = Net {
             name: name.clone(),
@@ -551,7 +629,7 @@ impl NetlistEdit for HashMapNetlist {
         };
         self.nets.insert(id, net);
         if let Some(name) = name {
-            self.nets_by_name.insert(name, id);
+            self.circuit_mut(parent).nets_by_name.insert(name, id);
         }
         id
     }
@@ -563,7 +641,7 @@ impl NetlistEdit for HashMapNetlist {
 
         // Check if a net with this name already exists.
         if let Some(name) = &new_name {
-            if let Some(other) = self.nets_by_name.get(name) {
+            if let Some(other) = self.circuit(parent_circuit).nets_by_name.get(name) {
                 if other != net_id {
                     panic!("Net name already exists.")
                 } else {
@@ -576,16 +654,15 @@ impl NetlistEdit for HashMapNetlist {
 
         // Remove the old name mapping.
         if let Some(old_name) = maybe_old_name {
-            self.nets_by_name.remove(&old_name);
+            self.circuit_mut(parent_circuit).nets_by_name.remove(&old_name);
         }
 
         // Add the new name mapping.
         if let Some(new_name) = new_name {
-            let new_name = Rc::new(new_name);
             self.nets.get_mut(net_id)
                 .expect("Net not found.")
                 .name.replace(new_name.clone());
-            self.nets_by_name.insert(new_name, *net_id);
+            self.circuit_mut(parent_circuit).nets_by_name.insert(new_name, *net_id);
         }
     }
 
@@ -593,6 +670,7 @@ impl NetlistEdit for HashMapNetlist {
     fn remove_net(&mut self, net: &NetId) {
         let pins = self.pins_for_net(net).collect_vec();
         let pin_insts = self.pins_instances_for_net(net).collect_vec();
+        let parent_circuit = self.net(net).parent;
 
         for p in pins {
             self.disconnect_pin(&p);
@@ -603,7 +681,7 @@ impl NetlistEdit for HashMapNetlist {
         let name = self.net(&net).name.clone();
         self.nets.remove(&net).unwrap();
         if let Some(name) = &name {
-            self.nets_by_name.remove(name).unwrap();
+            self.circuit_mut(&parent_circuit).nets_by_name.remove(name).unwrap();
         }
     }
 
@@ -638,32 +716,32 @@ impl NetlistEdit for HashMapNetlist {
 #[test]
 fn test_create_populated_netlist() {
     let mut netlist = HashMapNetlist::new();
-    let top = netlist.create_circuit("TOP".to_string(),
+    let top = netlist.create_circuit("TOP".into(),
                                      vec![
-                                         ("A".to_string(), Direction::Input),
-                                         ("B".to_string(), Direction::Output)
+                                         ("A".into(), Direction::Input),
+                                         ("B".into(), Direction::Output)
                                      ],
     );
     assert_eq!(Some(top), netlist.circuit_by_name("TOP"));
 
-    let sub_a = netlist.create_circuit("SUB_A".to_string(),
+    let sub_a = netlist.create_circuit("SUB_A".into(),
                                        vec![
-                                           ("A".to_string(), Direction::Input),
-                                           ("B".to_string(), Direction::Output)
+                                           ("A".into(), Direction::Input),
+                                           ("B".into(), Direction::Output)
                                        ],
     );
-    let sub_b = netlist.create_circuit("SUB_B".to_string(),
+    let sub_b = netlist.create_circuit("SUB_B".into(),
                                        vec![
-                                           ("A".to_string(), Direction::Input),
-                                           ("B".to_string(), Direction::Output)
+                                           ("A".into(), Direction::Input),
+                                           ("B".into(), Direction::Output)
                                        ],
     );
 
     let inst_a = netlist.create_circuit_instance(&top, &sub_a, None);
     let _inst_b = netlist.create_circuit_instance(&top, &sub_b, None);
 
-    let net_a = netlist.create_net(&top, Some("NetA".to_string()));
-    let net_b = netlist.create_net(&top, Some("NetB".to_string()));
+    let net_a = netlist.create_net(&top, Some("NetA".into()));
+    let net_b = netlist.create_net(&top, Some("NetB".into()));
 
     let pins_a = netlist.each_pin_instance(&inst_a).collect_vec();
     let pins_top = netlist.each_pin(&top).collect_vec();

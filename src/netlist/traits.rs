@@ -69,6 +69,9 @@ pub trait NetlistBase {
     /// Get the signal direction of the pin.
     fn pin_direction(&self, pin: &Self::PinId) -> Direction;
 
+    /// Get the name of the pin.
+    fn pin_name(&self, pin: &Self::PinId) -> Self::NameType;
+
     /// Get the ID of the parent circuit of this instance.
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId;
 

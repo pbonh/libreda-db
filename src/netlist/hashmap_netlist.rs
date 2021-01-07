@@ -323,6 +323,10 @@ impl NetlistBase for HashMapNetlist {
         self.pin(pin).direction
     }
 
+    fn pin_name(&self, pin: &Self::PinId) -> Self::NameType {
+        self.pin(pin).name.clone()
+    }
+
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
         self.circuit_inst(circuit_instance).parent
     }

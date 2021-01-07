@@ -482,6 +482,10 @@ impl NetlistBase for RcNetlist {
         pin.direction()
     }
 
+    fn pin_name(&self, pin: &Self::PinId) -> Self::NameType {
+        pin.name().to_string()
+    }
+
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
         circuit_instance.parent_circuit().upgrade().unwrap()
     }

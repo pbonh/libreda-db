@@ -27,6 +27,7 @@ use std::hash::Hash;
 use super::traits::NetlistBase;
 use crate::netlist::direction::Direction;
 use crate::netlist::traits::NetlistEdit;
+use crate::rc_string::RcString;
 use iron_shapes::point::Deref;
 use std::fmt::{Formatter, Debug};
 
@@ -70,69 +71,6 @@ impl From<PinInstId> for TerminalId {
 /// Net identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NetId(usize);
-
-/// Resource counted string, used for names.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RcString {
-    string: Rc<String>
-}
-
-impl std::fmt::Display for RcString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(self.string.as_str(), f)
-    }
-}
-
-impl RcString {
-    /// Create a new resource counted string.
-    pub fn new(string: String) -> Self {
-        RcString { string: Rc::new(string) }
-    }
-}
-
-impl Deref for RcString {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        self.string.deref()
-    }
-}
-
-impl Borrow<str> for RcString {
-    fn borrow(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl Borrow<String> for RcString {
-    fn borrow(&self) -> &String {
-        self.string.deref()
-    }
-}
-
-impl From<String> for RcString {
-    fn from(string: String) -> Self {
-        Self::new(string)
-    }
-}
-
-impl From<Rc<String>> for RcString {
-    fn from(string: Rc<String>) -> Self {
-        Self { string }
-    }
-}
-
-impl From<&str> for RcString {
-    fn from(s: &str) -> Self {
-        Self::new(s.to_string())
-    }
-}
-
-impl Into<String> for RcString {
-    fn into(self) -> String {
-        self.string.to_string()
-    }
-}
 
 /// A circuit is defined by an interface (pins) and
 /// a content which consists of interconnected circuit instances.

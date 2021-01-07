@@ -30,6 +30,7 @@ pub mod prelude;
 pub mod netlist;
 pub mod layout;
 pub mod index;
+pub mod rc_string;
 
 // Private modules.
 // mod refset; // Not currently used.

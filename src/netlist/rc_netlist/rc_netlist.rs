@@ -478,6 +478,10 @@ impl NetlistBase for RcNetlist {
         pin_instance.pin().clone()
     }
 
+    fn pin_direction(&self, pin: &Self::PinId) -> Direction {
+        pin.direction()
+    }
+
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
         circuit_instance.parent_circuit().upgrade().unwrap()
     }

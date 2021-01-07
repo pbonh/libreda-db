@@ -20,7 +20,6 @@
 //! Alternative netlist implementation. Not currently used, nor complete.
 
 use std::collections::{HashSet, HashMap};
-use std::rc::Rc;
 use itertools::Itertools;
 use std::borrow::Borrow;
 use std::hash::Hash;
@@ -28,8 +27,7 @@ use super::traits::NetlistBase;
 use crate::netlist::direction::Direction;
 use crate::netlist::traits::NetlistEdit;
 use crate::rc_string::RcString;
-use iron_shapes::point::Deref;
-use std::fmt::{Formatter, Debug};
+use std::fmt::Debug;
 
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -319,6 +317,10 @@ impl NetlistBase for HashMapNetlist {
 
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId {
         self.pin_inst(pin_instance).pin
+    }
+
+    fn pin_direction(&self, pin: &Self::PinId) -> Direction {
+        self.pin(pin).direction
     }
 
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {

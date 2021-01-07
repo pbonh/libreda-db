@@ -29,7 +29,7 @@ use std::collections::HashMap;
 /// Most basic trait of a netlist.
 pub trait NetlistBase {
     /// Type for names of circuits, instances, pins, etc.
-    type NameType: Eq + Hash + From<String> + Clone
+    type NameType: Eq + Hash + From<String> + Into<String> + Clone
     + Borrow<String> + Borrow<str>
     + std::fmt::Display + std::fmt::Debug;
     /// Pin identifier type.
@@ -65,6 +65,9 @@ pub trait NetlistBase {
 
     /// Get the ID of the template pin of this pin instance.
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId;
+
+    /// Get the signal direction of the pin.
+    fn pin_direction(&self, pin: &Self::PinId) -> Direction;
 
     /// Get the ID of the parent circuit of this instance.
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId;

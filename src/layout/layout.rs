@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2020 Thomas Kramer.
+ * Copyright (c) 2020-2021 Thomas Kramer.
  *
  * This file is part of LibrEDA 
  * (see https://codeberg.org/libreda).

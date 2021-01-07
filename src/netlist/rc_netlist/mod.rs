@@ -1,8 +1,8 @@
 
 /*
- * Copyright (c) 2020-2020 Thomas Kramer.
+ * Copyright (c) 2020-2021 Thomas Kramer.
  *
- * This file is part of LibrEDA
+ * This file is part of LibrEDA 
  * (see https://codeberg.org/libreda).
  *
  * This program is free software: you can redistribute it and/or modify

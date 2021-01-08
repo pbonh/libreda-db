@@ -19,10 +19,21 @@
  */
 //! This crate is a database for VLSI physical design. The core components are data structures for efficient
 //! representation of geometries and circuit netlists for chip layouts.
+//!
+//! # Core parts
+//!
+//! * Two dimensional geometrical primitives (implemented by the [`iron_shapes`] crate)
+//! * [`Netlist`]s
+//! * [`Layout`]
+//!
+//! [`iron_shapes`]: iron_shapes
+//! [`Netlist`]: netlist
+//! [`RcNetlist`]: netlist::rc_netlist::rc_netlist::RcNetlist
+//! [`Layout`]: layout
 
 #![deny(missing_docs)]
 
-// Re-exports.
+/// Re-exports: Crate for geometric primitives (points, polygons, ...).
 pub use iron_shapes;
 
 // Public modules.
@@ -31,8 +42,9 @@ pub mod netlist;
 pub mod layout;
 pub mod index;
 pub mod rc_string;
+pub mod property_storage;
 
 // Private modules.
 // mod refset; // Not currently used.
 // mod ref_wrapper; // Not currently used.
-pub mod property_storage;
+

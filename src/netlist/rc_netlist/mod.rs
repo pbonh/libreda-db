@@ -20,6 +20,10 @@
  */
 
 //! Data structures for representation of circuit-level netlists.
+//!
+//! This implementation of a netlist emulates an object oriented approach.
+//! Components of the netlist such as circuits, circuit instances, pins and nets are represented
+//! by resource counted structs. Interior mutability is heavily used.
 
 pub mod rc_netlist;
 pub mod prelude;

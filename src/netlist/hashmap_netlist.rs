@@ -19,6 +19,9 @@
  */
 //! Alternative netlist implementation. Not currently used, nor complete.
 
+// TODO: Remove this when fully implemented.
+#![allow(unused_variables)]
+
 use std::collections::{HashSet, HashMap};
 use itertools::Itertools;
 use std::borrow::Borrow;

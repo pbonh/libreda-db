@@ -17,7 +17,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 //! Data structures for representation of netlists.
+
+// TODO: Remove this when fully implemented.
+#![allow(unused_variables)]
 
 use super::prelude::*;
 use crate::index::{Index, IndexGenerator};

@@ -1,7 +1,6 @@
 
 use std::fs::File;
 use std::io::Read;
-use std::io::BufReader;
 
 /// Read a whole file into a byte vector.
 fn read_file(path: &str) -> Vec<u8> {

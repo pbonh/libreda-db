@@ -17,7 +17,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 //! Input and output interface definitions for netlists.
+//!
+//! Implementations for the various netlist formats are located in other crates.
 
 use std::io::{Read, Write};
 use crate::netlist::traits::{NetlistEdit, NetlistBase};

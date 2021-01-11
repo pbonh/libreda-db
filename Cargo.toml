@@ -5,6 +5,9 @@ authors = ["Thomas Kramer <code@tkramer.ch>"]
 edition = "2018"
 license = "AGPLv3"
 description = "Layout and netlist datastructures for chip design."
+readme = "README.md"
+homepage = "https://libreda.org"
+repository = "https://codeberg.org/libreda/libreda-db"
 
 [dependencies]
 log = "0.4"

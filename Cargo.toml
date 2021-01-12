@@ -12,5 +12,6 @@ repository = "https://codeberg.org/libreda/libreda-db"
 [dependencies]
 log = "0.4"
 itertools = "0.10.0"
-iron-shapes = { path = "../iron-shapes" }
+#iron-shapes = { path = "../iron-shapes" }
+iron-shapes = { git = "https://codeberg.org/libreda/iron-shapes", tag = "0.0.1" }
 genawaiter = { version = "0.99.1", default-features = false }

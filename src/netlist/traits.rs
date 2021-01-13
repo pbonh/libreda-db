@@ -345,7 +345,7 @@ pub trait NetlistBase {
         let mut visited = HashSet::new();
         self.for_each_pin_instance_of_net(net, |pin_inst| {
             let inst = self.parent_of_pin_instance(&pin_inst);
-            if visited.contains(&inst) {
+            if !visited.contains(&inst) {
                 f(inst);
             } else {
                 visited.insert(inst);

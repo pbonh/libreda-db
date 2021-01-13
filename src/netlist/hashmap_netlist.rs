@@ -401,6 +401,14 @@ impl NetlistBase for HashMapNetlist {
         unimplemented!()
     }
 
+    fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
+        self.circuit(circuit).references.iter().copied().for_each(f)
+    }
+
+    fn each_reference<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + 'a> {
+        Box::new(self.circuit(circuit).references.iter().copied())
+    }
+
     fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> () {
         self.circuit(circuit).pins.iter().copied().for_each(f)
     }

@@ -108,6 +108,45 @@ impl<'a, N: NetlistBase> CircuitInstRef for DefaultCircuitInstRef<'a, N> {
 
 
 /// Most basic trait of a netlist.
+///
+/// ## Netlist component relations
+///
+/// A netlist consists of circuits which are templates for circuit instances.
+/// Each circuit may contain such instances of other circuits.
+///
+/// The following diagram illustrates how this composition graph can be traversed using the functions
+/// defined by `NetlistBase`.
+///
+/// ```txt
+///                          each_circuit_dependency
+///                      +---------------------------+
+///                      |                           |
+///                      +                           v
+///       +----------------+ each_dependent_circuit +------------------+
+///       |Circuit (Top)   |<----------------------+|Circuit (Sub)     |
+///       +----------------+                        +------------------+
+///       |+              ^|                        | ^   +            |
+///       ||each_instance ||                        | |   |            |
+///       ||              ||                        | |   |            |
+///       ||              |parent_circuit           | |   |            |
+///       ||              ||                        | |   |            |
+///       ||+-----------+ ||                        | |   |            |
+///  +--> |>|Inst1 (Sub)|-+|                        | |   |            |
+///  |    ||+-----------+  |                        | |   |            |
+///  |    ||               |                        | |   |            |
+///  |    ||               |                        +-|---|------------+
+///  |    ||               |                          |   |
+///  |    ||+-----------+  |  template_circuit        |   |
+///  +--> |>|Inst2 (Sub)|+----------------------------+   |
+///  |    | +-----------+  |                              |
+///  |    |                |                              |
+///  |    |                |                              |
+///  |    +----------------+                              |
+///  |                                                    |
+///  |                         each_reference             |
+///  +----------------------------------------------------+
+/// ```
+///
 pub trait NetlistBase {
     /// Type for names of circuits, instances, pins, etc.
     type NameType: Eq + Hash + From<String> + Into<String> + Clone
@@ -225,6 +264,22 @@ pub trait NetlistBase {
     /// Iterate over all circuits that hold instances of this `circuit`.
     fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a>;
 
+    /// Iterate over all instances of this `circuit`, i.e. instances that use this circuit as
+    /// a template.
+    fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> ();
+
+    /// Get a `Vec` with all circuit instances referencing this circuit.
+    fn each_reference_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitInstId> {
+        let mut v = Vec::new();
+        self.for_each_reference(circuit, |c| v.push(c.clone()));
+        v
+    }
+
+    /// Iterate over all instances of this `circuit`, i.e. instances that use this circuit as
+    /// a template.
+    fn each_reference<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + 'a> {
+        Box::new(self.each_reference_vec(circuit).into_iter())
+    }
 
     /// Call a function for each pin of the circuit.
     fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> ();
@@ -596,6 +651,25 @@ pub trait NetlistEdit
         // TODO: Clean-up.
         // self.purge_nets();
         // Remove unconnected instances.
+    }
+
+    /// Flatten all instances of this circuit by replacing them with their content.
+    /// Remove the circuit from the netlist afterwards.
+    /// For top level circuits this is equivalent to removing them.
+    fn flatten_circuit(&mut self, circuit: &Self::CircuitId) {
+        // TODO: Assert that the circuit lives in this netlist.
+        // Get all instances of the circuit.
+
+        // Flatten all instances of the circuit.
+        for r in self.each_reference_vec(circuit) {
+            self.flatten_circuit_instance(&r);
+        }
+
+        debug_assert_eq!(self.each_reference(circuit).count(), 0,
+                         "Circuit should not have any references anymore.");
+
+        // Remove the circuit.
+        self.remove_circuit(circuit);
     }
 
     /// Delete all unconnected nets in this circuit.

@@ -555,6 +555,10 @@ impl NetlistBase for RcNetlist {
         unimplemented!()
     }
 
+    fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
+        circuit.each_reference().for_each(f);
+    }
+
     fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> () {
         circuit.each_pin().cloned().for_each(f)
     }

@@ -47,7 +47,7 @@ use std::hash::{Hash, Hasher};
 
 /// Resource counted string, used for names.
 /// `RcString`s can be efficiently cloned.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct RcString {
     string: Rc<String>
 }

@@ -577,6 +577,18 @@ impl NetlistBase for RcNetlist {
         circuit.each_net().for_each(f)
     }
 
+    fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize {
+        circuit.num_instances()
+    }
+
+    fn num_circuits(&self) -> usize {
+        self.circuits.len()
+    }
+
+    fn num_pins(&self, circuit: &Self::CircuitId) -> usize {
+        circuit.pin_count()
+    }
+
     fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> () {
         net.each_pin().for_each(f)
     }

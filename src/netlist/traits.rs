@@ -23,7 +23,7 @@
 use std::hash::Hash;
 use crate::netlist::direction::Direction;
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A reference to a circuit.
 pub trait CircuitRef {
@@ -112,6 +112,7 @@ pub trait NetlistBase {
     /// Type for names of circuits, instances, pins, etc.
     type NameType: Eq + Hash + From<String> + Into<String> + Clone
     + Borrow<String> + Borrow<str>
+    + PartialOrd + Ord
     + std::fmt::Display + std::fmt::Debug;
     /// Pin identifier type.
     type PinId: Eq + Hash + Clone;
@@ -258,6 +259,7 @@ pub trait NetlistBase {
 
 
     /// Iterate over all external nets connected to the circuit instance.
+    /// A net might appear more than once.
     fn each_external_net<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
         Box::new(self.each_pin_instance(circuit_instance)
             .flat_map(move |pin_id| self.net_of_pin_instance(&pin_id)))
@@ -297,6 +299,15 @@ pub trait NetlistBase {
         self.num_net_pins(net) + self.num_net_pin_instances(net)
     }
 
+    /// Get the number of cell instances inside the `circuit`.
+    fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize;
+
+    /// Get the number of cells inside in this netlist.
+    fn num_circuits(&self) -> usize;
+
+    /// Get the number of pins of a circuit.
+    fn num_pins(&self, circuit: &Self::CircuitId) -> usize;
+
     /// Call a function for each pin connected to this net.
     fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> ();
 
@@ -327,6 +338,29 @@ pub trait NetlistBase {
     fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_of_net_vec(net).into_iter())
     }
+
+    /// Visit all circuit instances connected to this net.
+    /// An instance is touched not more than once.
+    fn for_each_circuit_instance_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(Self::CircuitInstId) -> () {
+        let mut visited = HashSet::new();
+        self.for_each_pin_instance_of_net(net, |pin_inst| {
+            let inst = self.parent_of_pin_instance(&pin_inst);
+            if visited.contains(&inst) {
+                f(inst);
+            } else {
+                visited.insert(inst);
+            }
+        })
+    }
+
+    /// Iterate over all circuit instances connected to this net.
+    /// An instance is touched not more than once.
+    fn each_circuit_instance_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::CircuitInstId> {
+        let mut v = Vec::new();
+        self.for_each_circuit_instance_of_net(net, |c| v.push(c.clone()));
+        v
+    }
+
 
     /// Return a reference to the circuit with this ID.
     fn circuit(&self, id: Self::CircuitId) -> Box<dyn CircuitRef<N=Self> + '_>

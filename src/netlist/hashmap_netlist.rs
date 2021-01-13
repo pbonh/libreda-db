@@ -423,6 +423,18 @@ impl NetlistBase for HashMapNetlist {
         unimplemented!()
     }
 
+    fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize {
+        self.circuit(circuit).instances.len()
+    }
+
+    fn num_circuits(&self) -> usize {
+        self.circuits.len()
+    }
+
+    fn num_pins(&self, circuit: &Self::CircuitId) -> usize {
+        self.circuit(circuit).pins.len()
+    }
+
     fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> () {
         self.net(net).pins.iter().copied().for_each(f)
     }

@@ -25,6 +25,87 @@ use crate::netlist::direction::Direction;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 
+/// A reference to a circuit.
+pub trait CircuitRef {
+    /// Netlist type.
+    type N: NetlistBase;
+
+    /// Get the ID of this circuit.
+    fn id(&self) -> <<Self as CircuitRef>::N as NetlistBase>::CircuitId;
+
+    /// Get the name of the circuit.
+    fn name(&self) -> <<Self as CircuitRef>::N as NetlistBase>::NameType;
+
+    /// Get the net of the logical constant zero.
+    fn net_zero(&self) -> <<Self as CircuitRef>::N as NetlistBase>::NetId;
+
+    /// Get the net of the logical constant one.
+    fn net_one(&self) -> <<Self as CircuitRef>::N as NetlistBase>::NetId;
+}
+
+/// A reference to a circuit instance.
+pub trait CircuitInstRef {
+    /// Netlist type.
+    type N: NetlistBase;
+
+    /// Get the ID of this circuit.
+    fn id(&self) -> <<Self as CircuitInstRef>::N as NetlistBase>::CircuitInstId;
+
+    /// Get the name of the circuit.
+    fn name(&self) -> Option<<<Self as CircuitInstRef>::N as NetlistBase>::NameType>;
+}
+
+/// Default implementation for `CircuitRef`.
+/// This is just a wrapper around a netlist and a circuit ID.
+pub struct DefaultCircuitRef<'a, N: NetlistBase + ?Sized> {
+    /// Reference to the parent netlist.
+    netlist: &'a N,
+    /// ID of the corresponding circuit.
+    id: N::CircuitId,
+}
+
+impl<'a, N: NetlistBase> CircuitRef for DefaultCircuitRef<'a, N> {
+    type N = N;
+
+    fn id(&self) -> N::CircuitId {
+        self.id.clone()
+    }
+
+    fn name(&self) -> N::NameType {
+        self.netlist.circuit_name(&self.id)
+    }
+
+    fn net_zero(&self) -> N::NetId {
+        self.netlist.net_zero(&self.id)
+    }
+
+    fn net_one(&self) -> N::NetId {
+        self.netlist.net_one(&self.id)
+    }
+}
+
+
+/// Default implementation for `CircuitInstRef`.
+/// This is just a wrapper around a netlist and a circuit ID.
+pub struct DefaultCircuitInstRef<'a, N: NetlistBase + ?Sized> {
+    /// Reference to the parent netlist.
+    netlist: &'a N,
+    /// ID of the corresponding circuit instance.
+    id: N::CircuitInstId,
+}
+
+impl<'a, N: NetlistBase> CircuitInstRef for DefaultCircuitInstRef<'a, N> {
+    type N = N;
+
+    fn id(&self) -> N::CircuitInstId {
+        self.id.clone()
+    }
+
+    fn name(&self) -> Option<N::NameType> {
+        self.netlist.circuit_instance_name(&self.id)
+    }
+}
+
 
 /// Most basic trait of a netlist.
 pub trait NetlistBase {
@@ -246,6 +327,26 @@ pub trait NetlistBase {
     fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_of_net_vec(net).into_iter())
     }
+
+    /// Return a reference to the circuit with this ID.
+    fn circuit(&self, id: Self::CircuitId) -> Box<dyn CircuitRef<N=Self> + '_>
+        where Self: Sized {
+        // TODO: Check that ID exists.
+        Box::new(DefaultCircuitRef {
+            netlist: self,
+            id,
+        })
+    }
+
+    /// Return a reference to the circuit instance with this ID.
+    fn circuit_inst(&self, id: Self::CircuitInstId) -> Box<dyn CircuitInstRef<N=Self> + '_>
+        where Self: Sized {
+        // TODO: Check that ID exists.
+        Box::new(DefaultCircuitInstRef {
+            netlist: self,
+            id,
+        })
+    }
 }
 
 /// Trait for netlists that support editing.
@@ -407,7 +508,7 @@ pub trait NetlistEdit
                 None
             };
             let new_inst = self.create_circuit_instance(&sub_template, &sub_template,
-            new_name.map(|n| n.into()));
+                                                        new_name.map(|n| n.into()));
 
             // Re-connect pins to copies of the original nets.
             // Loop over old/new pin instances.
@@ -476,7 +577,7 @@ pub trait NetlistEdit
         unused.iter()
             .for_each(|n| self.remove_net(n));
 
-        return unused.len()
+        return unused.len();
     }
 
     /// Delete all unconnected nets in all circuits.

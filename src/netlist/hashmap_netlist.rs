@@ -83,21 +83,34 @@ pub struct Circuit {
     pub pins: Vec<PinId>,
     /// Instances inside this circuit.
     pub instances: HashSet<CircuitInstId>,
+    /// Instances inside this circuit indexed by name.
+    /// Not every instance needs to have a name.
+    instances_by_name: HashMap<RcString, CircuitInstId>,
     /// Circuit instances that reference to this circuit.
     pub references: HashSet<CircuitInstId>,
     /// All circuits that have instances of this circuit.
     pub parents: HashSet<CircuitId>,
+    /// All nets in this circuit.
+    nets: HashSet<NetId>,
     /// Nets IDs stored by name.
     nets_by_name: HashMap<RcString, NetId>,
     /// Logic constant LOW net.
     net_low: NetId,
     /// Logic constant HIGH net.
     net_high: NetId,
+    /// Set of circuits that are direct dependencies of this circuit.
+    /// Stored together with a counter of how many instances of the dependency are present.
+    /// This are the circuits towards the leaves in the dependency tree.
+    dependencies: HashMap<CircuitId, usize>,
+    /// Circuits that use a instance of this circuit.
+    dependent_circuits: HashMap<CircuitId, usize>,
 }
 
 /// Instance of a circuit.
 #[derive(Debug, Clone)]
 pub struct CircuitInst {
+    /// Name of the instance.
+    name: Option<RcString>,
     /// The ID of the template circuit.
     pub circuit: CircuitId,
     /// The ID of the parent circuit where this instance lives in.
@@ -308,14 +321,14 @@ impl NetlistBase for HashMapNetlist {
         self.circuits_by_name.get(name).copied()
     }
 
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, _parent_circuit: &Self::CircuitId, _name: &N)
+    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N)
                                                        -> Option<Self::CircuitInstId>
         where Self::NameType: Borrow<N> {
-        unimplemented!()
+        self.circuit(parent_circuit).instances_by_name.get(name).copied()
     }
 
     fn template_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
-        self.circuit_inst(circuit_instance).parent
+        self.circuit_inst(circuit_instance).circuit
     }
 
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId {
@@ -374,14 +387,13 @@ impl NetlistBase for HashMapNetlist {
         self.circuit(circuit).name.clone()
     }
 
-    fn circuit_instance_name(&self, _circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType> {
-        None // Circuit instance don't have a name.
+    fn circuit_instance_name(&self, circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType> {
+        self.circuit_inst(circuit_inst).name.clone()
     }
 
     fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CircuitId) -> () {
         self.circuits.keys().copied().for_each(f)
     }
-
 
     /// Iterate over all circuits.
     fn each_circuit(&self) -> Box<dyn Iterator<Item=CircuitId> + '_> {
@@ -394,11 +406,11 @@ impl NetlistBase for HashMapNetlist {
     }
 
     fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
-        unimplemented!()
+        self.circuit(circuit).dependencies.keys().copied().for_each(f);
     }
 
     fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
-        unimplemented!()
+        self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
     }
 
 
@@ -429,7 +441,7 @@ impl NetlistBase for HashMapNetlist {
     }
 
     fn for_each_internal_net<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::NetId) -> () {
-        self.circuit(circuit).nets_by_name.values().copied().for_each(f)
+        self.circuit(circuit).nets.iter().copied().for_each(f)
     }
 
     fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize {
@@ -477,12 +489,16 @@ impl NetlistEdit for HashMapNetlist {
             name: name.clone(),
             pins,
             instances: Default::default(),
+            instances_by_name: Default::default(),
             references: Default::default(),
             parents: Default::default(),
+            nets: Default::default(),
             nets_by_name: Default::default(),
             // Create LOW and HIGH nets.
             net_low: NetId(0),
             net_high: NetId(0),
+            dependent_circuits: Default::default(),
+            dependencies: Default::default(),
         };
 
         self.circuits.insert(id, circuit);
@@ -528,26 +544,20 @@ impl NetlistEdit for HashMapNetlist {
                                name: Option<Self::NameType>) -> CircuitInstId {
         let id = CircuitInstId(HashMapNetlist::next_id_counter(&mut self.id_counter_circuit_inst));
 
-        // Check that there is no cycle.
-        // Find root.
         {
-            let mut parents = vec![*parent];
-            loop {
-                if parents.is_empty() {
-                    // Found a root, there is no cycle.
-                    break;
-                } else {
-                    if parents.contains(&circuit_template) {
-                        // Loop found.
-                        panic!("Cannot create loops!");
-                    }
-                    // Find parents on next level.
-                    let new_parents = parents.iter()
-                        .flat_map(|p| self.circuit(p).parents.iter().copied())
-                        .collect();
-                    parents = new_parents;
+            // Check that creating this circuit instance does not create a cycle in the dependency graph.
+            // There can be no recursive instances.
+            let mut stack: Vec<CircuitId> = vec![*parent];
+            while let Some(c) = stack.pop() {
+                if &c == circuit_template {
+                    // The circuit to be instantiated depends on the current circuit.
+                    // This would insert a loop into the dependency tree.
+                    // TODO: Don't panic but return an `Err`.
+                    panic!("Cannot create recursive instances.");
                 }
-            };
+                // Follow the dependent circuits towards the root.
+                stack.extend(self.circuit(&c).dependent_circuits.keys().copied())
+            }
         }
 
         // Create pin instances from template pins.
@@ -557,6 +567,7 @@ impl NetlistEdit for HashMapNetlist {
             .collect();
 
         let inst = CircuitInst {
+            name: name.clone(),
             circuit: *circuit_template,
             parent: *parent,
             pins,
@@ -565,6 +576,26 @@ impl NetlistEdit for HashMapNetlist {
         self.circuit_instances.insert(id, inst);
         self.circuit_mut(&parent).instances.insert(id);
         self.circuit_mut(&circuit_template).references.insert(id);
+
+        if let Some(name) = name {
+            debug_assert!(!self.circuit(&parent).instances_by_name.contains_key(&name),
+                          "Circuit instance name already exists.");
+            self.circuit_mut(&parent).instances_by_name.insert(name, id);
+        }
+
+        // Remember dependency.
+        {
+            self.circuit_mut(&parent).dependencies.entry(*circuit_template)
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+        }
+
+        // Remember dependency.
+        {
+            self.circuit_mut(&circuit_template).dependent_circuits.entry(*parent)
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+        }
 
         id
     }
@@ -579,6 +610,33 @@ impl NetlistEdit for HashMapNetlist {
         // Remove the instance and all references.
         let parent = self.circuit_inst(&circuit_inst_id).parent;
         let template = self.circuit_inst(&circuit_inst_id).circuit;
+
+        // Remove dependency.
+        {
+            // Decrement counter.
+            let count = self.circuit_mut(&parent).dependencies.entry(template)
+                .or_insert(0); // Should not happen.
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                self.circuit_mut(&parent).dependencies.remove(&template);
+            }
+        }
+
+        // Remove dependency.
+        {
+            // Decrement counter.
+            let count = self.circuit_mut(&template).dependent_circuits.entry(parent)
+                .or_insert(0); // Should not happen.
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                self.circuit_mut(&template).dependent_circuits.remove(&parent);
+            }
+        }
+
         self.circuit_instances.remove(&circuit_inst_id).unwrap();
         self.circuit_mut(&parent).instances.remove(circuit_inst_id);
         self.circuit_mut(&template).references.remove(circuit_inst_id);
@@ -596,8 +654,11 @@ impl NetlistEdit for HashMapNetlist {
             pin_instances: Default::default(),
         };
         self.nets.insert(id, net);
+        let circuit = self.circuit_mut(parent);
+        circuit.nets.insert(id);
         if let Some(name) = name {
-            self.circuit_mut(parent).nets_by_name.insert(name, id);
+            debug_assert!(!circuit.nets_by_name.contains_key(&name), "Net name already exists.");
+            circuit.nets_by_name.insert(name, id);
         }
         id
     }
@@ -647,23 +708,39 @@ impl NetlistEdit for HashMapNetlist {
             self.disconnect_pin_instance(&p);
         }
         let name = self.net(&net).name.clone();
-        self.nets.remove(&net).unwrap();
+        let circuit = self.circuit_mut(&parent_circuit);
+        circuit.nets.remove(&net);
         if let Some(name) = &name {
-            self.circuit_mut(&parent_circuit).nets_by_name.remove(name).unwrap();
+            circuit.nets_by_name.remove(name).unwrap();
         }
+        self.nets.remove(&net).unwrap();
     }
 
     /// Connect the pin to a net.
     fn connect_pin(&mut self, pin: &PinId, net: Option<NetId>) -> Option<NetId> {
         if let Some(net) = net {
-            assert_eq!(self.pin(&pin).circuit, self.net(&net).parent, "Pin and net do not live in the same circuit.");
-            self.net_mut(&net).pins.insert(*pin);
+            // Sanity check.
+            assert_eq!(self.pin(&pin).circuit, self.net(&net).parent,
+                       "Pin and net do not live in the same circuit.");
         }
-        if let Some(net) = net {
+
+        let old_net = if let Some(net) = net {
             self.pin_mut(&pin).net.replace(net)
         } else {
             self.pin_mut(&pin).net.take()
+        };
+
+        if let Some(net) = old_net {
+            // Remove the pin from the old net.
+            self.net_mut(&net).pins.remove(&pin);
         }
+
+        if let Some(net) = net {
+            // Store the pin in the new net.
+            self.net_mut(&net).pins.insert(*pin);
+        }
+
+        old_net
     }
 
     /// Connect the pin to a net.
@@ -671,13 +748,25 @@ impl NetlistEdit for HashMapNetlist {
         if let Some(net) = net {
             assert_eq!(self.circuit_inst(&self.pin_inst(pin).circuit_inst).parent,
                        self.net(&net).parent, "Pin and net do not live in the same circuit.");
+        }
+
+        let old_net = if let Some(net) = net {
+            self.pin_inst_mut(&pin).net.replace(net)
+        } else {
+            self.pin_inst_mut(&pin).net.take()
+        };
+
+        if let Some(net) = old_net {
+            // Remove the pin from the old net.
+            self.net_mut(&net).pin_instances.remove(&pin);
+        }
+
+        if let Some(net) = net {
+            // Store the pin in the new net.
             self.net_mut(&net).pin_instances.insert(*pin);
         }
-        if let Some(net) = net {
-            self.pin_inst_mut(pin).net.replace(net)
-        } else {
-            self.pin_inst_mut(pin).net.take()
-        }
+
+        old_net
     }
 }
 
@@ -722,4 +811,7 @@ fn test_create_populated_netlist() {
 
     dbg!(&netlist);
     dbg!(netlist.terminals_for_net(&net_a).collect_vec());
+
+    assert_eq!(netlist.num_net_terminals(&net_a), 2);
+    assert_eq!(netlist.num_net_terminals(&net_b), 2);
 }

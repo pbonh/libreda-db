@@ -547,13 +547,14 @@ impl NetlistBase for RcNetlist {
         circuit.each_instance().for_each(f)
     }
 
-    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
-        unimplemented!()
+    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
+        circuit.each_circuit_dependency().for_each(f)
     }
 
-    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
-        unimplemented!()
+    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
+        circuit.each_dependent_circuit().for_each(f)
     }
+
 
     fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
         circuit.each_reference().for_each(f);

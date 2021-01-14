@@ -258,11 +258,35 @@ pub trait NetlistBase {
         Box::new(self.each_instance_vec(circuit).into_iter())
     }
 
-    /// Iterate over all circuits that are childs of this `circuit`.
-    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a>;
+    /// Call a function for each circuit that is a child of this `circuit`.
+    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> ();
 
-    /// Iterate over all circuits that hold instances of this `circuit`.
-    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a>;
+    /// Get a `Vec` of each circuit that is a child of this `circuit`.
+    fn each_circuit_dependency_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitId> {
+        let mut v = Vec::new();
+        self.for_each_circuit_dependency(circuit, |c| v.push(c.clone()));
+        v
+    }
+
+    /// Iterate over all circuits that are childs of this `circuit`.
+    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a> {
+        Box::new(self.each_circuit_dependency_vec(circuit).into_iter())
+    }
+
+    /// Call a function for each circuit that directly depends on `circuit`.
+    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> ();
+
+    /// Get a `Vec` of each circuit that directly depends on `circuit`.
+    fn each_dependent_circuit_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitId> {
+        let mut v = Vec::new();
+        self.for_each_dependent_circuit(circuit, |c| v.push(c.clone()));
+        v
+    }
+
+    /// Iterate over each circuit that directly depends on `circuit`.
+    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a> {
+        Box::new(self.each_dependent_circuit_vec(circuit).into_iter())
+    }
 
     /// Iterate over all instances of this `circuit`, i.e. instances that use this circuit as
     /// a template.

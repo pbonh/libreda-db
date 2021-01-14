@@ -393,13 +393,14 @@ impl NetlistBase for HashMapNetlist {
             .copied().for_each(f)
     }
 
-    fn each_circuit_dependency<'a>(&'a self, _circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
+    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
         unimplemented!()
     }
 
-    fn each_dependent_circuit<'a>(&'a self, _circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId>> {
+    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
         unimplemented!()
     }
+
 
     fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
         self.circuit(circuit).references.iter().copied().for_each(f)
@@ -428,7 +429,7 @@ impl NetlistBase for HashMapNetlist {
     }
 
     fn for_each_internal_net<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::NetId) -> () {
-        unimplemented!()
+        self.circuit(circuit).nets_by_name.values().copied().for_each(f)
     }
 
     fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize {

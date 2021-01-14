@@ -156,18 +156,18 @@ pub trait NetlistBase {
     + PartialOrd + Ord
     + std::fmt::Display + std::fmt::Debug;
     /// Pin identifier type.
-    type PinId: Eq + Hash + Clone;
+    type PinId: Eq + Hash + Clone + std::fmt::Debug;
     /// Pin instance identifier type.
     /// A pin instance is a pin of a circuit instance.
-    type PinInstId: Eq + Hash + Clone;
+    type PinInstId: Eq + Hash + Clone + std::fmt::Debug;
     /// Either a pin or a pin instance ID.
-    type TerminalId: Eq + Hash + Clone;
+    type TerminalId: Eq + Hash + Clone + std::fmt::Debug;
     /// Circuit identifier type.
-    type CircuitId: Eq + Hash + Clone;
+    type CircuitId: Eq + Hash + Clone + std::fmt::Debug;
     /// Circuit instance identifier type.
-    type CircuitInstId: Eq + Hash + Clone;
+    type CircuitInstId: Eq + Hash + Clone + std::fmt::Debug;
     /// Net identifier type.
-    type NetId: Eq + Hash + Clone;
+    type NetId: Eq + Hash + Clone + std::fmt::Debug;
 
 
     /// Create a new empty netlist.

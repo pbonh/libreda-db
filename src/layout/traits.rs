@@ -47,26 +47,38 @@ pub trait LayoutBase {
     /// Iterate over all cells.
     fn each_cell<'a>(&'a self) -> Box<dyn Iterator<Item=&Self::CellId> + 'a>;
 
+    /// Iterate over all child instance in a cell.
+    fn each_cell_instance<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=&Self::CellInstId> + 'a>;
+
+    /// Iterate over all cells that contain a child of type `cell`.
+    fn each_dependent_cell<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=&Self::CellId> + 'a>;
+
+    /// Iterate over all cells types that are instantiated in this `cell`.
+    fn each_cell_dependency<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=&Self::CellId> + 'a>;
+
+    /// Get the ID of the parent cell of this instance.
+    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId;
+
+    /// Get the ID of the template cell of this instance.
+    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId;
 }
 
 
 /// Trait for layouts that support editing.
 pub trait LayoutEdit
     where Self: LayoutBase {
-
     /// Create a new and empty cell.
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId;
 
     /// Delete the given cell if it exists.
     fn remove_cell(&mut self, cell_id: &Self::CellId);
 
-    /// Create a new cell instance.
+    /// Create a new instance of `template_cell` in `parent_cell`.
     fn create_cell_instance(&mut self,
-                               parent_cell: &Self::CellId,
-                               template_cell: &Self::CellId,
-                               name: Option<Self::NameType>) -> Self::CellInstId;
+                            parent_cell: &Self::CellId,
+                            template_cell: &Self::CellId,
+                            name: Option<Self::NameType>) -> Self::CellInstId;
 
     /// Remove cell instance if it exists.
     fn remove_cell_instance(&mut self, id: &Self::CellInstId);
-
 }

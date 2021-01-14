@@ -397,7 +397,7 @@ impl NetlistBase for HashMapNetlist {
 
     /// Iterate over all circuits.
     fn each_circuit(&self) -> Box<dyn Iterator<Item=CircuitId> + '_> {
-        Box::new(self.circuits.keys().cloned())
+        Box::new(self.circuits.keys().copied())
     }
 
     fn for_each_instance<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
@@ -405,27 +405,37 @@ impl NetlistBase for HashMapNetlist {
             .copied().for_each(f)
     }
 
+    fn each_instance(&self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + '_> {
+        Box::new(self.circuit(circuit).instances.iter().copied())
+    }
+
     fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
         self.circuit(circuit).dependencies.keys().copied().for_each(f);
+    }
+
+    fn each_circuit_dependency(&self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
+        Box::new(self.circuit(circuit).dependencies.keys().copied())
     }
 
     fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
         self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
     }
 
+    fn each_dependent_circuit(&self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
+        Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
+    }
 
     fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
         self.circuit(circuit).references.iter().copied().for_each(f)
     }
 
-    fn each_reference<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + 'a> {
+    fn each_reference(&self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + '_> {
         Box::new(self.circuit(circuit).references.iter().copied())
     }
 
     fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> () {
         self.circuit(circuit).pins.iter().copied().for_each(f)
     }
-
 
     /// Iterate over all pins of a circuit.
     fn each_pin(&self, circuit_id: &CircuitId) -> Box<dyn Iterator<Item=PinId> + '_> {
@@ -444,6 +454,10 @@ impl NetlistBase for HashMapNetlist {
         self.circuit(circuit).nets.iter().copied().for_each(f)
     }
 
+    fn each_internal_net(&self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::NetId> + '_> {
+        Box::new(self.circuit(circuit).nets.iter().copied())
+    }
+
     fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize {
         self.circuit(circuit).instances.len()
     }
@@ -459,7 +473,6 @@ impl NetlistBase for HashMapNetlist {
     fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> () {
         self.net(net).pins.iter().copied().for_each(f)
     }
-
 
     fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=Self::PinId> + 'a> {
         Box::new(self.net(net).pins.iter().copied())

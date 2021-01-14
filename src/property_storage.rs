@@ -123,10 +123,16 @@ impl From<f64> for PropertyValue {
 // }
 
 /// Look-up table for property values.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct PropertyStore<K>
     where K: Hash + Eq {
     content: HashMap<K, PropertyValue>
+}
+
+impl<K: Hash + Eq> Default for PropertyStore<K> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<K: Hash + Eq> PropertyStore<K> {
@@ -202,7 +208,7 @@ pub trait WithProperties {
         where Self::Key: Borrow<Q>,
               Q: Eq + Hash {
         self.with_properties(|p|
-            p.and_then(|p|p.get_string(key).cloned())
+            p.and_then(|p| p.get_string(key).cloned())
         )
     }
 

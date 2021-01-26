@@ -101,8 +101,8 @@ impl Pin {
     }
 
     /// Get the name of the pin.
-    pub fn name(&self) -> &str {
-        self.name.as_str()
+    pub fn name(&self) -> &String {
+        &self.name
     }
 
     /// Return the input/output direction of the pin.

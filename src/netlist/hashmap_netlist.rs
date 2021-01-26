@@ -343,6 +343,13 @@ impl NetlistBase for HashMapNetlist {
         self.pin(pin).name.clone()
     }
 
+    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::PinId>
+        where Self::NameType: Borrow<N> {
+        // TODO: Create index for pin names.
+        self.circuit(&parent_circuit).pins.iter().find(|p| self.pin(*p).name.borrow() == name)
+            .copied()
+    }
+
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
         self.circuit_inst(circuit_instance).parent
     }

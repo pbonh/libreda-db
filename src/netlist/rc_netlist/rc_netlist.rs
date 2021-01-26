@@ -490,6 +490,11 @@ impl NetlistBase for RcNetlist {
         pin.name().to_string()
     }
 
+    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::PinId>
+        where Self::NameType: Borrow<N> {
+        parent_circuit.pin_by_name(name)
+    }
+
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
         circuit_instance.parent_circuit().upgrade().unwrap()
     }

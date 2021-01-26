@@ -751,11 +751,12 @@ impl Circuit {
 
     /// Find a pin by its name.
     /// Returns `None` if the name is not found.
-    pub fn pin_by_name(&self, pin_name: &str) -> Option<Rc<Pin>> {
+    pub fn pin_by_name<N: ?Sized + Eq + Hash>(&self, pin_name: &N) -> Option<Rc<Pin>>
+        where String: Borrow<N> {
         // Find the pin name by linear search.
         // TODO: Create look-up table for pin names in `Circuit`?
         let pin = self.pins.iter()
-            .find(|p| p.name() == pin_name);
+            .find(|p| p.name().borrow() == pin_name);
 
         pin.cloned()
     }

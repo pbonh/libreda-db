@@ -195,6 +195,11 @@ pub trait NetlistBase {
     /// Get the name of the pin.
     fn pin_name(&self, pin: &Self::PinId) -> Self::NameType;
 
+    /// Find a pin by its name.
+    /// Returns `None` if no such pin can be found.
+    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::PinId>
+        where Self::NameType: Borrow<N>;
+
     /// Get the ID of the parent circuit of this instance.
     fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId;
 

@@ -23,7 +23,7 @@
 
 use std::borrow::Borrow;
 use std::hash::Hash;
-use crate::layout::types::{UInt, SInt};
+use crate::layout::types::UInt;
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
 

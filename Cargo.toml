@@ -1,10 +1,11 @@
 [package]
 name = "libreda-db"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Thomas Kramer <code@tkramer.ch>"]
 edition = "2018"
-license = "AGPLv3"
+license = "AGPL-3.0"
 description = "Layout and netlist datastructures for chip design."
+keywords = ["vlsi"]
 readme = "README.md"
 homepage = "https://libreda.org"
 repository = "https://codeberg.org/libreda/libreda-db"
@@ -13,9 +14,4 @@ repository = "https://codeberg.org/libreda/libreda-db"
 log = "0.4"
 itertools = "0.10.0"
 genawaiter = { version = "0.99.1", default-features = false }
-#iron-shapes = { git = "https://codeberg.org/libreda/iron-shapes", tag = "0.0.1" }
-iron-shapes = { path = "../iron-shapes" }
-
-# Use local crates if possible.
-#[patch."https://codeberg.org/libreda/iron-shapes"]
-#iron-shapes = { path = "../iron-shapes" }
+iron-shapes = { version = "0.0.4", path = "../iron-shapes" }

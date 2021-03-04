@@ -79,8 +79,16 @@ pub trait LayoutBase {
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;
 
-    /// Iterate over all shapes on a layer.
-    fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_>;
+    // /// Iterate over all shapes on a layer.
+    // fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_>;
+
+    /// Call a function for each shape on this layer.
+    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
+        where F: FnMut(&Geometry<Self::Coord>) -> ();
+
+    // /// Call a function for each shape on this layer.
+    // fn for_each_shape_box<F>(&self, cell: &Self::CellId, layer: &Self::LayerId,
+    //                          f: Box<dyn FnMut(&Geometry<Self::Coord>) -> ()>);
 }
 
 

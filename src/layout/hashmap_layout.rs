@@ -236,8 +236,14 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
     }
 
-    fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_> {
-        Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| &s.geometry))
+    // fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_> {
+    //     Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| &s.geometry))
+    // }
+
+    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
+        where F: FnMut(&Geometry<Self::Coord>) -> () {
+        self.cells[cell].shapes_map[layer].shapes.values()
+            .for_each(|s| f(&s.geometry))
     }
 }
 

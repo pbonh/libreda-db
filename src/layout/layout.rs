@@ -414,30 +414,38 @@ impl LayoutBase for Layout {
         self.find_layer(index, datatype)
     }
 
-    fn each_shape<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&'a Geometry<Self::Coord>> + 'a> {
-        
-        // Box::new(
-        //     self.cells[&cell.index()].shapes(*layer)
-        //         .into_iter()
-        //         .flat_map(|shapes|
-        //             shapes.each_shape().map(|shape| &shape.geometry)
-        //         )
-        // )
+    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
+        where F: FnMut(&Geometry<Self::Coord>) -> () {
 
-        unimplemented!()
-
-        // let cell_id = cell.index();
-        // let layer = *layer;
-        //
-        // let generator = Gen::new(|co: Co<&'a _>| async move {
-        //     if let Some(shapes) = self.cells[&cell_id].shapes(layer) {
-        //         for shape in shapes.each_shape() {
-        //             co.yield_(&shape.geometry).await;
-        //         }
-        //     }
-        // });
-        // Box::new(generator.into_iter())
+        if let Some(shapes) = cell.shapes(*layer) {
+            shapes.for_each_shape(|s| f(&s.geometry))
+        }
     }
+
+    // fn each_shape<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&'a Geometry<Self::Coord>> + 'a> {
+    //
+    //     // Box::new(
+    //     //     self.cells[&cell.index()].shapes(*layer)
+    //     //         .into_iter()
+    //     //         .flat_map(|shapes|
+    //     //             shapes.each_shape().map(|shape| &shape.geometry)
+    //     //         )
+    //     // )
+    //
+    //     unimplemented!()
+    //
+    //     // let cell_id = cell.index();
+    //     // let layer = *layer;
+    //     //
+    //     // let generator = Gen::new(|co: Co<&'a _>| async move {
+    //     //     if let Some(shapes) = self.cells[&cell_id].shapes(layer) {
+    //     //         for shape in shapes.each_shape() {
+    //     //             co.yield_(&shape.geometry).await;
+    //     //         }
+    //     //     }
+    //     // });
+    //     // Box::new(generator.into_iter())
+    // }
 }
 
 

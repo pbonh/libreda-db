@@ -110,7 +110,7 @@ pub struct Cell<C: CoordinateType> {
     cell_instances_by_name: HashMap<RcString, CellInstId<C>>,
 
     /// Mapping from layer indices to geometry data.
-    shapes_map: HashMap<LayerIndex, Shapes<C>>,
+    shapes_map: HashMap<LayerId, Shapes<C>>,
 
     /// All the instances of this cell.
     cell_references: HashSet<CellInstId<C>>,
@@ -152,8 +152,8 @@ pub struct Shape<T: CoordinateType> {
     index: Index<Self>,
     /// The geometry of this shape.
     pub geometry: Geometry<T>,
-    /// Reference ID to container.
-    parent_id: Index<Shapes<T>>,
+    // /// Reference ID to container.
+    // parent_id: Index<Shapes<T>>,
 }
 
 /// `Shapes<T>` is a collection of `Shape<T>` structs. Each of
@@ -204,6 +204,14 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         Box::new(self.cells.keys().copied())
     }
 
+    fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
+        self.cells[cell].name.clone()
+    }
+
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+        self.cell_instances[cell_inst].name.clone()
+    }
+
     fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.cells[cell].cell_instances.iter().copied())
     }
@@ -227,11 +235,15 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
     }
+
+    fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_> {
+        Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| &s.geometry))
+    }
 }
 
 
 impl<C: CoordinateType> LayoutEdit for Layout<C> {
-    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> LayerId {
+    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
         let layer = self.find_layer(index, datatype);
         if let Some(layer) = layer {
             layer
@@ -385,5 +397,18 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         self.cell_instances.remove(&id).unwrap();
         self.cells.get_mut(&parent).unwrap().cell_instances.remove(id);
         self.cells.get_mut(&template).unwrap().cell_references.remove(id);
+    }
+
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) {
+        let shape_id = self.shape_index_generator.next();
+
+        let shape = Shape {
+            index: shape_id,
+            geometry,
+        };
+
+        self.cells.get_mut(parent_cell).expect("Cell not found.")
+            .shapes_map.get_mut(layer).expect("Layer not found.")
+            .shapes.insert(shape_id, shape);
     }
 }

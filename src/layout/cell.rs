@@ -226,6 +226,16 @@ impl<C: CoordinateType> Cell<C> {
         self.cell_references.borrow().len()
     }
 
+    /// Iterate over all cell instances that reference this cell.
+    pub fn each_reference(&self) -> impl Iterator<Item=Rc<CellInstance<C>>> + '_ {
+        let generator = Gen::new(|co| async move {
+            for e in self.cell_references.borrow().iter().cloned() {
+                co.yield_(e).await;
+            }
+        });
+        generator.into_iter()
+    }
+
     /// Remove the given cell instance from this cell.
      /// # Panics
      /// Panics if the cell instance does not live in this cell.
@@ -337,6 +347,27 @@ impl<C: CoordinateType> Cell<C> {
         let generator = Gen::new(|co| async move {
             for i in self.cell_instances.borrow().values().cloned() {
                 co.yield_(i).await;
+            }
+        });
+        generator.into_iter()
+    }
+
+    /// Get all cells (not instances) that are direct children of this cell.
+    pub fn each_cell_dependency(&self) -> impl Iterator<Item=Rc<Cell<C>>> + '_ {
+        let generator = Gen::new(|co| async move {
+            for (dep, _counter) in self.dependencies.borrow().values() {
+                co.yield_(dep.upgrade().unwrap()).await;
+            }
+        });
+        generator.into_iter()
+    }
+
+    /// Get all cells that directly depend on this cell,
+    /// i.e. have an instance of this cell as a direct child.
+    pub fn each_dependent_cell(&self) -> impl Iterator<Item=Rc<Cell<C>>> + '_ {
+        let generator = Gen::new(|co| async move {
+            for (dep, _counter) in self.dependent_cells.borrow().values() {
+                co.yield_(dep.upgrade().unwrap()).await;
             }
         });
         generator.into_iter()

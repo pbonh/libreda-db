@@ -20,6 +20,7 @@
 //! A layout data structure represents chip geometries. It consists of a hierarchical arrangement
 //! of `Cell`s. Each cell contains geometric primitives that are grouped on `Layer`s.
 
+use itertools::Itertools;
 use crate::prelude::*;
 use super::errors::LayoutDbError;
 
@@ -29,6 +30,7 @@ use std::hash::Hash;
 use std::borrow::Borrow;
 use crate::property_storage::{PropertyStore, WithProperties};
 use std::cell::RefCell;
+use crate::layout::traits::{LayoutBase, LayoutEdit};
 
 
 /// Data structure which holds cells and cell instances.
@@ -58,7 +60,7 @@ pub struct Layout {
     /// Info structures for all layers.
     layer_info: HashMap<LayerIndex, LayerInfo>,
     /// Property storage for properties related to this layout.
-    property_storage: RefCell<PropertyStore<String>>
+    property_storage: RefCell<PropertyStore<String>>,
 }
 
 /// Meta-data of a layer.
@@ -117,6 +119,7 @@ impl Layout {
         cell_index
     }
 
+
     /// Create a new cell in this layout.
     /// Returns: Returns a reference to this cell.
     ///
@@ -132,6 +135,22 @@ impl Layout {
     pub fn create_and_get_cell<S: Into<String>>(&mut self, cell_name: Option<S>) -> Rc<Cell<Coord>> {
         let idx = self.create_cell(cell_name);
         self.cell_by_index(idx).unwrap() // This unwrap should succeed, otherwise there is a bug in this module.
+    }
+
+    /// Delete the given cell if it exists.
+    pub fn remove_cell(&mut self, cell: &Rc<Cell<Coord>>) -> () {
+        // Remove all circuit instances.
+        let references = cell.each_reference().collect_vec();
+        for inst in references {
+            cell.remove_cell_instance(&inst)
+        }
+        // Check that now there are no references to this circuit anymore.
+        debug_assert_eq!(cell.num_references(), 0);
+        // Remove the circuit.
+        if let Some(name) = cell.name() {
+            self.cells_by_name.remove(&name).unwrap();
+        }
+        self.cells.remove(&cell.index());
     }
 
     /// Find a cell index by the cell name.
@@ -342,4 +361,111 @@ fn test_layout_properties() {
 
     layout.set_property("my_string_property".to_string(), "string_value".to_string());
     assert!(!layout.property_str("my_string_property").is_none());
+}
+
+impl LayoutBase for Layout {
+    type Coord = SInt;
+    type NameType = String;
+    type LayerId = LayerIndex;
+    type CellId = Rc<Cell<Coord>>;
+    type CellInstId = Rc<CellInstance<Coord>>;
+
+    fn new() -> Self {
+        Layout::new()
+    }
+
+    fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId> where Self::NameType: Borrow<N> {
+        self.cell_by_name(name)
+    }
+
+    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.each_cell().cloned())
+    }
+
+    fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
+        cell.name().unwrap()
+    }
+
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+        None
+    }
+
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.cells[&cell.index()].each_inst())
+    }
+
+    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells[&cell.index()].each_dependent_cell())
+    }
+
+    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells[&cell.index()].each_cell_dependency())
+    }
+
+    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+        cell_instance.parent_cell.upgrade().unwrap()
+    }
+
+    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+        cell_instance.cell().upgrade().unwrap()
+    }
+
+    fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
+        self.find_layer(index, datatype)
+    }
+
+    fn each_shape<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&'a Geometry<Self::Coord>> + 'a> {
+        
+        // Box::new(
+        //     self.cells[&cell.index()].shapes(*layer)
+        //         .into_iter()
+        //         .flat_map(|shapes|
+        //             shapes.each_shape().map(|shape| &shape.geometry)
+        //         )
+        // )
+
+        unimplemented!()
+
+        // let cell_id = cell.index();
+        // let layer = *layer;
+        //
+        // let generator = Gen::new(|co: Co<&'a _>| async move {
+        //     if let Some(shapes) = self.cells[&cell_id].shapes(layer) {
+        //         for shape in shapes.each_shape() {
+        //             co.yield_(&shape.geometry).await;
+        //         }
+        //     }
+        // });
+        // Box::new(generator.into_iter())
+    }
+}
+
+
+impl LayoutEdit for Layout {
+    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
+        self.find_or_create_layer(index, datatype)
+    }
+
+    fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
+        self.create_and_get_cell(Some(name))
+    }
+
+    fn remove_cell(&mut self, cell_id: &Self::CellId) {
+        Layout::remove_cell(self, cell_id)
+    }
+
+    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>, transform: SimpleTransform<Self::Coord>) -> Self::CellInstId {
+        parent_cell.create_instance(template_cell, transform)
+    }
+
+    fn remove_cell_instance(&mut self, id: &Self::CellInstId) {
+        id.parent_cell().upgrade()
+            .map(|p| p.remove_cell_instance(id));
+    }
+
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) {
+        parent_cell.shapes(*layer)
+            .expect("Layer not found.")
+            .insert(geometry);
+    }
 }

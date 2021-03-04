@@ -26,12 +26,15 @@ use std::hash::Hash;
 use crate::layout::types::UInt;
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
+use iron_shapes::shape::Geometry;
 
 /// Most basic trait of a layout.
+///
+/// This traits specifies methods for accessing the components of a layout.
 pub trait LayoutBase {
     /// Number type used for coordinates.
     type Coord: CoordinateType;
-    /// Type for names of circuits, instances, pins, etc.
+    /// Type for names of cells, instances, etc.
     type NameType: Eq + Hash + From<String> + Clone + Borrow<String> + Borrow<str>;
     /// Layer identifier type.
     type LayerId: Eq + Hash + Clone;
@@ -50,31 +53,39 @@ pub trait LayoutBase {
         where Self::NameType: Borrow<N>;
 
     /// Iterate over all cells.
-    fn each_cell<'a>(&'a self) -> Box<dyn Iterator<Item=Self::CellId> + 'a>;
+    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
+
+    /// Get the name of the cell.
+    fn cell_name(&self, cell: &Self::CellId) -> Self::NameType;
+
+    /// Get the name of the cell instance.
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType>;
 
     /// Iterate over all child instance in a cell.
-    fn each_cell_instance<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + 'a>;
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>;
 
     /// Iterate over all cells that contain a child of type `cell`.
-    fn each_dependent_cell<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a>;
+    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
 
     /// Iterate over all cells types that are instantiated in this `cell`.
-    fn each_cell_dependency<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a>;
+    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
 
     /// Get the ID of the parent cell of this instance.
-    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId;
+    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Get the ID of the template cell of this instance.
-    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId;
+    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;
+
+    /// Iterate over all shapes on a layer.
+    fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_>;
 }
 
 
 /// Trait for layouts that support editing.
-pub trait LayoutEdit
-    where Self: LayoutBase {
+pub trait LayoutEdit: LayoutBase {
     /// Create a layer or return an existing one.
     fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
 
@@ -93,4 +104,7 @@ pub trait LayoutEdit
 
     /// Remove cell instance if it exists.
     fn remove_cell_instance(&mut self, id: &Self::CellInstId);
+
+    /// Insert a geometric shape into the parent cell.
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>);
 }

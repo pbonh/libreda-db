@@ -23,7 +23,6 @@
 use crate::index::{Index, IndexGenerator};
 use super::cell::Cell;
 use super::cell_instance::CellInstance;
-use super::layout::LayerInfo;
 
 /// Default unsigned integer type.
 pub type UInt = u32;
@@ -48,3 +47,13 @@ pub type CellInstId = Index<CellInstance<Coord>>;
 /// Generator for cell instance indices.
 pub(crate) type CellInstIndexGenerator = IndexGenerator<CellInstance<Coord>>;
 
+/// Meta-data of a layer.
+#[derive(Clone, Hash, PartialEq, Debug)]
+pub struct LayerInfo {
+    /// Identifier of the layer.
+    pub index: UInt,
+    /// Identifier of the layer.
+    pub datatype: UInt,
+    /// Name of the layer.
+    pub name: Option<String>,
+}

@@ -29,6 +29,7 @@ use std::fmt::Formatter;
 /// An identifier for an arbitrary type `T`.
 /// This is a wrapper around `usize` which is bound to a type `T`.
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Index<T> {
     index: usize,
     phantom: PhantomData<T>,
@@ -90,6 +91,7 @@ impl<T> Index<T> {
 
 /// Generator for incrementing `Index<T>` values.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub(crate) struct IndexGenerator<T> {
     counter: usize,
     phantom: PhantomData<T>,

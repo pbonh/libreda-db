@@ -31,6 +31,7 @@ use std::borrow::Borrow;
 use crate::property_storage::{PropertyStore, WithProperties};
 use std::cell::RefCell;
 use crate::layout::traits::{LayoutBase, LayoutEdit};
+use crate::layout::hashmap_layout::LayerId;
 
 
 /// Data structure which holds cells and cell instances.
@@ -61,17 +62,6 @@ pub struct Layout {
     layer_info: HashMap<LayerIndex, LayerInfo>,
     /// Property storage for properties related to this layout.
     property_storage: RefCell<PropertyStore<String>>,
-}
-
-/// Meta-data of a layer.
-#[derive(Clone, Hash, PartialEq, Debug)]
-pub struct LayerInfo {
-    /// Identifier of the layer.
-    pub index: UInt,
-    /// Identifier of the layer.
-    pub datatype: UInt,
-    /// Name of the layer.
-    pub name: Option<String>,
 }
 
 impl Layout {
@@ -374,6 +364,18 @@ impl LayoutBase for Layout {
         Layout::new()
     }
 
+    fn dbu(&self) -> Self::Coord {
+        self.dbu as SInt
+    }
+
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
+        Box::new(self.layer_info.keys().copied())
+    }
+
+    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
+        self.get_layer_info(*layer).expect("Non existent layer ID.")
+    }
+
     fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId> where Self::NameType: Borrow<N> {
         self.cell_by_name(name)
     }
@@ -416,11 +418,19 @@ impl LayoutBase for Layout {
 
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
         where F: FnMut(&Geometry<Self::Coord>) -> () {
-
         if let Some(shapes) = cell.shapes(*layer) {
             shapes.for_each_shape(|s| f(&s.geometry))
         }
     }
+
+    // fn with_shapes<'a, F, R>(& self, cell: &Self::CellId, layer: &Self::LayerId, f: F) -> R
+    //     where F: FnMut(dyn IntoIterator<Item=&'a Geometry<Self::Coord>>) -> R{
+    //     f(
+    //         &cell.shapes(*layer).into_iter()
+    //             .flat_map(|shapes| shapes.each_shape())
+    //     )
+    // }
+
 
     // fn each_shape<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&'a Geometry<Self::Coord>> + 'a> {
     //

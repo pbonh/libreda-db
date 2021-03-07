@@ -33,6 +33,8 @@ use iron_shapes::transform::SimpleTransform;
 use crate::layout::traits::{LayoutBase, LayoutEdit};
 use std::hash::Hash;
 use std::borrow::Borrow;
+use iron_shapes::point::Deref;
+use crate::layout::errors::LayoutDbError::CellIndexNotFound;
 
 /// Cell identifier.
 pub type CellId<T> = Index<Cell<T>>;
@@ -57,7 +59,7 @@ pub type LayerId = Index<LayerInfo>;
 #[derive(Default, Debug)]
 pub struct Layout<C: CoordinateType> {
     /// Data-base unit. Pixels per micrometer.
-    dbu: UInt,
+    dbu: C,
     /// All cell templates.
     cells: HashMap<CellId<C>, Cell<C>>,
     /// All cell instances.
@@ -84,15 +86,45 @@ pub struct Layout<C: CoordinateType> {
     property_storage: PropertyStore<RcString>,
 }
 
-/// Meta-data of a layer.
-#[derive(Clone, Hash, PartialEq, Debug)]
-pub struct LayerInfo {
-    /// Identifier of the layer.
-    pub index: UInt,
-    /// Identifier of the layer.
-    pub datatype: UInt,
-    /// Name of the layer.
-    pub name: Option<RcString>,
+impl<C: CoordinateType> Layout<C> {
+    /// Get a reference to the cell with the given `ID`.
+    ///
+    /// # Panics
+    /// Panics if the ID does not exist.
+    pub fn cell_by_id(&self, id: &CellId<C>) -> CellRef<'_, C> {
+        let cell = &self.cells[id];
+        CellRef {
+            layout: self,
+            cell,
+        }
+    }
+
+    /// Find the ID of the cell with the given `name`.
+    pub fn cell_id_by_name(&self, name: &str) -> Option<CellId<C>> {
+        self.cells_by_name.get(name).copied()
+    }
+
+    /// Get a reference to the cell with the given name.
+    pub fn cell_by_name(&self, name: &str) -> Option<CellRef<'_, C>> {
+        let cell_id = self.cell_id_by_name(name);
+
+        cell_id.map(|cell_id| {
+            let cell = &self.cells[&cell_id];
+            CellRef {
+                layout: self,
+                cell,
+            }
+        })
+    }
+
+    /// Iterate over all cells in this layout.
+    pub fn each_cell(&self) -> impl Iterator<Item=CellRef<'_, C>> {
+        self.cells.values()
+            .map(move |cell| CellRef {
+                layout: self,
+                cell,
+            })
+    }
 }
 
 /// A `Cell` is a container for geometrical shapes organized on different layers.
@@ -129,6 +161,118 @@ pub struct Cell<C: CoordinateType> {
     instance_properties: HashMap<CellInstId<C>, PropertyStore<RcString>>,
 }
 
+impl<C: CoordinateType> Cell<C> {
+    /// Get the name of this cell.
+    pub fn name(&self) -> &RcString {
+        &self.name
+    }
+
+    /// Get the ID of this cell.
+    /// The ID uniquely identifies the cell within this layout.
+    pub fn id(&self) -> CellId<C> {
+        self.index
+    }
+
+    /// Get the shape container of this layer.
+    /// Returns `None` if the shapes object does not exist for this layer.
+    pub fn shapes(&self, layer_id: &LayerId) -> Option<&Shapes<C>> {
+        self.shapes_map.get(layer_id)
+    }
+
+    /// Find a child instance in this cell by its name.
+    pub fn instance_id_by_name(&self, name: &str) -> Option<CellInstId<C>> {
+        self.cell_instances_by_name.get(name).copied()
+    }
+
+    /// Iterate over the IDs of each layer of each used layer in this cell.
+    pub fn each_used_layer(&self) -> impl Iterator<Item=LayerId> + '_ {
+        self.shapes_map.keys().copied()
+    }
+
+    /// Iterate over the IDs of the child cell instances.
+    pub fn each_instance_id(&self) -> impl Iterator<Item=CellInstId<C>> + '_ {
+        self.cell_instances.iter().copied()
+    }
+
+    /// Iterate over the IDs of each dependency of this cell.
+    /// A dependency is a cell that is instantiated in `self`.
+    pub fn each_dependency_id(&self) -> impl Iterator<Item=CellId<C>> + '_ {
+        self.dependencies.keys().copied()
+    }
+
+    /// Iterate over the IDs of cell that depends on this cell.
+    pub fn each_dependent_cell_id(&self) -> impl Iterator<Item=CellId<C>> + '_ {
+        self.dependent_cells.keys().copied()
+    }
+}
+
+/// A 'fat' reference to a cell.
+///
+/// This struct also keeps a reference to a cell and to the layout.
+///
+/// This allows convenient read-only access to the layout in an object like manner.
+#[derive(Clone, Debug)]
+pub struct CellRef<'a, C: CoordinateType> {
+    /// Reference to the parent layout.
+    layout: &'a Layout<C>,
+    /// Reference to the cell.
+    cell: &'a Cell<C>,
+}
+
+/// All functions of `Cell` are made available also for `CellRef` by implementation of the `Deref` trait.
+impl<'a, C: CoordinateType> Deref for CellRef<'a, C> {
+    type Target = Cell<C>;
+
+    fn deref(&self) -> &Self::Target {
+        self.cell
+    }
+}
+
+impl<C: CoordinateType> CellRef<'_, C> {
+    /// Iterate over all cell instances in this cell.
+    pub fn each_instance_ref(&self) -> impl Iterator<Item=CellInstanceRef<'_, C>> {
+        self.cell_instances.iter()
+            .map(move |inst_id| {
+                let inst = &self.layout.cell_instances[inst_id];
+                CellInstanceRef {
+                    layout: self.layout,
+                    inst,
+                }
+            })
+    }
+
+    /// Find a child cell instance by its name.
+    /// Returns `None` if no such instance exists.
+    pub fn instance_ref_by_name(&self, name: &str) -> Option<CellInstanceRef<'_, C>> {
+        let id = self.instance_id_by_name(name);
+        id.map(|id| {
+            let inst = &self.layout.cell_instances[&id];
+            CellInstanceRef {
+                layout: self.layout,
+                inst,
+            }
+        })
+    }
+
+    /// Iterate over the references to all cells that are dependencies of this cell.
+    pub fn each_dependency_ref(&self) -> impl Iterator<Item=CellRef<'_, C>> {
+        self.each_dependency_id()
+            .map(move |id| CellRef {
+                layout: self.layout,
+                cell: &self.layout.cells[&id],
+            })
+    }
+
+    /// Iterate over the references to all cells that are dependent on this cell.
+    pub fn each_dependent_cell_ref(&self) -> impl Iterator<Item=CellRef<'_, C>> {
+        self.each_dependent_cell_id()
+            .map(move |id| CellRef {
+                layout: self.layout,
+                cell: &self.layout.cells[&id],
+            })
+    }
+}
+
 /// An actual instance of a cell.
 #[derive(Clone, Debug)]
 pub struct CellInstance<C: CoordinateType> {
@@ -139,10 +283,81 @@ pub struct CellInstance<C: CoordinateType> {
     /// Identifier. Uniquely identifies the instance within the parent cell.
     id: CellInstId<C>,
     /// ID of the template cell.
-    template_cell: CellId<C>,
+    template_cell_id: CellId<C>,
     /// Transformation to put the cell to the right place an into the right scale/rotation.
     transform: SimpleTransform<C>,
     // TODO: Repetition
+}
+
+
+impl<C: CoordinateType> CellInstance<C> {
+    /// Get the name of this cell instance.
+    pub fn name(&self) -> &Option<RcString> {
+        &self.name
+    }
+
+    /// Get the ID of this cell instance.
+    /// The ID uniquely identifies the cell within this layout.
+    pub fn id(&self) -> CellInstId<C> {
+        self.id
+    }
+
+    /// Get the ID of the parent cell.
+    pub fn parent_cell_id(&self) -> CellId<C> {
+        self.parent_cell_id
+    }
+
+    /// Get the ID of the template cell.
+    pub fn template_cell_id(&self) -> CellId<C> {
+        self.template_cell_id
+    }
+
+    /// Get the transformation that represents the location and orientation of this instanc.e
+    pub fn get_transform(&self) -> &SimpleTransform<C> {
+        &self.transform
+    }
+}
+
+/// A reference to a cell instance.
+///
+/// This struct also keeps a reference to the parent layout struct of the cell.
+#[derive(Clone, Debug)]
+pub struct CellInstanceRef<'a, C: CoordinateType> {
+    layout: &'a Layout<C>,
+    inst: &'a CellInstance<C>,
+}
+
+impl<'a, C: CoordinateType> Deref for CellInstanceRef<'a, C> {
+    type Target = CellInstance<C>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inst
+    }
+}
+
+impl<C: CoordinateType> CellInstanceRef<'_, C> {
+    /// Get reference to the layout struct where this cell instance lives in.
+    pub fn layout(&self) -> &Layout<C> {
+        self.layout
+    }
+
+    /// Get a reference to the parent cell of this instance.
+    pub fn parent_cell(&self) -> CellRef<C> {
+        let parent = &self.layout.cells[&self.parent_cell_id];
+        CellRef {
+            layout: self.layout,
+            cell: parent,
+        }
+    }
+
+    /// Get a reference to the template cell of this instance.
+    pub fn template_cell(&self) -> CellRef<C> {
+        let template = &self.layout.cells[&self.template_cell_id];
+        CellRef {
+            layout: self.layout,
+            cell: template,
+        }
+    }
 }
 
 /// Wrapper around a `Geometry` struct.
@@ -171,6 +386,19 @@ pub struct Shapes<C>
     shape_properties: HashMap<ShapeId<C>, PropertyStore<RcString>>,
 }
 
+impl<C: CoordinateType> Shapes<C> {
+
+    /// Get the ID of this shape container.
+    pub fn id(&self) -> Index<Self> {
+        self.id
+    }
+
+    /// Iterate over all geometric shapes in this collection.
+    pub fn each_shape(&self) -> impl Iterator<Item=&Shape<C>> {
+        self.shapes.values()
+    }
+}
+
 impl<C: CoordinateType> LayoutBase for Layout<C> {
     type Coord = C;
     type NameType = RcString;
@@ -178,9 +406,10 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
     type CellId = CellId<C>;
     type CellInstId = CellInstId<C>;
 
+    /// Create a new empty layout.
     fn new() -> Self {
         Layout {
-            dbu: 0,
+            dbu: C::zero(),
             cells: Default::default(),
             cell_instances: Default::default(),
             cell_index_generator: Default::default(),
@@ -193,6 +422,18 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
             layer_info: Default::default(),
             property_storage: Default::default(),
         }
+    }
+
+    fn dbu(&self) -> Self::Coord {
+        self.dbu
+    }
+
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
+        Box::new(self.layer_info.keys().copied())
+    }
+
+    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
+        &self.layer_info[layer]
     }
 
     fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
@@ -229,7 +470,7 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
     }
 
     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-        self.cell_instances[cell_instance].template_cell
+        self.cell_instances[cell_instance].template_cell_id
     }
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
@@ -333,7 +574,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             name: name.clone(),
             parent_cell_id: *parent_cell,
             id: id,
-            template_cell: *template_cell,
+            template_cell_id: *template_cell,
             transform: transform,
         };
 
@@ -370,7 +611,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
 
         // Remove the instance and all references.
         let parent = self.cell_instances[id].parent_cell_id;
-        let template = self.cell_instances[id].template_cell;
+        let template = self.cell_instances[id].template_cell_id;
 
         // Remove dependency.
         {

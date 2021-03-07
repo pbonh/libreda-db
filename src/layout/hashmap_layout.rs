@@ -22,7 +22,6 @@
 //! of `Cell`s. Each cell contains geometric primitives that are grouped on `Layer`s.
 
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
 use crate::index::*;
 use crate::layout::types::*;
 use crate::property_storage::PropertyStore;
@@ -35,6 +34,11 @@ use std::hash::Hash;
 use std::borrow::Borrow;
 use iron_shapes::point::Deref;
 use crate::layout::errors::LayoutDbError::CellIndexNotFound;
+
+// Use an alternative hasher that has good performance for integer keys.
+use fnv::{FnvHashMap, FnvHashSet};
+type HashMap<K, V> = FnvHashMap<K, V>;
+type HashSet<V> = FnvHashSet<V>;
 
 /// Cell identifier.
 pub type CellId<T> = Index<Cell<T>>;
@@ -130,7 +134,7 @@ impl<C: CoordinateType> Layout<C> {
 /// A `Cell` is a container for geometrical shapes organized on different layers.
 /// Additionally to the geometrical shapes a cell can also contain instances of other cells.
 #[derive(Clone, Debug)]
-pub struct Cell<C: CoordinateType> {
+pub struct Cell<C: CoordinateType, U = ()> {
     /// Cell name.
     name: RcString,
     /// The index of this cell inside the layout. This is none if the cell does not belong to a layout.
@@ -159,6 +163,8 @@ pub struct Cell<C: CoordinateType> {
     /// Properties related to the instances in this cell.
     /// Instance properties are stored here for lower overhead of cell instances.
     instance_properties: HashMap<CellInstId<C>, PropertyStore<RcString>>,
+    /// User-defined data.
+    user_data: U,
 }
 
 impl<C: CoordinateType> Cell<C> {
@@ -275,7 +281,7 @@ impl<C: CoordinateType> CellRef<'_, C> {
 
 /// An actual instance of a cell.
 #[derive(Clone, Debug)]
-pub struct CellInstance<C: CoordinateType> {
+pub struct CellInstance<C: CoordinateType, U = ()> {
     /// Name of the instance.
     name: Option<RcString>,
     /// ID of the parent cell.
@@ -287,6 +293,8 @@ pub struct CellInstance<C: CoordinateType> {
     /// Transformation to put the cell to the right place an into the right scale/rotation.
     transform: SimpleTransform<C>,
     // TODO: Repetition
+    /// User-defined data.
+    user_data: U,
 }
 
 
@@ -362,13 +370,15 @@ impl<C: CoordinateType> CellInstanceRef<'_, C> {
 
 /// Wrapper around a `Geometry` struct.
 #[derive(Clone, Debug)]
-pub struct Shape<T: CoordinateType> {
+pub struct Shape<T: CoordinateType, U = ()> {
     /// Identifier of this shape.
     index: Index<Self>,
     /// The geometry of this shape.
     pub geometry: Geometry<T>,
     // /// Reference ID to container.
     // parent_id: Index<Shapes<T>>,
+    /// User-defined data.
+    user_data: U
 }
 
 /// `Shapes<T>` is a collection of `Shape<T>` structs. Each of
@@ -521,6 +531,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             dependent_cells: Default::default(),
             cell_properties: Default::default(),
             instance_properties: Default::default(),
+            user_data: Default::default()
         };
 
         self.cells.insert(id, cell);
@@ -576,6 +587,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             id: id,
             template_cell_id: *template_cell,
             transform: transform,
+            user_data: Default::default()
         };
 
         self.cell_instances.insert(id, inst);
@@ -652,6 +664,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         let shape = Shape {
             index: shape_id,
             geometry,
+            user_data: Default::default()
         };
 
         self.cells.get_mut(parent_cell).expect("Cell not found.")

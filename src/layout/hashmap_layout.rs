@@ -37,8 +37,10 @@ use crate::layout::errors::LayoutDbError::CellIndexNotFound;
 
 // Use an alternative hasher that has good performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
-type HashMap<K, V> = FnvHashMap<K, V>;
-type HashSet<V> = FnvHashSet<V>;
+use std::collections::HashMap;
+
+type IntHashMap<K, V> = FnvHashMap<K, V>;
+type IntHashSet<V> = FnvHashSet<V>;
 
 /// Cell identifier.
 pub type CellId<T> = Index<Cell<T>>;
@@ -65,9 +67,9 @@ pub struct Layout<C: CoordinateType> {
     /// Data-base unit. Pixels per micrometer.
     dbu: C,
     /// All cell templates.
-    cells: HashMap<CellId<C>, Cell<C>>,
+    cells: IntHashMap<CellId<C>, Cell<C>>,
     /// All cell instances.
-    cell_instances: HashMap<CellInstId<C>, CellInstance<C>>,
+    cell_instances: IntHashMap<CellInstId<C>, CellInstance<C>>,
     /// Counter for generating the next cell index.
     cell_index_generator: IndexGenerator<Cell<C>>,
     /// Counter for generating the next cell instance index.
@@ -83,9 +85,9 @@ pub struct Layout<C: CoordinateType> {
     /// Lookup table for finding layers by name.
     layers_by_name: HashMap<RcString, LayerId>,
     /// Lookup table for finding layers by index/datatype numbers.
-    layers_by_index_datatype: HashMap<(UInt, UInt), LayerId>,
+    layers_by_index_datatype: IntHashMap<(UInt, UInt), LayerId>,
     /// Info structures for all layers.
-    layer_info: HashMap<LayerId, LayerInfo>,
+    layer_info: IntHashMap<LayerId, LayerInfo>,
     /// Property storage for properties related to this layout.
     property_storage: PropertyStore<RcString>,
 }
@@ -140,29 +142,29 @@ pub struct Cell<C: CoordinateType, U = ()> {
     /// The index of this cell inside the layout. This is none if the cell does not belong to a layout.
     index: CellId<C>,
     /// Child cells.
-    cell_instances: HashSet<CellInstId<C>>,
+    cell_instances: IntHashSet<CellInstId<C>>,
 
     /// Cell instances indexed by name.
     cell_instances_by_name: HashMap<RcString, CellInstId<C>>,
 
     /// Mapping from layer indices to geometry data.
-    shapes_map: HashMap<LayerId, Shapes<C>>,
+    shapes_map: IntHashMap<LayerId, Shapes<C>>,
 
     /// All the instances of this cell.
-    cell_references: HashSet<CellInstId<C>>,
+    cell_references: IntHashSet<CellInstId<C>>,
 
     /// Set of cells that are dependencies of this cell.
     /// Stored together with a counter of how many instances of the dependency are present.
     /// This are the cells towards the leaves in the dependency tree.
-    dependencies: HashMap<CellId<C>, usize>,
+    dependencies: IntHashMap<CellId<C>, usize>,
     /// Cells that use an instance of this cell.
     /// This are the cells towards the root in the dependency tree.
-    dependent_cells: HashMap<CellId<C>, usize>,
+    dependent_cells: IntHashMap<CellId<C>, usize>,
     /// Properties related to this cell.
     cell_properties: PropertyStore<RcString>,
     /// Properties related to the instances in this cell.
     /// Instance properties are stored here for lower overhead of cell instances.
-    instance_properties: HashMap<CellInstId<C>, PropertyStore<RcString>>,
+    instance_properties: IntHashMap<CellInstId<C>, PropertyStore<RcString>>,
     /// User-defined data.
     user_data: U,
 }
@@ -391,9 +393,9 @@ pub struct Shapes<C>
     /// Reference to the cell where this shape collection lives. Can be none.
     parent_cell: CellId<C>,
     /// Shape elements.
-    shapes: HashMap<ShapeId<C>, Shape<C>>,
+    shapes: IntHashMap<ShapeId<C>, Shape<C>>,
     /// Property stores for the shapes.
-    shape_properties: HashMap<ShapeId<C>, PropertyStore<RcString>>,
+    shape_properties: IntHashMap<ShapeId<C>, PropertyStore<RcString>>,
 }
 
 impl<C: CoordinateType> Shapes<C> {

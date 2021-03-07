@@ -23,10 +23,11 @@
 
 use std::borrow::Borrow;
 use std::hash::Hash;
-use crate::layout::types::UInt;
+use crate::layout::types::{UInt, LayerInfo};
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
+use crate::layout::hashmap_layout::LayerId;
 
 /// Most basic trait of a layout.
 ///
@@ -46,6 +47,15 @@ pub trait LayoutBase {
 
     /// Create a new empty netlist.
     fn new() -> Self;
+
+    /// Get the distance unit used in this layout in 'pixels per micron'.
+    fn dbu(&self) -> Self::Coord;
+
+    /// Iterate over all defined layers.
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_>;
+
+    /// Get the `LayerInfo` data structure for this layer.
+    fn layer_info(&self, layer: &LayerId) -> &LayerInfo;
 
     /// Find a cell by its name.
     /// Return the cell with the given name. Returns `None` if the cell does not exist.
@@ -85,6 +95,9 @@ pub trait LayoutBase {
     /// Call a function for each shape on this layer.
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
         where F: FnMut(&Geometry<Self::Coord>) -> ();
+
+    // fn with_shapes<'a, F, R>(& self, cell: &Self::CellId, layer: &Self::LayerId, f: F) -> R
+    //     where F: FnMut(dyn IntoIterator<Item=&'a Geometry<Self::Coord>>) -> R;
 
     // /// Call a function for each shape on this layer.
     // fn for_each_shape_box<F>(&self, cell: &Self::CellId, layer: &Self::LayerId,

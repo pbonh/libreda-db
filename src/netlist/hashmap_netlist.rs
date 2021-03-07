@@ -32,6 +32,11 @@ use crate::netlist::traits::NetlistEdit;
 use crate::rc_string::RcString;
 use std::fmt::Debug;
 
+// Use an alternative hasher that has good performance for integer keys.
+use fnv::{FnvHashMap, FnvHashSet};
+type IntHashMap<K, V> = FnvHashMap<K, V>;
+type IntHashSet<V> = FnvHashSet<V>;
+
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CircuitId(usize);
@@ -82,16 +87,16 @@ pub struct Circuit {
     /// Pin definitions.
     pub pins: Vec<PinId>,
     /// Instances inside this circuit.
-    pub instances: HashSet<CircuitInstId>,
+    pub instances: IntHashSet<CircuitInstId>,
     /// Instances inside this circuit indexed by name.
     /// Not every instance needs to have a name.
     instances_by_name: HashMap<RcString, CircuitInstId>,
     /// Circuit instances that reference to this circuit.
-    pub references: HashSet<CircuitInstId>,
+    pub references: IntHashSet<CircuitInstId>,
     /// All circuits that have instances of this circuit.
-    pub parents: HashSet<CircuitId>,
+    pub parents: IntHashSet<CircuitId>,
     /// All nets in this circuit.
-    nets: HashSet<NetId>,
+    nets: IntHashSet<NetId>,
     /// Nets IDs stored by name.
     nets_by_name: HashMap<RcString, NetId>,
     /// Logic constant LOW net.
@@ -101,9 +106,9 @@ pub struct Circuit {
     /// Set of circuits that are direct dependencies of this circuit.
     /// Stored together with a counter of how many instances of the dependency are present.
     /// This are the circuits towards the leaves in the dependency tree.
-    dependencies: HashMap<CircuitId, usize>,
+    dependencies: IntHashMap<CircuitId, usize>,
     /// Circuits that use a instance of this circuit.
-    dependent_circuits: HashMap<CircuitId, usize>,
+    dependent_circuits: IntHashMap<CircuitId, usize>,
 }
 
 /// Instance of a circuit.
@@ -151,20 +156,20 @@ pub struct Net {
     /// Parent circuit of the net.
     pub parent: CircuitId,
     /// Pins connected to this net.
-    pub pins: HashSet<PinId>,
+    pub pins: IntHashSet<PinId>,
     /// Pin instances connected to this net.
-    pub pin_instances: HashSet<PinInstId>,
+    pub pin_instances: IntHashSet<PinInstId>,
 }
 
 /// A netlist is the container of circuits.
 #[derive(Debug, Default)]
 pub struct HashMapNetlist {
-    circuits: HashMap<CircuitId, Circuit>,
+    circuits: IntHashMap<CircuitId, Circuit>,
     circuits_by_name: HashMap<RcString, CircuitId>,
-    circuit_instances: HashMap<CircuitInstId, CircuitInst>,
-    nets: HashMap<NetId, Net>,
-    pins: HashMap<PinId, Pin>,
-    pin_instances: HashMap<PinInstId, PinInst>,
+    circuit_instances: IntHashMap<CircuitInstId, CircuitInst>,
+    nets: IntHashMap<NetId, Net>,
+    pins: IntHashMap<PinId, Pin>,
+    pin_instances: IntHashMap<PinInstId, PinInst>,
 
     id_counter_circuit: usize,
     id_counter_circuit_inst: usize,

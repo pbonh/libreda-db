@@ -31,7 +31,12 @@
 //! [`RcNetlist`]: netlist::rc_netlist::rc_netlist::RcNetlist
 //! [`Layout`]: layout
 
+// Enforce documentation of the public API.
 #![deny(missing_docs)]
+
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
 
 /// Re-exports: Crate for geometric primitives (points, polygons, ...).
 pub use iron_shapes;

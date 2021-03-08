@@ -322,7 +322,7 @@ impl<C: CoordinateType> CellInstance<C> {
         self.template_cell_id
     }
 
-    /// Get the transformation that represents the location and orientation of this instanc.e
+    /// Get the transformation that represents the location and orientation of this instance.
     pub fn get_transform(&self) -> &SimpleTransform<C> {
         &self.transform
     }

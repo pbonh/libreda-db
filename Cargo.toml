@@ -10,6 +10,7 @@ readme = "README.md"
 homepage = "https://libreda.org"
 repository = "https://codeberg.org/libreda/libreda-db"
 
+[lib]
 [dependencies]
 log = "0.4"
 itertools = "0.10.0"

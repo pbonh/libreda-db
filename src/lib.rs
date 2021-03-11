@@ -48,7 +48,6 @@ pub mod layout;
 pub mod index;
 pub mod rc_string;
 pub mod property_storage;
-mod flyweight;
 
 // Private modules.
 // mod refset; // Not currently used.

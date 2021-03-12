@@ -39,7 +39,7 @@ use std::fmt;
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FlyWeightContainer<T, I> {
     /// All templates indexed by ID.
     templates: IntHashMap<Index<T>, T>,

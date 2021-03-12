@@ -393,7 +393,7 @@ impl<'a, C: ?Sized, T, I> fmt::Debug for TemplateRef<'a, C, T, I>
 }
 
 impl<'a, C: ?Sized, T: ?Sized, I: ?Sized> TemplateRef<'a, C, T, I>
-   {
+{
     fn new(container: &'a C, template: &'a T) -> Self {
         Self {
             container,
@@ -416,7 +416,6 @@ impl<'a, C, T, I> Deref for TemplateRef<'a, C, T, I>
 impl<'a, C, T, I> TemplateRef<'a, C, T, I>
     where C: FlyWeightContainerTrait<T, I>,
           T: TemplateTrait<T, I> {
-
     pub fn id(&self) -> Index<T> {
         self.tpl().id
     }
@@ -660,7 +659,4 @@ fn test() {
     assert_eq!(inst_b.template().id(), id_b);
     assert_eq!(inst_b.parent().id(), id_a);
     assert_eq!(inst_b.parent_id(), id_a);
-
-
-
 }

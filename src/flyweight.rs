@@ -57,6 +57,14 @@ pub trait FlyWeightContainerTrait<T, I>
     where T: TemplateTrait<T, I> {
     fn fwc(&self) -> &FlyWeightContainer<T, I>;
     fn fwc_mut(&mut self) -> &mut FlyWeightContainer<T, I>;
+
+    /// Callback function that will be used to clean up
+    /// when calling `remove_template()`.
+    fn destroy_template(&mut self, _template_id: &Index<T>) {}
+
+    /// Callback function that will be used to clean up
+    /// when calling `remove_instance()`.
+    fn destroy_instance(&mut self, _instance_id: &Index<I>) {}
 }
 
 macro_rules! impl_flyweight_container {
@@ -116,6 +124,10 @@ macro_rules! impl_flyweight_container {
     }
 
     pub fn remove_template(&mut self, template_id: &Index<$T>) {
+
+        // Give the container implementation the chance to do some clean-up.
+        self.destroy_template(template_id);
+
         // Remove all instances inside this template.
         let instances = self.fwc().templates[template_id].tpl().child_instances.iter().copied().collect_vec();
         for inst in instances {
@@ -196,6 +208,9 @@ macro_rules! impl_flyweight_container {
     /// Remove an instance.
     pub fn remove_instance(&mut self, instance_id: &Index<$I>) {
 
+        // Give the container implementation the chance to do some clean-up.
+        self.destroy_instance(instance_id);
+
         // Remove the instance and all references.
         let parent = self.fwc().instances[instance_id].inst().parent_id;
         let template = self.fwc().instances[instance_id].inst().template_id;
@@ -239,6 +254,8 @@ pub trait TemplateTrait<T, I> {
     fn tpl(&self) -> &Template<T, I>;
     fn tpl_mut(&mut self) -> &mut Template<T, I>;
 
+    /// Create a new default instance with a struct `t` holding references.
+    /// `t` must be made accessible with the `tpl()` and `tpl_mut()` functions.
     fn new(t: Template<T, I>) -> Self;
 }
 
@@ -305,7 +322,7 @@ pub trait InstanceTrait<T, I> {
     }
 
     /// Get the ID of the parent template.
-    fn parent_template_id(&self) -> Index<T> {
+    fn parent_id(&self) -> Index<T> {
         self.inst().parent_id
     }
 
@@ -473,7 +490,7 @@ macro_rules! impl_instance {
         }
 
         /// Get the ID of the parent template.
-        pub fn parent_template_id(&self) -> Index<$T> {
+        pub fn parent_id(&self) -> Index<$T> {
             self.inst().parent_id
         }
 
@@ -624,7 +641,8 @@ fn test() {
     let id_a = netlist.create_template("A".into());
     let id_b = netlist.create_template("B".into());
     assert_eq!(netlist.each_template().len(), 2);
-    let inst1 = netlist.create_instance(&id_a, &id_b, "instB".into());
+
+    let _inst1 = netlist.create_instance(&id_a, &id_b, "instB".into());
 
     let a = netlist.template_by_id(&id_a);
     let b = netlist.template_by_id(&id_b);
@@ -638,7 +656,11 @@ fn test() {
     assert_eq!(b.each_dependency_id().len(), 0);
     assert_eq!(b.each_dependent_template_id().len(), 1);
 
-    let instB = a.instance_ref_by_name("instB").unwrap();
-    assert_eq!(instB.template().id(), id_b);
+    let inst_b = a.instance_ref_by_name("instB").unwrap();
+    assert_eq!(inst_b.template().id(), id_b);
+    assert_eq!(inst_b.parent().id(), id_a);
+    assert_eq!(inst_b.parent_id(), id_a);
+
+
 
 }

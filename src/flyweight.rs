@@ -34,6 +34,7 @@ use crate::rc_string::RcString;
 use iron_shapes::point::Deref;
 use std::ops::DerefMut;
 use std::marker::PhantomData;
+use std::fmt;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -365,6 +366,15 @@ pub struct TemplateRef<'a, C: ?Sized, T: ?Sized, I: ?Sized>
     instance_type: PhantomData<I>,
 }
 
+
+impl<'a, C: ?Sized, T, I> fmt::Debug for TemplateRef<'a, C, T, I>
+    where T: TemplateTrait<T, I>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "TemplateRef({})", self.template.tpl().id)
+    }
+}
+
 impl<'a, C: ?Sized, T: ?Sized, I: ?Sized> TemplateRef<'a, C, T, I>
    {
     fn new(container: &'a C, template: &'a T) -> Self {
@@ -376,7 +386,6 @@ impl<'a, C: ?Sized, T: ?Sized, I: ?Sized> TemplateRef<'a, C, T, I>
     }
 }
 
-/// All functions of `Cell` are made available also for `CellRef` by implementation of the `Deref` trait.
 impl<'a, C, T, I> Deref for TemplateRef<'a, C, T, I>
     where C: FlyWeightContainerTrait<T, I>,
           T: TemplateTrait<T, I> {
@@ -390,6 +399,11 @@ impl<'a, C, T, I> Deref for TemplateRef<'a, C, T, I>
 impl<'a, C, T, I> TemplateRef<'a, C, T, I>
     where C: FlyWeightContainerTrait<T, I>,
           T: TemplateTrait<T, I> {
+
+    pub fn id(&self) -> Index<T> {
+        self.tpl().id
+    }
+
     /// Iterate over all instances in this template.
     pub fn each_instance_ref(&self) -> impl Iterator<Item=InstanceRef<'_, C, T, I>> + ExactSizeIterator {
         self.tpl().child_instances.iter()
@@ -402,33 +416,34 @@ impl<'a, C, T, I> TemplateRef<'a, C, T, I>
             })
     }
 
-    // /// Find a child instance by its name.
-    // /// Returns `None` if no such instance exists.
-    // pub fn instance_ref_by_name(&self, name: &str) -> Option<InstanceRef<'_, C, T, I>> {
-    //     let id = self.instance_id_by_name(name);
-    //     id.map(|id| {
-    //         let inst = &self.container.fwc().instances[&id];
-    //         InstanceRef::new(self.container, inst)
-    //     })
-    // }
+    /// Find a child instance by its name.
+    /// Returns `None` if no such instance exists.
+    pub fn instance_ref_by_name(&self, name: &str) -> Option<InstanceRef<'_, C, T, I>> {
+        // let id = self.instance_id_by_name(name);
+        let id = self.tpl().child_instances_by_name.get(name).copied();
+        id.map(|id| {
+            let inst = &self.container.fwc().instances[&id];
+            InstanceRef::new(self.container, inst)
+        })
+    }
 
-    // /// Iterate over the references to all cells that are dependencies of this cell.
-    // pub fn each_dependency_ref(&self) -> impl Iterator<Item=TemplateRef<'_, C, T, I>> + ExactSizeIterator {
-    //     self.tpl().each_dependency_id()
-    //         .map(move |id| TemplateRef::new(
-    //             self.container,
-    //             &self.container.fwc().templates[&id],
-    //         ))
-    // }
+    /// Iterate over the references to all cells that are dependencies of this cell.
+    pub fn each_dependency_ref(&self) -> impl Iterator<Item=TemplateRef<'_, C, T, I>> + ExactSizeIterator {
+        self.tpl().dependencies.keys().copied()
+            .map(move |id| TemplateRef::new(
+                self.container,
+                &self.container.fwc().templates[&id],
+            ))
+    }
 
-    // /// Iterate over the references to all cells that are dependent on this cell.
-    // pub fn each_dependent_template_ref(&self) -> impl Iterator<Item=TemplateRef<'_, C, T, I>> + ExactSizeIterator {
-    //     self.each_dependent_template_id()
-    //         .map(move |id| TemplateRef::new(
-    //             self.container,
-    //             template: &self.container.templates[&id],
-    //         ))
-    // }
+    /// Iterate over the references to all cells that are dependent on this cell.
+    pub fn each_dependent_template_ref(&self) -> impl Iterator<Item=TemplateRef<'_, C, T, I>> + ExactSizeIterator {
+        self.tpl().dependent_templates.keys().copied()
+            .map(move |id| TemplateRef::new(
+                self.container,
+                &self.container.fwc().templates[&id],
+            ))
+    }
 }
 
 /// An actual instance of a template.
@@ -472,10 +487,8 @@ macro_rules! impl_instance {
 /// A reference to an instance.
 ///
 /// This struct also keeps a reference to the container struct.
-#[derive(Clone, Debug)]
-pub struct InstanceRef<'a, C, T, I>
-    where C: FlyWeightContainerTrait<T, I>,
-          T: TemplateTrait<T, I> {
+#[derive(Clone)]
+pub struct InstanceRef<'a, C: ?Sized, T: ?Sized, I: ?Sized> {
     container: &'a C,
     inst: &'a I,
     template_type: PhantomData<T>,
@@ -491,6 +504,14 @@ impl<'a, C, T, I> InstanceRef<'a, C, T, I>
             inst,
             template_type: PhantomData,
         }
+    }
+}
+
+impl<'a, C: ?Sized, T, I> fmt::Debug for InstanceRef<'a, C, T, I>
+    where I: InstanceTrait<T, I>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "InstanceRef({})", self.inst.id())
     }
 }
 
@@ -603,7 +624,7 @@ fn test() {
     let id_a = netlist.create_template("A".into());
     let id_b = netlist.create_template("B".into());
     assert_eq!(netlist.each_template().len(), 2);
-    netlist.create_instance(&id_a, &id_b, "instA".into());
+    let inst1 = netlist.create_instance(&id_a, &id_b, "instB".into());
 
     let a = netlist.template_by_id(&id_a);
     let b = netlist.template_by_id(&id_b);
@@ -616,4 +637,8 @@ fn test() {
 
     assert_eq!(b.each_dependency_id().len(), 0);
     assert_eq!(b.each_dependent_template_id().len(), 1);
+
+    let instB = a.instance_ref_by_name("instB").unwrap();
+    assert_eq!(instB.template().id(), id_b);
+
 }

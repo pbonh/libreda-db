@@ -28,11 +28,16 @@ use std::fmt::Formatter;
 
 /// An identifier for an arbitrary type `T`.
 /// This is a wrapper around `usize` which is bound to a type `T`.
-#[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Index<T> {
     index: usize,
     phantom: PhantomData<T>,
+}
+
+impl<T> fmt::Debug for Index<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Index({})", self.index)
+    }
 }
 
 impl<T> Hash for Index<T> {

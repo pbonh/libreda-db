@@ -52,18 +52,20 @@ pub struct FlyWeightContainer<T, I> {
     templates_by_name: HashMap<RcString, Index<T>>,
 }
 
-pub trait FlyWeightContainerTrait<T, I> {
+pub trait FlyWeightContainerTrait<T, I>
+    where T: TemplateTrait<T, I> {
     fn fwc(&self) -> &FlyWeightContainer<T, I>;
     fn fwc_mut(&mut self) -> &mut FlyWeightContainer<T, I>;
 }
 
 macro_rules! impl_flyweight_container {
     ($T:ty, $I:ty) => {
+
     /// Get a reference to the template with the given `ID`.
     ///
     /// # Panics
     /// Panics if the ID does not exist.
-    pub fn template_by_id(&self, id: &Index<$T>) -> TemplateRef<'_, Self, $T, $I> {
+    pub fn template_by_id(&self, id: &Index<$T>) -> TemplateRef<Self, $T, $I> {
         let template = &self.fwc().templates[id];
         TemplateRef::new(
             self,
@@ -111,25 +113,25 @@ macro_rules! impl_flyweight_container {
 
         id
     }
-    //
-    // fn remove_template(&mut self, template_id: &Index<T>) {
-    //     // Remove all instances inside this template.
-    //     let instances = self.templates[template_id].child_instances.iter().copied().collect_vec();
-    //     for inst in instances {
-    //         self.remove_instance(&inst);
-    //     }
-    //     // Remove all instances of this cell.
-    //     let references = self.templates[template_id].template_references.iter().copied().collect_vec();
-    //     for inst in references {
-    //         self.remove_instance(&inst);
-    //     }
-    //
-    //     // Remove the cell.
-    //     let name = self.templates[template_id].name.clone();
-    //     self.templates_by_name.remove(&name).unwrap();
-    //     self.templates.remove(&template_id).unwrap();
-    // }
-    //
+
+    pub fn remove_template(&mut self, template_id: &Index<$T>) {
+        // Remove all instances inside this template.
+        let instances = self.fwc().templates[template_id].tpl().child_instances.iter().copied().collect_vec();
+        for inst in instances {
+            self.remove_instance(&inst);
+        }
+        // Remove all instances of this cell.
+        let references = self.fwc().templates[template_id].tpl().template_references.iter().copied().collect_vec();
+        for inst in references {
+            self.remove_instance(&inst);
+        }
+
+        // Remove the cell.
+        let name = self.fwc().templates[template_id].tpl().name.clone();
+        self.fwc_mut().templates_by_name.remove(&name).unwrap();
+        self.fwc_mut().templates.remove(&template_id).unwrap();
+    }
+
     pub fn create_instance(&mut self, parent_id: &Index<$T>,
                            template_id: &Index<$T>,
                            name: RcString) -> Index<$I> {
@@ -189,58 +191,48 @@ macro_rules! impl_flyweight_container {
 
         id
     }
-    //
-    // /// Remove an instance.
-    // pub fn remove_instance(&mut self, instance_id: &Index<I>) {
-    //
-    //     // Remove the instance and all references.
-    //     let parent = self.instances[instance_id].parent_id;
-    //     let template = self.instances[instance_id].template_id;
-    //
-    //     // Remove dependency.
-    //     {
-    //         // Decrement counter.
-    //         let parent_mut = self.templates.get_mut(&parent).unwrap();
-    //         let count = parent_mut.dependencies.entry(template)
-    //             .or_insert(0); // Should not happen.
-    //         *count -= 1;
-    //
-    //         if *count == 0 {
-    //             // Remove entry.
-    //             parent_mut.dependencies.remove(&template);
-    //         }
-    //     }
-    //
-    //     // Remove dependency.
-    //     {
-    //         // Decrement counter.
-    //         let template_mut = self.templates.get_mut(&template).unwrap();
-    //         let count = template_mut.dependent_templates.entry(parent)
-    //             .or_insert(0); // Should not happen.
-    //         *count -= 1;
-    //
-    //         if *count == 0 {
-    //             // Remove entry.
-    //             template_mut.dependent_templates.remove(&parent);
-    //         }
-    //     }
-    //
-    //     self.instances.remove(&instance_id).unwrap();
-    //     self.templates.get_mut(&parent).unwrap().child_instances.remove(instance_id);
-    //     self.templates.get_mut(&template).unwrap().child_instances.remove(instance_id);
-    // }
+
+    /// Remove an instance.
+    pub fn remove_instance(&mut self, instance_id: &Index<$I>) {
+
+        // Remove the instance and all references.
+        let parent = self.fwc().instances[instance_id].inst().parent_id;
+        let template = self.fwc().instances[instance_id].inst().template_id;
+
+        // Remove dependency.
+        {
+            // Decrement counter.
+            let parent_mut = self.fwc_mut().templates.get_mut(&parent).unwrap().tpl_mut();
+            let count = parent_mut.dependencies.entry(template)
+                .or_insert(0); // Should not happen.
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                parent_mut.dependencies.remove(&template);
+            }
+        }
+
+        // Remove dependency.
+        {
+            // Decrement counter.
+            let template_mut = self.fwc_mut().templates.get_mut(&template).unwrap().tpl_mut();
+            let count = template_mut.dependent_templates.entry(parent)
+                .or_insert(0); // Should not happen.
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                template_mut.dependent_templates.remove(&parent);
+            }
+        }
+
+        self.fwc_mut().instances.remove(&instance_id).unwrap();
+        self.fwc_mut().templates.get_mut(&parent).unwrap().tpl_mut().child_instances.remove(instance_id);
+        self.fwc_mut().templates.get_mut(&template).unwrap().tpl_mut().child_instances.remove(instance_id);
+    }
     }
 }
-
-// impl<T, I> FlyWeightContainerTrait<T, I> for FlyWeightContainer<T, I> {
-//     fn fwc(&self) -> &FlyWeightContainer<T, I> {
-//         self
-//     }
-//
-//     fn fwc_mut(&mut self) -> &mut FlyWeightContainer<T, I> {
-//         self
-//     }
-// }
 
 pub trait TemplateTrait<T, I> {
     fn tpl(&self) -> &Template<T, I>;
@@ -356,9 +348,6 @@ pub struct Template<T, I> {
     /// Templates that use an instance of this template.
     /// This are the templates towards the root in the dependency tree.
     dependent_templates: IntHashMap<Index<T>, usize>,
-
-    // /// User data.
-    // data: T,
 }
 
 /// A 'fat' reference to a template.
@@ -366,10 +355,9 @@ pub struct Template<T, I> {
 /// This struct keeps a reference to a template as well as a reference to the container.
 ///
 /// This allows convenient read-only access.
-#[derive(Clone, Debug)]
-pub struct TemplateRef<'a, C, T, I>
-    where C: FlyWeightContainerTrait<T, I>,
-          T: TemplateTrait<T, I> {
+#[derive(Clone)]
+pub struct TemplateRef<'a, C: ?Sized, T: ?Sized, I: ?Sized>
+{
     /// Reference to the parent layout.
     container: &'a C,
     /// Reference to the template.
@@ -377,9 +365,8 @@ pub struct TemplateRef<'a, C, T, I>
     instance_type: PhantomData<I>,
 }
 
-impl<'a, C, T, I> TemplateRef<'a, C, T, I>
-    where C: FlyWeightContainerTrait<T, I>,
-          T: TemplateTrait<T, I> {
+impl<'a, C: ?Sized, T: ?Sized, I: ?Sized> TemplateRef<'a, C, T, I>
+   {
     fn new(container: &'a C, template: &'a T) -> Self {
         Self {
             container,
@@ -455,8 +442,6 @@ pub struct Instance<T, I> {
     id: Index<I>,
     /// ID of the template cell.
     template_id: Index<T>,
-    // /// User data.
-    // data: I,
 }
 
 macro_rules! impl_instance {
@@ -548,8 +533,6 @@ impl<'a, C, T, I> InstanceRef<'a, C, T, I>
 }
 
 
-
-
 #[test]
 fn test() {
     #[derive(Default)]
@@ -621,4 +604,16 @@ fn test() {
     let id_b = netlist.create_template("B".into());
     assert_eq!(netlist.each_template().len(), 2);
     netlist.create_instance(&id_a, &id_b, "instA".into());
+
+    let a = netlist.template_by_id(&id_a);
+    let b = netlist.template_by_id(&id_b);
+
+    assert_eq!(a.each_instance_ref().len(), 1);
+    assert_eq!(b.each_instance_ref().len(), 0);
+
+    assert_eq!(a.each_dependency_id().len(), 1);
+    assert_eq!(a.each_dependent_template_id().len(), 0);
+
+    assert_eq!(b.each_dependency_id().len(), 0);
+    assert_eq!(b.each_dependent_template_id().len(), 1);
 }

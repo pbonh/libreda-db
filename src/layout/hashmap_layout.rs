@@ -380,7 +380,7 @@ pub struct Shape<T: CoordinateType, U = ()> {
     // /// Reference ID to container.
     // parent_id: Index<Shapes<T>>,
     /// User-defined data.
-    user_data: U
+    user_data: U,
 }
 
 /// `Shapes<T>` is a collection of `Shape<T>` structs. Each of
@@ -399,7 +399,6 @@ pub struct Shapes<C>
 }
 
 impl<C: CoordinateType> Shapes<C> {
-
     /// Get the ID of this shape container.
     pub fn id(&self) -> Index<Self> {
         self.id
@@ -533,7 +532,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             dependent_cells: Default::default(),
             cell_properties: Default::default(),
             instance_properties: Default::default(),
-            user_data: Default::default()
+            user_data: Default::default(),
         };
 
         self.cells.insert(id, cell);
@@ -589,7 +588,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             id: id,
             template_cell_id: *template_cell,
             transform: transform,
-            user_data: Default::default()
+            user_data: Default::default(),
         };
 
         self.cell_instances.insert(id, inst);
@@ -666,7 +665,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         let shape = Shape {
             index: shape_id,
             geometry,
-            user_data: Default::default()
+            user_data: Default::default(),
         };
 
         self.cells.get_mut(parent_cell).expect("Cell not found.")

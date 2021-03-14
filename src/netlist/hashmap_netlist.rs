@@ -31,9 +31,11 @@ use crate::netlist::direction::Direction;
 use crate::netlist::traits::NetlistEdit;
 use crate::rc_string::RcString;
 use std::fmt::Debug;
+use std::ops::Deref;
 
 // Use an alternative hasher that has good performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
+
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
 
@@ -82,6 +84,8 @@ pub struct NetId(usize);
 /// a content which consists of interconnected circuit instances.
 #[derive(Debug, Clone)]
 pub struct Circuit {
+    /// ID of this circuit.
+    id: CircuitId,
     /// Name of the circuit.
     pub name: RcString,
     /// Pin definitions.
@@ -109,6 +113,34 @@ pub struct Circuit {
     dependencies: IntHashMap<CircuitId, usize>,
     /// Circuits that use a instance of this circuit.
     dependent_circuits: IntHashMap<CircuitId, usize>,
+}
+
+impl Circuit {
+    /// Get the ID of this circuit.
+    pub fn id(&self) -> CircuitId {
+        self.id
+    }
+
+    /// Find a child instance in this circuit by its name.
+    pub fn instance_id_by_name(&self, name: &str) -> Option<CircuitInstId> {
+        self.instances_by_name.get(name).copied()
+    }
+
+    /// Iterate over the IDs of the child instances.
+    pub fn each_instance_id(&self) -> impl Iterator<Item=CircuitInstId> + '_ {
+        self.instances.iter().copied()
+    }
+
+    /// Iterate over the IDs of each dependency of this circuit.
+    /// A dependency is a circuit that is instantiated in `self`.
+    pub fn each_dependency_id(&self) -> impl Iterator<Item=CircuitId> + '_ {
+        self.dependencies.keys().copied()
+    }
+
+    /// Iterate over the IDs of cell that depends on this circuit.
+    pub fn each_dependent_cell_id(&self) -> impl Iterator<Item=CircuitId> + '_ {
+        self.dependent_circuits.keys().copied()
+    }
 }
 
 /// Instance of a circuit.
@@ -159,6 +191,49 @@ pub struct Net {
     pub pins: IntHashSet<PinId>,
     /// Pin instances connected to this net.
     pub pin_instances: IntHashSet<PinInstId>,
+}
+
+
+/// A reference to a circuit instance.
+///
+/// This struct also keeps a reference to the parent netlist struct of the circuit.
+#[derive(Clone, Debug)]
+pub struct CircuitInstanceRef<'a> {
+    netlist: &'a HashMapNetlist,
+    inst: &'a CircuitInst,
+}
+
+impl<'a> Deref for CircuitInstanceRef<'a> {
+    type Target = CircuitInst;
+
+    fn deref(&self) -> &Self::Target {
+        self.inst
+    }
+}
+
+impl CircuitInstanceRef<'_> {
+    /// Get reference to the netlist struct where this instance lives in.
+    pub fn netlist(&self) -> &HashMapNetlist {
+        self.netlist
+    }
+
+    /// Get a reference to the parent cell of this instance.
+    pub fn parent_cell(&self) -> CircuitRef {
+        let parent = &self.netlist.circuits[&self.parent];
+        CircuitRef {
+            netlist: self.netlist,
+            circuit: parent,
+        }
+    }
+
+    /// Get a reference to the template of this instance.
+    pub fn template_cell(&self) -> CircuitRef {
+        let template = &self.netlist.circuits[&self.circuit];
+        CircuitRef {
+            netlist: self.netlist,
+            circuit: template,
+        }
+    }
 }
 
 /// A netlist is the container of circuits.
@@ -303,6 +378,70 @@ impl HashMapNetlist {
     /// Iterate through all nets that are defined in the netlist.
     pub fn each_net(&self) -> impl Iterator<Item=NetId> + '_ {
         self.nets.keys().copied()
+    }
+}
+
+
+/// A 'fat' reference to a circuit.
+#[derive(Clone, Debug)]
+pub struct CircuitRef<'a> {
+    /// Reference to the parent netlist.
+    netlist: &'a HashMapNetlist,
+    /// Reference to the circuit.
+    circuit: &'a Circuit,
+}
+
+/// All functions of `Cell` are made available also for `CellRef` by implementation of the `Deref` trait.
+impl<'a> Deref for CircuitRef<'a> {
+    type Target = Circuit;
+
+    fn deref(&self) -> &Self::Target {
+        self.circuit
+    }
+}
+
+impl CircuitRef<'_> {
+    /// Iterate over all cell instances in this circuit.
+    pub fn each_instance_ref(&self) -> impl Iterator<Item=CircuitInstanceRef<'_>> {
+        self.instances.iter()
+            .map(move |inst_id| {
+                let inst = &self.netlist.circuit_instances[inst_id];
+                CircuitInstanceRef {
+                    netlist: self.netlist,
+                    inst,
+                }
+            })
+    }
+
+    /// Find a child cell instance by its name.
+    /// Returns `None` if no such instance exists.
+    pub fn instance_ref_by_name(&self, name: &str) -> Option<CircuitInstanceRef<'_>> {
+        let id = self.instance_id_by_name(name);
+        id.map(|id| {
+            let inst = &self.netlist.circuit_instances[&id];
+            CircuitInstanceRef {
+                netlist: self.netlist,
+                inst,
+            }
+        })
+    }
+
+    /// Iterate over the references to all cells that are dependencies of this cell.
+    pub fn each_dependency_ref(&self) -> impl Iterator<Item=CircuitRef<'_>> {
+        self.each_dependency_id()
+            .map(move |id| CircuitRef {
+                netlist: self.netlist,
+                circuit: &self.netlist.circuits[&id],
+            })
+    }
+
+    /// Iterate over the references to all cells that are dependent on this cell.
+    pub fn each_dependent_cell_ref(&self) -> impl Iterator<Item=CircuitRef<'_>> {
+        self.each_dependent_cell_id()
+            .map(move |id| CircuitRef {
+                netlist: self.netlist,
+                circuit: &self.netlist.circuits[&id],
+            })
     }
 }
 
@@ -511,6 +650,7 @@ impl NetlistEdit for HashMapNetlist {
             .collect();
 
         let circuit = Circuit {
+            id,
             name: name.clone(),
             pins,
             instances: Default::default(),

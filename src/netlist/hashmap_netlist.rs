@@ -41,17 +41,15 @@ type IntHashSet<V> = FnvHashSet<V>;
 
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-/// TODO: Convert from usize to u32.
-pub struct CircuitId(usize);
+pub struct CircuitId(u32);
 
 /// Circuit instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CircuitInstId(usize);
 
 /// Pin identifier.
-/// TODO: Convert from usize to u32.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct PinId(usize);
+pub struct PinId(u32);
 
 /// Pin instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -473,9 +471,9 @@ pub struct HashMapNetlist {
     pins: IntHashMap<PinId, Pin>,
     pin_instances: IntHashMap<PinInstId, PinInst>,
 
-    id_counter_circuit: usize,
+    id_counter_circuit: u32,
     id_counter_circuit_inst: usize,
-    id_counter_pin: usize,
+    id_counter_pin: u32,
     id_counter_pin_inst: usize,
     id_counter_net: usize,
 }
@@ -535,7 +533,14 @@ impl HashMapNetlist {
     }
 
     /// Get the value of a counter and increment the counter afterwards.
-    fn next_id_counter(ctr: &mut usize) -> usize {
+    fn next_id_counter_usize(ctr: &mut usize) -> usize {
+        let c = *ctr;
+        *ctr += 1;
+        c
+    }
+
+    /// Get the value of a counter and increment the counter afterwards.
+    fn next_id_counter_u32(ctr: &mut u32) -> u32 {
         let c = *ctr;
         *ctr += 1;
         c
@@ -543,7 +548,7 @@ impl HashMapNetlist {
 
     /// Append a new pin to the `parent` circuit.
     fn create_pin(&mut self, parent: CircuitId, name: RcString, direction: Direction, position: usize) -> PinId {
-        let id = PinId(HashMapNetlist::next_id_counter(&mut self.id_counter_pin));
+        let id = PinId(HashMapNetlist::next_id_counter_u32(&mut self.id_counter_pin));
         let pin = Pin {
             name,
             direction,
@@ -558,7 +563,7 @@ impl HashMapNetlist {
 
     /// Insert a new pin instance to a circuit instance.
     fn create_pin_inst(&mut self, circuit: CircuitInstId, pin: PinId) -> PinInstId {
-        let id = PinInstId(HashMapNetlist::next_id_counter(&mut self.id_counter_pin_inst));
+        let id = PinInstId(HashMapNetlist::next_id_counter_usize(&mut self.id_counter_pin_inst));
         let pin = PinInst {
             template_pin_id: pin,
             circuit_inst: circuit,
@@ -937,7 +942,7 @@ impl NetlistEdit for HashMapNetlist {
     /// Create a new circuit with a given list of pins.
     fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CircuitId {
         assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
-        let id = CircuitId(HashMapNetlist::next_id_counter(&mut self.id_counter_circuit));
+        let id = CircuitId(HashMapNetlist::next_id_counter_u32(&mut self.id_counter_circuit));
 
         // Create pins.
         let pins = pins.into_iter()
@@ -1005,7 +1010,7 @@ impl NetlistEdit for HashMapNetlist {
     fn create_circuit_instance(&mut self, parent: &CircuitId,
                                circuit_template: &CircuitId,
                                name: Option<Self::NameType>) -> CircuitInstId {
-        let id = CircuitInstId(HashMapNetlist::next_id_counter(&mut self.id_counter_circuit_inst));
+        let id = CircuitInstId(HashMapNetlist::next_id_counter_usize(&mut self.id_counter_circuit_inst));
 
         {
             // Check that creating this circuit instance does not create a cycle in the dependency graph.
@@ -1109,7 +1114,7 @@ impl NetlistEdit for HashMapNetlist {
     fn create_net(&mut self, parent: &CircuitId, name: Option<Self::NameType>) -> NetId {
         assert!(self.circuits.contains_key(parent));
 
-        let id = NetId(HashMapNetlist::next_id_counter(&mut self.id_counter_net));
+        let id = NetId(HashMapNetlist::next_id_counter_usize(&mut self.id_counter_net));
         let net = Net {
             name: name.clone(),
             parent: *parent,

@@ -369,13 +369,80 @@ pub struct Net {
     /// Name of the net.
     pub name: Option<RcString>,
     /// Parent circuit of the net.
-    pub parent: CircuitId,
+    pub parent_id: CircuitId,
     /// Pins connected to this net.
     pub pins: IntHashSet<PinId>,
     /// Pin instances connected to this net.
     pub pin_instances: IntHashSet<PinInstId>,
 }
 
+impl Net {
+
+}
+
+/// Fat reference to a net. Includes also a reference to the parent circuit.
+#[derive(Copy, Clone, Debug)]
+pub struct NetRef<'a> {
+    parent: CircuitRef<'a>,
+    net: &'a Net,
+}
+
+impl<'a> NetRef<'a> {
+    fn new(parent: CircuitRef<'a>, net: &'a Net) -> Self {
+        Self {
+            parent,
+            net,
+        }
+    }
+
+    /// Get the circuit where this net lives.
+    pub fn parent_circuit(self) -> CircuitRef<'a> {
+        self.parent
+    }
+
+    /// Get reference to the netlist where this net lives.
+    pub fn netlist(self) -> &'a HashMapNetlist {
+        self.parent_circuit().netlist()
+    }
+
+    /// Iterate over all external pin IDs connected to this net.
+    pub fn each_pin_id(&self) -> impl Iterator<Item=PinId> + '_ {
+        self.pins.iter().copied()
+    }
+
+    /// Iterate over all internal pin instance IDs connected to this net.
+    pub fn each_pin_inst_id(&self) -> impl Iterator<Item=PinInstId> + '_ {
+        self.pin_instances.iter().copied()
+    }
+
+    /// Iterate over all external pins connected to this net.
+    pub fn each_pin_ref(&'a self) -> impl Iterator<Item=PinRef<'a>> + 'a {
+        self.pins.iter()
+            .map(move |id| {
+                PinRef::new(self.parent_circuit(), self.netlist().pin(id))
+            })
+    }
+
+    /// Iterate over all internal pins instances connected to this net.
+    pub fn each_pin_inst_ref(&'a self) -> impl Iterator<Item=PinInstRef<'a>> + 'a {
+        let netlist = self.netlist();
+        self.pin_instances.iter()
+            .map(move |id| {
+                let pin_inst = netlist.pin_inst(id);
+                let parent_inst_id = pin_inst.circuit_inst;
+                let parent_inst = netlist.circuit_inst_ref(&parent_inst_id);
+                PinInstRef::new(parent_inst, pin_inst)
+            })
+    }
+}
+
+impl Deref for NetRef<'_> {
+    type Target = Net;
+
+    fn deref(&self) -> &Self::Target {
+        self.net
+    }
+}
 
 /// A reference to a circuit instance.
 ///
@@ -395,6 +462,12 @@ impl<'a> Deref for CircuitInstanceRef<'a> {
 }
 
 impl<'a> CircuitInstanceRef<'a> {
+    fn new(netlist: &'a HashMapNetlist, inst: &'a CircuitInst) -> Self {
+        Self {
+            netlist,
+            inst,
+        }
+    }
     /// Get reference to the netlist struct where this instance lives in.
     pub fn netlist(self) -> &'a HashMapNetlist {
         self.netlist
@@ -500,6 +573,11 @@ impl HashMapNetlist {
     /// Get a reference to a circuit instance.
     pub fn circuit_inst(&self, id: &CircuitInstId) -> &CircuitInst {
         &self.circuit_instances[id]
+    }
+
+    /// Get a fat circuit instance reference by its ID.
+    pub fn circuit_inst_ref(&self, id: &CircuitInstId) -> CircuitInstanceRef {
+        CircuitInstanceRef::new(self, &self.circuit_instances[id])
     }
 
     /// Get a reference to a net by its ID.
@@ -1117,7 +1195,7 @@ impl NetlistEdit for HashMapNetlist {
         let id = NetId(HashMapNetlist::next_id_counter_usize(&mut self.id_counter_net));
         let net = Net {
             name: name.clone(),
-            parent: *parent,
+            parent_id: *parent,
             pins: Default::default(),
             pin_instances: Default::default(),
         };
@@ -1133,7 +1211,7 @@ impl NetlistEdit for HashMapNetlist {
 
     fn rename_net(&mut self, parent_circuit: &Self::CircuitId,
                   net_id: &Self::NetId, new_name: Option<Self::NameType>) {
-        assert_eq!(parent_circuit, &self.nets.get(net_id).expect("Net not found.").parent);
+        assert_eq!(parent_circuit, &self.nets.get(net_id).expect("Net not found.").parent_id);
 
 
         // Check if a net with this name already exists.
@@ -1167,7 +1245,7 @@ impl NetlistEdit for HashMapNetlist {
     fn remove_net(&mut self, net: &NetId) {
         let pins = self.pins_for_net(net).collect_vec();
         let pin_insts = self.pins_instances_for_net(net).collect_vec();
-        let parent_circuit = self.net(net).parent;
+        let parent_circuit = self.net(net).parent_id;
 
         for p in pins {
             self.disconnect_pin(&p);
@@ -1188,7 +1266,7 @@ impl NetlistEdit for HashMapNetlist {
     fn connect_pin(&mut self, pin: &PinId, net: Option<NetId>) -> Option<NetId> {
         if let Some(net) = net {
             // Sanity check.
-            assert_eq!(self.pin(&pin).circuit, self.net(&net).parent,
+            assert_eq!(self.pin(&pin).circuit, self.net(&net).parent_id,
                        "Pin and net do not live in the same circuit.");
         }
 
@@ -1215,7 +1293,7 @@ impl NetlistEdit for HashMapNetlist {
     fn connect_pin_instance(&mut self, pin: &PinInstId, net: Option<NetId>) -> Option<Self::NetId> {
         if let Some(net) = net {
             assert_eq!(self.circuit_inst(&self.pin_inst(pin).circuit_inst).parent_circuit_id,
-                       self.net(&net).parent, "Pin and net do not live in the same circuit.");
+                       self.net(&net).parent_id, "Pin and net do not live in the same circuit.");
         }
 
         let old_net = if let Some(net) = net {

@@ -219,7 +219,7 @@ impl<C: CoordinateType> Cell<C> {
 /// This struct also keeps a reference to a cell and to the layout.
 ///
 /// This allows convenient read-only access to the layout in an object like manner.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct CellRef<'a, C: CoordinateType> {
     /// Reference to the parent layout.
     layout: &'a Layout<C>,
@@ -331,7 +331,7 @@ impl<C: CoordinateType> CellInstance<C> {
 /// A reference to a cell instance.
 ///
 /// This struct also keeps a reference to the parent layout struct of the cell.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct CellInstanceRef<'a, C: CoordinateType> {
     layout: &'a Layout<C>,
     inst: &'a CellInstance<C>,
@@ -416,6 +416,7 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
     type LayerId = LayerId;
     type CellId = CellId<C>;
     type CellInstId = CellInstId<C>;
+    type ShapeId = ShapeId<C>;
 
     /// Create a new empty layout.
     fn new() -> Self {
@@ -488,6 +489,10 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
     }
 
+    fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+        Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| s.index))
+    }
+
     // fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_> {
     //     Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| &s.geometry))
     // }
@@ -498,7 +503,6 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
             .for_each(|s| f(&s.geometry))
     }
 }
-
 
 impl<C: CoordinateType> LayoutEdit for Layout<C> {
     fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {

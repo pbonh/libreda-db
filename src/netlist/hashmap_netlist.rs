@@ -171,6 +171,11 @@ impl Circuit {
     pub fn pin_id_at(&self, position: usize) -> PinId {
         self.pins[position]
     }
+
+    /// Iterate over the IDs of all nets that are defined in this circuit.
+    pub fn each_net_id(&self) -> impl Iterator<Item=NetId> + ExactSizeIterator + '_ {
+        self.nets.iter().copied()
+    }
 }
 
 /// Instance of a circuit.
@@ -352,6 +357,12 @@ impl<'a> PinInstRef<'a> {
     pub fn netlist(self) -> &'a HashMapNetlist {
         self.parent_circuit_instance().netlist()
     }
+
+    /// Get a reference to the net that is connected to this pin instance.
+    pub fn net_ref(self) -> Option<NetRef<'a>> {
+        self.net_id()
+            .map(|id| self.netlist().net_ref(&id))
+    }
 }
 
 impl Deref for PinInstRef<'_> {
@@ -376,9 +387,7 @@ pub struct Net {
     pub pin_instances: IntHashSet<PinInstId>,
 }
 
-impl Net {
-
-}
+impl Net {}
 
 /// Fat reference to a net. Includes also a reference to the parent circuit.
 #[derive(Copy, Clone, Debug)]
@@ -502,6 +511,13 @@ impl<'a> CircuitInstanceRef<'a> {
         let num_pins = self.pins.len();
         (0..num_pins).map(move |pos| self.pin_inst_ref_at(pos))
     }
+
+    /// Iterate over all nets that are connected externally to this circuit instance.
+    /// Nets may appear multiple times.
+    pub fn each_external_net(&self) -> impl Iterator<Item=NetRef<'a>> + 'a {
+        self.each_pin_inst_ref()
+            .filter_map(|p| p.net_ref())
+    }
 }
 
 
@@ -589,7 +605,14 @@ impl HashMapNetlist {
     fn net_mut(&mut self, id: &NetId) -> &mut Net {
         self.nets.get_mut(id).unwrap()
     }
-    
+
+    /// Get a fat reference to the net by its ID.
+    pub fn net_ref(&self, id: &NetId) -> NetRef {
+        let net = self.net(id);
+        let parent_circuit = self.circuit_ref(&net.parent_id);
+        NetRef::new(parent_circuit, net)
+    }
+
     /// Get a reference to a pin by its ID.
     pub fn pin(&self, id: &PinId) -> &Pin {
         &self.pins[id]
@@ -784,6 +807,12 @@ impl<'a> CircuitRef<'a> {
     /// Get a reference to the netlist where this circuit lives.
     pub fn netlist(self) -> &'a HashMapNetlist {
         self.netlist
+    }
+
+    /// Iterate over all nets defined in this circuit.
+    pub fn each_net_ref(&self) -> impl Iterator<Item=NetRef<'_>> {
+        self.each_net_id()
+            .map(move |id|  NetRef::new(*self, self.netlist.net(&id)))
     }
 }
 

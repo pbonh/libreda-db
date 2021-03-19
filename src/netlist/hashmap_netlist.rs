@@ -316,7 +316,7 @@ pub struct PinInst {
 
 impl PinInst {
     /// Get the ID of the net that is internally connected to this pin.
-    pub fn net(&self) -> Option<NetId> {
+    pub fn net_id(&self) -> Option<NetId> {
         self.net.clone()
     }
 }
@@ -589,7 +589,7 @@ impl HashMapNetlist {
     fn net_mut(&mut self, id: &NetId) -> &mut Net {
         self.nets.get_mut(id).unwrap()
     }
-
+    
     /// Get a reference to a pin by its ID.
     pub fn pin(&self, id: &PinId) -> &Pin {
         &self.pins[id]

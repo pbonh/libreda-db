@@ -27,7 +27,7 @@ use crate::layout::types::{UInt, LayerInfo};
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
-use crate::layout::hashmap_layout::{LayerId, ShapeId};
+use crate::layout::hashmap_layout::{LayerId};
 
 /// Most basic trait of a layout.
 ///
@@ -91,7 +91,7 @@ pub trait LayoutBase {
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;
 
-    /// Iterate over all shapes on a layer.
+    /// Iterate over the IDs of all shapes in the cell on a specific layer.
     fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_>;
 
     /// Call a function for each shape on this layer.

@@ -32,12 +32,11 @@ use iron_shapes::transform::SimpleTransform;
 use crate::layout::traits::{LayoutBase, LayoutEdit};
 use std::hash::Hash;
 use std::borrow::Borrow;
-use iron_shapes::point::Deref;
-use crate::layout::errors::LayoutDbError::CellIndexNotFound;
 
 // Use an alternative hasher that has good performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
 use std::collections::HashMap;
+use std::ops::Deref;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;

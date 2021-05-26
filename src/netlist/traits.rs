@@ -57,6 +57,40 @@ pub trait CircuitInstRef {
     fn name(&self) -> Option<<<Self as CircuitInstRef>::N as NetlistBase>::NameType>;
 }
 
+/// A reference to a pin.
+pub trait PinRef {
+    /// Netlist type.
+    type N: NetlistBase;
+}
+
+/// A reference to a pin instance.
+pub trait PinInstRef {
+    /// Netlist type.
+    type N: NetlistBase;
+}
+
+
+/// A reference to a net.
+pub trait NetRef {
+    /// Netlist type.
+    type N: NetlistBase;
+
+    // /// Get the circuit where this net lives.
+    // fn parent_circuit(self) -> CircuitRef<'a>;
+
+    // /// Iterate over all external pin IDs connected to this net.
+    // fn each_pin_id(&self) -> impl Iterator<Item=PinId> + '_;
+    //
+    // /// Iterate over all internal pin instance IDs connected to this net.
+    // fn each_pin_inst_id(&self) -> impl Iterator<Item=PinInstId> + '_;
+    //
+    // /// Iterate over all external pins connected to this net.
+    // fn each_pin_ref(&'a self) -> impl Iterator<Item=PinRef<'a>> + 'a;
+    //
+    // /// Iterate over all internal pins instances connected to this net.
+    // fn each_pin_inst_ref(&'a self) -> Box<impl Iterator<Item=PinInstRef<'a>>> + 'a;
+}
+
 /// Default implementation for `CircuitRef`.
 /// This is just a wrapper around a netlist and a circuit ID.
 pub struct DefaultCircuitRef<'a, N: NetlistBase + ?Sized> {
@@ -108,6 +142,14 @@ impl<'a, N: NetlistBase> CircuitInstRef for DefaultCircuitInstRef<'a, N> {
     }
 }
 
+/// Trait that provides object-like read access to a netlist and its elements.
+pub trait NetlistReferenceAccess: NetlistBase
+{
+    /// Reference type for circuits.
+    type CircuitRefType: CircuitRef;
+    /// Reference type for circuit instances.
+    type CircuitInstRefType: CircuitInstRef;
+}
 
 /// Most basic trait of a netlist.
 ///

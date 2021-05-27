@@ -25,6 +25,7 @@ use crate::prelude::*;
 use std::rc::Weak;
 use std::hash::{Hash, Hasher};
 use crate::property_storage::{WithProperties, PropertyStore};
+use std::cell::RefCell;
 
 /// An actual instance of a cell.
 #[derive(Clone, Debug)]
@@ -38,7 +39,7 @@ pub struct CellInstance<C: CoordinateType> {
     /// Cell where this instance lives in.
     pub(super) parent_cell: Weak<Cell<C>>,
     /// Transformation to put the cell to the right place an into the right scale/rotation.
-    pub(super) transform: SimpleTransform<C>,
+    pub(super) transform: RefCell<SimpleTransform<C>>,
     // TODO: Repetition
 }
 
@@ -83,7 +84,12 @@ impl<C: CoordinateType> CellInstance<C> {
 
     /// Get the transformation describing the location, orientation and magnification of this cell instance.
     pub fn get_transform(&self) -> SimpleTransform<C> {
-        self.transform.clone()
+        self.transform.borrow().clone()
+    }
+
+    /// Set the transformation describing the location, orientation and magnification of this cell instance.
+    pub fn set_transform(&self, tf: SimpleTransform<C>) {
+        self.transform.replace(tf);
     }
 }
 

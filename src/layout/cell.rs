@@ -30,6 +30,7 @@ use std::rc::{Rc, Weak};
 use genawaiter::rc::Gen;
 use std::hash::{Hash, Hasher};
 use crate::property_storage::{PropertyStore, WithProperties};
+use std::borrow::Borrow;
 
 /// Mutable shared reference to a `Cell`.
 pub type CellReference<C> = Rc<RefCell<Cell<C>>>;
@@ -169,7 +170,7 @@ impl<C: CoordinateType> Cell<C> {
             parent_cell_id: self.index(),
             cell: Rc::downgrade(template_cell),
             parent_cell: self.self_reference.borrow().clone(),
-            transform,
+            transform: RefCell::new(transform),
         };
         let rc_cell_inst = Rc::new(cell_inst);
         self.cell_instances.borrow_mut().insert(index, rc_cell_inst.clone());

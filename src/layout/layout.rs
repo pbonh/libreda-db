@@ -21,6 +21,10 @@
 //! of `Cell`s. Each cell contains geometric primitives that are grouped on `Layer`s.
 
 use itertools::Itertools;
+
+use genawaiter;
+use genawaiter::rc::Gen;
+
 use crate::prelude::*;
 use super::errors::LayoutDbError;
 
@@ -359,6 +363,7 @@ impl LayoutBase for Layout {
     type LayerId = LayerIndex;
     type CellId = Rc<Cell<Coord>>;
     type CellInstId = Rc<CellInstance<Coord>>;
+    type ShapeId = Rc<Shape<Coord>>;
 
     fn new() -> Self {
         Layout::new()
@@ -416,11 +421,18 @@ impl LayoutBase for Layout {
         self.find_layer(index, datatype)
     }
 
-    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
-        where F: FnMut(&Geometry<Self::Coord>) -> () {
-        if let Some(shapes) = cell.shapes(*layer) {
-            shapes.for_each_shape(|s| f(&s.geometry))
-        }
+    fn each_shape_id<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + 'a> {
+        let cell_id = cell.index();
+        let layer = *layer;
+
+        let generator = Gen::new(|co| async move {
+            if let Some(shapes) = self.cells[&cell_id].shapes(layer) {
+                for shape in shapes.each_shape() {
+                    co.yield_(shape).await;
+                }
+            }
+        });
+        Box::new(generator.into_iter())
     }
 
     // fn with_shapes<'a, F, R>(& self, cell: &Self::CellId, layer: &Self::LayerId, f: F) -> R
@@ -432,32 +444,27 @@ impl LayoutBase for Layout {
     // }
 
 
-    // fn each_shape<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&'a Geometry<Self::Coord>> + 'a> {
-    //
-    //     // Box::new(
-    //     //     self.cells[&cell.index()].shapes(*layer)
-    //     //         .into_iter()
-    //     //         .flat_map(|shapes|
-    //     //             shapes.each_shape().map(|shape| &shape.geometry)
-    //     //         )
-    //     // )
-    //
-    //     unimplemented!()
-    //
-    //     // let cell_id = cell.index();
-    //     // let layer = *layer;
-    //     //
-    //     // let generator = Gen::new(|co: Co<&'a _>| async move {
-    //     //     if let Some(shapes) = self.cells[&cell_id].shapes(layer) {
-    //     //         for shape in shapes.each_shape() {
-    //     //             co.yield_(&shape.geometry).await;
-    //     //         }
-    //     //     }
-    //     // });
-    //     // Box::new(generator.into_iter())
-    // }
+    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
+        where F: FnMut(&Geometry<Self::Coord>) -> () {
+        if let Some(shapes) = cell.shapes(*layer) {
+            shapes.for_each_shape(|s| f(&s.geometry))
+        }
+    }
 }
 
+// pub struct GeometryIter<C: CoordinateType> {
+//     shapes: Rc<Shapes<C>>
+// }
+//
+// impl<'a, C: CoordinateType> IntoIterator for &'a GeometryIter<C> {
+//     type Item = &'a Geometry<C>;
+//     type IntoIter = Box<impl Iterator<Item=&'a Geometry<C>>>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         let i = self.shapes.each_shape().map(|shape| &shape.geometry);
+//         i
+//     }
+// }
 
 impl LayoutEdit for Layout {
     fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {

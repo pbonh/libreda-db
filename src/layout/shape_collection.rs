@@ -33,6 +33,7 @@ use std::collections::hash_map::Values;
 use genawaiter;
 use genawaiter::rc::Gen;
 use crate::property_storage::{PropertyStore, WithProperties};
+use std::hash::{Hash, Hasher};
 
 /// Wrapper around a `Geometry` struct.
 #[derive(Clone, Debug)]
@@ -44,6 +45,14 @@ pub struct Shape<T: CoordinateType> {
     /// Weak reference to container.
     parent: Weak<Shapes<T>>,
 }
+
+impl<C: CoordinateType> Hash for Shape<C> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.index.hash(state);
+    }
+}
+
+impl<C: CoordinateType> Eq for Shape<C> {}
 
 impl<T: CoordinateType> PartialEq for Shape<T> {
     fn eq(&self, other: &Self) -> bool {

@@ -30,7 +30,6 @@ use std::rc::{Rc, Weak};
 use genawaiter::rc::Gen;
 use std::hash::{Hash, Hasher};
 use crate::property_storage::{PropertyStore, WithProperties};
-use std::borrow::Borrow;
 
 /// Mutable shared reference to a `Cell`.
 pub type CellReference<C> = Rc<RefCell<Cell<C>>>;

@@ -19,7 +19,7 @@
  */
 //! A cell is a container for geometric shapes and cell instances.
 
-use crate::iron_shapes::prelude::*;
+use iron_shapes::prelude::*;
 use super::prelude::*;
 use super::shape_collection::{Shapes, Shape};
 

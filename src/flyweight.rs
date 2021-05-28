@@ -222,18 +222,13 @@ pub trait FlyWeightContainerTrait<T, I>
 
         id
     }
-}
-
-/// Implement the flyweight container.
-#[macro_export]
-macro_rules! impl_flyweight_container {
-    ($T:ty, $I:ty) => {
 
     /// Get a reference to the template with the given `ID`.
     ///
     /// # Panics
     /// Panics if the ID does not exist.
-    pub fn template_by_id(&self, id: &Index<$T>) -> TemplateRef<Self, $T, $I> {
+    fn template_by_id<'a>(&'a self, id: &Index<T>) -> TemplateRef<'a, Self, T, I>
+        where T: 'a, I: 'a {
         let template = &self.fwc().templates[id];
         TemplateRef::new(
             self,
@@ -241,9 +236,9 @@ macro_rules! impl_flyweight_container {
         )
     }
 
-
     /// Get a reference to the template with the given name.
-    pub fn template_by_name(&self, name: &str) -> Option<TemplateRef<'_, Self, $T, $I>> {
+    fn template_by_name<'a>(&'a self, name: &str) -> Option<TemplateRef<'_, Self, T, I>>
+        where T: 'a, I: 'a {
         let template_id = self.template_id_by_name(name);
 
         template_id.map(|template_id| {
@@ -253,11 +248,31 @@ macro_rules! impl_flyweight_container {
     }
 
     /// Iterate over all templates in this layout.
-    pub fn each_template(&self) -> impl Iterator<Item=TemplateRef<'_, Self, $T, $I>> + ExactSizeIterator {
-        self.fwc().templates.values()
-            .map(move |template| TemplateRef::new(self, template))
+    fn each_template<'a>(&'a self) -> Box<dyn Iterator<Item=TemplateRef<'_, Self, T, I>> + 'a>
+        where T: 'a, I: 'a {
+        Box::new(self.fwc().templates.values()
+            .map(move |template| TemplateRef::new(self, template)))
     }
 
+    /// Visit all templates.
+    fn for_each_template(&self, f: impl FnMut(TemplateRef<Self, T, I>)) {
+        self.fwc().templates.values()
+            .map(move |template| TemplateRef::new(self, template))
+            .for_each(f);
+    }
+}
+
+
+/// Implement the flyweight container.
+#[macro_export]
+macro_rules! impl_flyweight_container {
+    ($T:ty, $I:ty) => {
+
+        /// Iterate over all templates in this layout.
+        pub fn each_template(&self) -> impl Iterator<Item=TemplateRef<'_, Self, $T, $I>> + ExactSizeIterator {
+            self.fwc().templates.values()
+                .map(move |template| TemplateRef::new(self, template))
+        }
 
     }
 }
@@ -269,6 +284,12 @@ pub trait TemplateTrait<T, I> {
     /// Create a new default instance with a struct `t` holding references.
     /// `t` must be made accessible with the `tpl()` and `tpl_mut()` functions.
     fn new(t: Template<T, I>) -> Self;
+
+    /// Get the name of this template.
+    fn name<'a>(&'a self) -> &'a RcString
+        where T: 'a, I: 'a {
+        &self.tpl().name
+    }
 
     /// Get the ID of this template.
     /// The ID uniquely identifies the template within this layout.
@@ -282,21 +303,24 @@ pub trait TemplateTrait<T, I> {
     }
 
 
-    // /// Iterate over the IDs of the child template instances.
-    // fn each_instance_id(&self) -> impl Iterator<Item=Index<I>> + ExactSizeIterator + '_ {
-    //     self.tpl().child_instances.iter().copied()
-    // }
-    //
-    // /// Iterate over the IDs of each dependency of this template.
-    // /// A dependency is a template that is instantiated in `self`.
-    // fn each_dependency_id(&self) -> impl Iterator<Item=Index<T>> + ExactSizeIterator + '_ {
-    //     self.tpl().dependencies.keys().copied()
-    // }
-    //
-    // /// Iterate over the IDs of templates that depends on this template.
-    // fn each_dependent_template_id(&self) -> impl Iterator<Item=Index<T>> + ExactSizeIterator + '_ {
-    //     self.tpl().dependent_templates.keys().copied()
-    // }
+    /// Iterate over the IDs of the child template instances.
+    fn each_instance_id<'a>(&'a self) -> Box<dyn Iterator<Item=Index<I>> + 'a>
+        where T: 'a, I: 'a {
+        Box::new(self.tpl().child_instances.iter().copied())
+    }
+
+    /// Iterate over the IDs of each dependency of this template.
+    /// A dependency is a template that is instantiated in `self`.
+    fn each_dependency_id<'a>(&'a self) -> Box<dyn Iterator<Item=Index<T>> + 'a>
+        where T: 'a, I: 'a {
+        Box::new(self.tpl().dependencies.keys().copied())
+    }
+
+    /// Iterate over the IDs of templates that depends on this template.
+    fn each_dependent_template_id<'a>(&'a self) -> Box<dyn Iterator<Item=Index<T>> + 'a>
+        where T: 'a, I: 'a {
+        Box::new(self.tpl().dependent_templates.keys().copied())
+    }
 }
 
 /// Implement iterators over instances, and dependency relations.
@@ -304,11 +328,6 @@ pub trait TemplateTrait<T, I> {
 #[macro_export]
 macro_rules! impl_template {
     ($T:ty, $I:ty) => {
-
-        /// Get the name of this template.
-        fn name(&self) -> &RcString {
-            &self.tpl().name
-        }
 
         /// Iterate over the IDs of the child template instances.
         pub fn each_instance_id(&self) -> impl Iterator<Item=Index<$I>> + ExactSizeIterator + '_ {
@@ -681,6 +700,8 @@ fn test() {
 
     let a = netlist.template_by_id(&id_a);
     let b = netlist.template_by_id(&id_b);
+
+    let a_by_name = netlist.template_by_name("A".into());
 
     assert_eq!(a.each_instance_ref().len(), 1);
     assert_eq!(b.each_instance_ref().len(), 0);

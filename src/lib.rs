@@ -49,6 +49,7 @@ pub mod index;
 pub mod rc_string;
 pub mod property_storage;
 mod flyweight;
+mod fused_layout_netlist;
 
 // Private modules.
 // mod refset; // Not currently used.

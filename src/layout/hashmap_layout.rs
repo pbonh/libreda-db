@@ -675,4 +675,28 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             .shapes_map.get_mut(layer).expect("Layer not found.")
             .shapes.insert(shape_id, shape);
     }
+
+    fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)
+                    -> Option<Geometry<Self::Coord>> {
+        self.cells.get_mut(parent_cell).expect("Cell not found.")
+            .shapes_map.get_mut(layer).expect("Layer not found.")
+            .shapes.remove(shape_id)
+            .map(|s| s.geometry)
+    }
+
+    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
+                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
+                     -> Option<Geometry<Self::Coord>> {
+        let shape_id = *shape_id;
+        let shape = Shape {
+            index: shape_id,
+            geometry,
+            user_data: Default::default(),
+        };
+
+        self.cells.get_mut(parent_cell).expect("Cell not found.")
+            .shapes_map.get_mut(layer).expect("Layer not found.")
+            .shapes.insert(shape_id, shape)
+            .map(|s| s.geometry)
+    }
 }

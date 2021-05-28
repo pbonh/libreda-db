@@ -130,4 +130,12 @@ pub trait LayoutEdit: LayoutBase {
 
     /// Insert a geometric shape into the parent cell.
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>);
+
+    /// Remove shape from the parent cell.
+    fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
+                    shape_id: &Self::ShapeId) -> Option<Geometry<Self::Coord>>;
+
+    /// Replace the geometry of a shape.
+    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
+                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Option<Geometry<Self::Coord>>;
 }

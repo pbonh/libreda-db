@@ -493,4 +493,16 @@ impl LayoutEdit for Layout {
             .expect("Layer not found.")
             .insert(geometry);
     }
+
+    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
+                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
+                     -> Option<Geometry<Self::Coord>> {
+        unimplemented!()
+    }
+
+    fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
+                    shape_id: &Self::ShapeId)
+                    -> Option<Geometry<Self::Coord>> {
+        unimplemented!()
+    }
 }

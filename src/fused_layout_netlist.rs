@@ -236,6 +236,12 @@ impl Circuit {
     pub fn shapes(&self, layer_id: &LayerId) -> Option<&Shapes<Coord>> {
         self.shapes_map.get(layer_id)
     }
+
+    /// Get the mutable shape container of this layer.
+    /// Returns `None` if the shapes object does not exist for this layer.
+    fn shapes_mut(&mut self, layer_id: &LayerId) -> Option<&mut Shapes<Coord>> {
+        self.shapes_map.get_mut(layer_id)
+    }
 }
 
 /// Instance of a circuit.
@@ -667,6 +673,8 @@ pub struct Chip<C: CoordinateType = Coord> {
     layers_by_index_datatype: IntHashMap<(UInt, UInt), LayerId>,
     /// Info structures for all layers.
     layer_info: IntHashMap<LayerId, LayerInfo>,
+    /// ID generator for shapes.
+    shape_index_generator: IndexGenerator<Shape<C>>,
 }
 
 impl Chip<Coord> {
@@ -1005,7 +1013,7 @@ impl Chip<Coord> {
 
     /// Get a mutable reference to the circuit by its ID.
     fn circuit_mut(&mut self, id: &CircuitId) -> &mut Circuit {
-        self.circuits.get_mut(id).unwrap()
+        self.circuits.get_mut(id).expect("Cell ID not found.")
     }
 
     /// Get a reference to a circuit instance.
@@ -1731,43 +1739,41 @@ impl LayoutEdit for Chip<Coord> {
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) {
-        // let shape_id = self.shape_index_generator.next();
-        //
-        // let shape = Shape {
-        //     index: shape_id,
-        //     geometry,
-        //     user_data: Default::default(),
-        // };
-        //
-        // self.cells.get_mut(parent_cell).expect("Cell not found.")
-        //     .shapes_map.get_mut(layer).expect("Layer not found.")
-        //     .shapes.insert(shape_id, shape);
-        unimplemented!()
+        let shape_id = self.shape_index_generator.next();
+
+        let shape = Shape {
+            index: shape_id,
+            geometry,
+            user_data: Default::default(),
+        };
+
+        self.circuit_mut(parent_cell)
+            .shapes_mut(layer).expect("Layer not found.")
+            .shapes
+            .insert(shape_id, shape);
     }
 
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)
                     -> Option<Geometry<Self::Coord>> {
-        // self.cells.get_mut(parent_cell).expect("Cell not found.")
-        //     .shapes_map.get_mut(layer).expect("Layer not found.")
-        //     .shapes.remove(shape_id)
-        //     .map(|s| s.geometry)
-        unimplemented!()
+        self.circuit_mut(parent_cell)
+            .shapes_mut(layer).expect("Layer not found.")
+            .shapes.remove(shape_id)
+            .map(|s| s.geometry)
     }
 
     fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
                      shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
                      -> Option<Geometry<Self::Coord>> {
-        // let shape_id = *shape_id;
-        // let shape = Shape {
-        //     index: shape_id,
-        //     geometry,
-        //     user_data: Default::default(),
-        // };
-        //
-        // self.cells.get_mut(parent_cell).expect("Cell not found.")
-        //     .shapes_map.get_mut(layer).expect("Layer not found.")
-        //     .shapes.insert(shape_id, shape)
-        //     .map(|s| s.geometry)
-        unimplemented!()
+        let shape_id = *shape_id;
+        let shape = Shape {
+            index: shape_id,
+            geometry,
+            user_data: Default::default(),
+        };
+
+        self.circuit_mut(parent_cell)
+            .shapes_mut(layer).expect("Layer not found.")
+            .shapes.insert(shape_id, shape)
+            .map(|s| s.geometry)
     }
 }

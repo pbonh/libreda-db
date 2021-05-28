@@ -19,7 +19,7 @@
  */
 //! A cell is a container for geometric shapes and cell instances.
 
-use crate::iron_shapes::prelude::*;
+use iron_shapes::prelude::*;
 use super::prelude::*;
 use super::shape_collection::{Shapes, Shape};
 
@@ -30,7 +30,6 @@ use std::rc::{Rc, Weak};
 use genawaiter::rc::Gen;
 use std::hash::{Hash, Hasher};
 use crate::property_storage::{PropertyStore, WithProperties};
-use std::borrow::Borrow;
 
 /// Mutable shared reference to a `Cell`.
 pub type CellReference<C> = Rc<RefCell<Cell<C>>>;

@@ -344,6 +344,7 @@ impl<T, I> Default for FlyWeightContainer<T, I> {
     }
 }
 
+/// Data structure for all indices and information that a flyweight template must hold.
 #[derive(Clone, Debug)]
 pub struct Template<T, I> {
     /// Template name.
@@ -559,7 +560,7 @@ impl<'a, C, T, I> InstanceRef<'a, C, T, I>
         )
     }
 
-    /// Get a reference to the template cell of this instance.
+    /// Get a reference to the template of this instance.
     pub fn template(&self) -> TemplateRef<C, T, I> {
         let template = &self.container.fwc().templates[&self.inst().template_id];
         TemplateRef::new(

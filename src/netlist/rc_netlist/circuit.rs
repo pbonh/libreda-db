@@ -214,7 +214,7 @@ impl Circuit {
     }
 
     /// Get the net of the logical constant zero or one.
-    fn net_of_logic_constant(&self, constant: usize) -> Rc<Net> {
+    fn net_of_logic_constant(&self, constant: u32) -> Rc<Net> {
         let net_index = NetIndex::new(constant);
         self.net_by_index(&net_index)
             .unwrap_or_else(|| {

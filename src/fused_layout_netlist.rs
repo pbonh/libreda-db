@@ -104,10 +104,10 @@ pub struct NetId(usize);
 //
 
 /// Unique (across layout) identifier of a shape.
-pub type ShapeId<T> = Index<Shape<T>>;
+pub type ShapeId = Index<Shape<Coord>, u32>;
 
 /// ID for layers.
-pub type LayerId = Index<LayerInfo>;
+pub type LayerId = Index<LayerInfo, u16>;
 
 /// A circuit is defined by an interface (pins) and
 /// a content which consists of interconnected circuit instances.
@@ -143,6 +143,8 @@ pub struct Circuit<C = Coord, U = ()>
     /// Properties related to the instances in this template.
     /// Instance properties are stored here for lower overhead of cell instances.
     instance_properties: IntHashMap<CircuitInstId, PropertyStore<RcString>>,
+    /// Properties related to this template.
+    properties: PropertyStore<RcString>,
     /// User-defined data.
     user_data: U,
 
@@ -322,6 +324,8 @@ impl CircuitInst {
 /// Single bit wire pin.
 #[derive(Debug, Clone)]
 pub struct Pin {
+    /// The unique ID of the pin.
+    id: PinId,
     /// Name of the pin.
     name: RcString,
     /// Signal type/direction of the pin.
@@ -332,8 +336,10 @@ pub struct Pin {
     net: Option<NetId>,
     /// Position in the list of pins of the parent circuit.
     position: usize,
-    /// The unique ID of the pin.
-    id: PinId,
+
+    // == Layout == //
+    // /// List of shapes in the layout that represent the physical pin.
+    // pin_shapes: Vec<(LayerId, ShapeId)>,
 }
 
 impl Pin {
@@ -666,7 +672,7 @@ pub struct Chip<C: CoordinateType = Coord> {
     dbu: C,
 
     /// Counter for generating the next layer index.
-    layer_index_generator: IndexGenerator<LayerInfo>,
+    layer_index_generator: IndexGenerator<LayerInfo, u16>,
     /// Lookup table for finding layers by name.
     layers_by_name: HashMap<RcString, LayerId>,
     /// Lookup table for finding layers by index/datatype numbers.
@@ -715,6 +721,7 @@ impl Chip<Coord> {
             dependencies: Default::default(),
             user_data: Default::default(),
             shapes_map: Default::default(),
+            properties: Default::default()
         };
 
         self.circuits.insert(id, circuit);
@@ -1600,9 +1607,9 @@ pub struct Shapes<C>
     /// Reference to the cell where this shape collection lives. Can be none.
     parent_cell: CircuitId,
     /// Shape elements.
-    shapes: IntHashMap<ShapeId<C>, Shape<C>>,
+    shapes: IntHashMap<ShapeId, Shape<C>>,
     /// Property stores for the shapes.
-    shape_properties: IntHashMap<ShapeId<C>, PropertyStore<RcString>>,
+    shape_properties: IntHashMap<ShapeId, PropertyStore<RcString>>,
 }
 
 impl<C: CoordinateType> Shapes<C> {
@@ -1624,7 +1631,7 @@ impl LayoutBase for Chip<Coord> {
     type LayerId = LayerId;
     type CellId = CircuitId;
     type CellInstId = CircuitInstId;
-    type ShapeId = ShapeId<Coord>;
+    type ShapeId = ShapeId;
 
     /// Create a new empty layout.
     fn new() -> Self {

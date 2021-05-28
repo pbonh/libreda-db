@@ -57,7 +57,7 @@ pub trait LayoutBase {
     fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_>;
 
     /// Get the `LayerInfo` data structure for this layer.
-    fn layer_info(&self, layer: &LayerId) -> &LayerInfo;
+    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo;
 
     /// Find a cell by its name.
     /// Return the cell with the given name. Returns `None` if the cell does not exist.

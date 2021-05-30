@@ -1745,7 +1745,7 @@ impl LayoutEdit for Chip<Coord> {
         <Chip<Self::Coord>>::remove_circuit_instance(self, id)
     }
 
-    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) {
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId{
         let shape_id = self.shape_index_generator.next();
 
         let shape = Shape {
@@ -1758,6 +1758,8 @@ impl LayoutEdit for Chip<Coord> {
             .shapes_mut(layer).expect("Layer not found.")
             .shapes
             .insert(shape_id, shape);
+
+        shape_id
     }
 
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)

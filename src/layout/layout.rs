@@ -488,10 +488,10 @@ impl LayoutEdit for Layout {
             .map(|p| p.remove_cell_instance(id));
     }
 
-    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) {
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
         parent_cell.shapes(*layer)
             .expect("Layer not found.")
-            .insert(geometry);
+            .insert(geometry)
     }
 
     fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,

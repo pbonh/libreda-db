@@ -662,7 +662,7 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         self.cells.get_mut(&template).unwrap().cell_references.remove(id);
     }
 
-    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) {
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
         let shape_id = self.shape_index_generator.next();
 
         let shape = Shape {
@@ -674,6 +674,8 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         self.cells.get_mut(parent_cell).expect("Cell not found.")
             .shapes_map.get_mut(layer).expect("Layer not found.")
             .shapes.insert(shape_id, shape);
+
+        shape_id
     }
 
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)

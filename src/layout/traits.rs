@@ -129,7 +129,7 @@ pub trait LayoutEdit: LayoutBase {
     fn remove_cell_instance(&mut self, id: &Self::CellInstId);
 
     /// Insert a geometric shape into the parent cell.
-    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>);
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId;
 
     /// Remove shape from the parent cell.
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,

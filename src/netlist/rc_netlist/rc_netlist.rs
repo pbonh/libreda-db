@@ -455,8 +455,8 @@ impl NetlistBase for RcNetlist {
     type PinId = Rc<Pin>;
     type PinInstId = Rc<PinInstance>;
     type TerminalId = ();
-    type CircuitId = Rc<Circuit>;
-    type CircuitInstId = Rc<CircuitInstance>;
+    type CellId = Rc<Circuit>;
+    type CellInstId = Rc<CircuitInstance>;
     type NetId = Rc<Net>;
 
     fn new() -> Self {
@@ -469,12 +469,12 @@ impl NetlistBase for RcNetlist {
         RcNetlist::circuit_by_name(self, name)
     }
 
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N)
-        -> Option<Self::CircuitInstId> where Self::NameType: Borrow<N> {
+    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
+        -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
         parent_circuit.circuit_instance_by_name(name)
     }
 
-    fn template_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
+    fn template_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
         circuit_instance.circuit_ref().upgrade().unwrap()
     }
 
@@ -490,20 +490,20 @@ impl NetlistBase for RcNetlist {
         pin.name().to_string()
     }
 
-    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::PinId>
+    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId>
         where Self::NameType: Borrow<N> {
         parent_circuit.pin_by_name(name)
     }
 
-    fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId {
+    fn parent_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
         circuit_instance.parent_circuit().upgrade().unwrap()
     }
 
-    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CircuitId {
+    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
         pin.parent_circuit().upgrade().unwrap()
     }
 
-    fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CircuitInstId {
+    fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CellInstId {
         pin_inst.circuit_instance().upgrade().unwrap()
     }
 
@@ -515,15 +515,15 @@ impl NetlistBase for RcNetlist {
         pin.net()
     }
 
-    fn net_zero(&self, parent_circuit: &Self::CircuitId) -> Self::NetId {
+    fn net_zero(&self, parent_circuit: &Self::CellId) -> Self::NetId {
         parent_circuit.net_zero()
     }
 
-    fn net_one(&self, parent_circuit: &Self::CircuitId) -> Self::NetId {
+    fn net_one(&self, parent_circuit: &Self::CellId) -> Self::NetId {
         parent_circuit.net_one()
     }
 
-    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent: &Self::CircuitId, name: &N) -> Option<Self::NetId>
+    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent: &Self::CellId, name: &N) -> Option<Self::NetId>
         where Self::NameType: Borrow<N> {
         parent.net_by_name(name)
     }
@@ -532,62 +532,62 @@ impl NetlistBase for RcNetlist {
         net.name()
     }
 
-    fn circuit_name(&self, circuit: &Self::CircuitId) -> Self::NameType {
+    fn circuit_name(&self, circuit: &Self::CellId) -> Self::NameType {
         circuit.name().clone()
     }
 
-    fn circuit_instance_name(&self, circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType> {
+    fn circuit_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
         circuit_inst.name().cloned()
     }
 
-    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CircuitId) -> () {
+    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
         RcNetlist::each_circuit(self).cloned().for_each(f)
     }
 
-    fn each_circuit(&self) -> Box<dyn Iterator<Item=Self::CircuitId> + '_> {
+    fn each_circuit(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
         Box::new(RcNetlist::each_circuit(self).cloned())
     }
 
-    fn for_each_instance<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
+    fn for_each_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
         circuit.each_instance().for_each(f)
     }
 
-    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
+    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
         circuit.each_circuit_dependency().for_each(f)
     }
 
-    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> () {
+    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
         circuit.each_dependent_circuit().for_each(f)
     }
 
 
-    fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> () {
+    fn for_each_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
         circuit.each_reference().for_each(f);
     }
 
-    fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> () {
+    fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
         circuit.each_pin().cloned().for_each(f)
     }
 
     /// Get a `Vec` with the IDs of all pins of this circuit.
-    fn each_pin_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::PinId> {
+    fn each_pin_vec(&self, circuit: &Self::CellId) -> Vec<Self::PinId> {
         circuit.each_pin_vec()
     }
 
-    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CircuitInstId, f: F) where F: FnMut(Self::PinInstId) -> () {
+    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F) where F: FnMut(Self::PinInstId) -> () {
         circuit_inst.each_pin_instance().cloned().for_each(f)
     }
 
     /// Get a `Vec` with the IDs of all pin instance of this circuit instance.
-    fn each_pin_instance_vec(&self, circuit_instance: &Self::CircuitInstId) -> Vec<Self::PinInstId> {
+    fn each_pin_instance_vec(&self, circuit_instance: &Self::CellInstId) -> Vec<Self::PinInstId> {
         circuit_instance.each_pin_instance_vec()
     }
 
-    fn for_each_internal_net<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::NetId) -> () {
+    fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::NetId) -> () {
         circuit.each_net().for_each(f)
     }
 
-    fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize {
+    fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
         circuit.num_instances()
     }
 
@@ -595,7 +595,7 @@ impl NetlistBase for RcNetlist {
         self.circuits.len()
     }
 
-    fn num_pins(&self, circuit: &Self::CircuitId) -> usize {
+    fn num_pins(&self, circuit: &Self::CellId) -> usize {
         circuit.pin_count()
     }
 
@@ -609,34 +609,34 @@ impl NetlistBase for RcNetlist {
 }
 
 impl NetlistEdit for RcNetlist {
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CircuitId {
+    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
         let pins = pins.into_iter()
             .map(|(name, direction)| Pin::new(name, direction))
             .collect();
         RcNetlist::create_circuit(self, name, pins)
     }
 
-    fn remove_circuit(&mut self, circuit_id: &Self::CircuitId) {
+    fn remove_circuit(&mut self, circuit_id: &Self::CellId) {
         RcNetlist::remove_circuit(self, circuit_id)
     }
 
-    fn create_circuit_instance(&mut self, parent_circuit: &Self::CircuitId,
-                               template_circuit: &Self::CircuitId,
-                               name: Option<Self::NameType>) -> Self::CircuitInstId {
+    fn create_circuit_instance(&mut self, parent_circuit: &Self::CellId,
+                               template_circuit: &Self::CellId,
+                               name: Option<Self::NameType>) -> Self::CellInstId {
         parent_circuit.create_circuit_instance(template_circuit, name)
     }
 
-    fn remove_circuit_instance(&mut self, circuit_inst: &Self::CircuitInstId) {
+    fn remove_circuit_instance(&mut self, circuit_inst: &Self::CellInstId) {
         circuit_inst.parent_circuit().upgrade()
             .unwrap()
             .remove_circuit_instance(circuit_inst)
     }
 
-    fn create_net(&mut self, parent: &Self::CircuitId, name: Option<Self::NameType>) -> Self::NetId {
+    fn create_net(&mut self, parent: &Self::CellId, name: Option<Self::NameType>) -> Self::NetId {
         parent.create_net(name)
     }
 
-    fn rename_net(&mut self, parent_circuit: &Self::CircuitId, net_id: &Self::NetId, new_name: Option<Self::NameType>) {
+    fn rename_net(&mut self, parent_circuit: &Self::CellId, net_id: &Self::NetId, new_name: Option<Self::NameType>) {
         parent_circuit.rename_net(net_id.id, new_name);
     }
 

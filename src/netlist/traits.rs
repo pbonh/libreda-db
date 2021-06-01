@@ -33,7 +33,7 @@ pub trait CircuitRef {
     type N: NetlistBase;
 
     /// Get the ID of this circuit.
-    fn id(&self) -> <<Self as CircuitRef>::N as NetlistBase>::CircuitId;
+    fn id(&self) -> <<Self as CircuitRef>::N as NetlistBase>::CellId;
 
     /// Get the name of the circuit.
     fn name(&self) -> <<Self as CircuitRef>::N as NetlistBase>::NameType;
@@ -51,7 +51,7 @@ pub trait CircuitInstRef {
     type N: NetlistBase;
 
     /// Get the ID of this circuit.
-    fn id(&self) -> <<Self as CircuitInstRef>::N as NetlistBase>::CircuitInstId;
+    fn id(&self) -> <<Self as CircuitInstRef>::N as NetlistBase>::CellInstId;
 
     /// Get the name of the circuit.
     fn name(&self) -> Option<<<Self as CircuitInstRef>::N as NetlistBase>::NameType>;
@@ -97,13 +97,13 @@ pub struct DefaultCircuitRef<'a, N: NetlistBase + ?Sized> {
     /// Reference to the parent netlist.
     netlist: &'a N,
     /// ID of the corresponding circuit.
-    id: N::CircuitId,
+    id: N::CellId,
 }
 
 impl<'a, N: NetlistBase> CircuitRef for DefaultCircuitRef<'a, N> {
     type N = N;
 
-    fn id(&self) -> N::CircuitId {
+    fn id(&self) -> N::CellId {
         self.id.clone()
     }
 
@@ -127,13 +127,13 @@ pub struct DefaultCircuitInstRef<'a, N: NetlistBase + ?Sized> {
     /// Reference to the parent netlist.
     netlist: &'a N,
     /// ID of the corresponding circuit instance.
-    id: N::CircuitInstId,
+    id: N::CellInstId,
 }
 
 impl<'a, N: NetlistBase> CircuitInstRef for DefaultCircuitInstRef<'a, N> {
     type N = N;
 
-    fn id(&self) -> N::CircuitInstId {
+    fn id(&self) -> N::CellInstId {
         self.id.clone()
     }
 
@@ -205,9 +205,9 @@ pub trait NetlistBase {
     /// Either a pin or a pin instance ID.
     type TerminalId: Eq + Hash + Clone + std::fmt::Debug;
     /// Circuit identifier type.
-    type CircuitId: Eq + Hash + Clone + std::fmt::Debug;
+    type CellId: Eq + Hash + Clone + std::fmt::Debug;
     /// Circuit instance identifier type.
-    type CircuitInstId: Eq + Hash + Clone + std::fmt::Debug;
+    type CellInstId: Eq + Hash + Clone + std::fmt::Debug;
     /// Net identifier type.
     type NetId: Eq + Hash + Clone + std::fmt::Debug;
 
@@ -217,16 +217,16 @@ pub trait NetlistBase {
 
     /// Find a circuit by its name.
     /// Return the circuit with the given name. Returns `None` if the circuit does not exist.
-    fn circuit_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CircuitId>
+    fn circuit_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
         where Self::NameType: Borrow<N>;
 
     /// Find a circuit instance by its name.
     /// Returns `None` if the name does not exist.
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::CircuitInstId>
+    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId>
         where Self::NameType: Borrow<N>;
 
     /// Get the ID of the template circuit of this instance.
-    fn template_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId;
+    fn template_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Get the ID of the template pin of this pin instance.
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId;
@@ -239,17 +239,17 @@ pub trait NetlistBase {
 
     /// Find a pin by its name.
     /// Returns `None` if no such pin can be found.
-    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::PinId>
+    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId>
         where Self::NameType: Borrow<N>;
 
     /// Get the ID of the parent circuit of this instance.
-    fn parent_circuit(&self, circuit_instance: &Self::CircuitInstId) -> Self::CircuitId;
+    fn parent_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Get the ID of the parent circuit of this pin.
-    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CircuitId;
+    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId;
 
     /// Get the ID of the circuit instance that holds this pin instance.
-    fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CircuitInstId;
+    fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CellInstId;
 
     /// Get the internal net attached to this pin.
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId>;
@@ -258,91 +258,91 @@ pub trait NetlistBase {
     fn net_of_pin_instance(&self, pin_instance: &Self::PinInstId) -> Option<Self::NetId>;
 
     /// Get the net of the logical constant zero.
-    fn net_zero(&self, parent_circuit: &Self::CircuitId) -> Self::NetId;
+    fn net_zero(&self, parent_circuit: &Self::CellId) -> Self::NetId;
 
     /// Get the net of the logical constant one.
-    fn net_one(&self, parent_circuit: &Self::CircuitId) -> Self::NetId;
+    fn net_one(&self, parent_circuit: &Self::CellId) -> Self::NetId;
 
     /// Find a net by its name inside the parent circuit.
     /// Returns `None` if no such net can be found.
-    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CircuitId, name: &N) -> Option<Self::NetId>
+    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::NetId>
         where Self::NameType: Borrow<N>;
 
     /// Get the name of the net.
     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType>;
 
     /// Get the name of the circuit.
-    fn circuit_name(&self, circuit: &Self::CircuitId) -> Self::NameType;
+    fn circuit_name(&self, circuit: &Self::CellId) -> Self::NameType;
 
     /// Get the name of the circuit instance.
-    fn circuit_instance_name(&self, circuit_inst: &Self::CircuitInstId) -> Option<Self::NameType>;
+    fn circuit_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType>;
 
     /// Call a function on each circuit of the netlist.
-    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CircuitId) -> ();
+    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of all circuit IDs in this netlist.
-    fn each_circuit_vec(&self) -> Vec<Self::CircuitId> {
+    fn each_circuit_vec(&self) -> Vec<Self::CellId> {
         let mut v = Vec::new();
         self.for_each_circuit(|c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all circuits.
-    fn each_circuit<'a>(&'a self) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a> {
+    fn each_circuit<'a>(&'a self) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
         Box::new(self.each_circuit_vec().into_iter())
     }
 
     /// Call a function on each instance in this circuit.
-    fn for_each_instance<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> ();
+    fn for_each_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
 
     /// Get a `Vec` of the IDs of all instances in this circuit.
-    fn each_instance_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitInstId> {
+    fn each_instance_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellInstId> {
         let mut v = Vec::new();
         self.for_each_instance(circuit, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all instances in a circuit.
-    fn each_instance<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + 'a> {
+    fn each_instance<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + 'a> {
         Box::new(self.each_instance_vec(circuit).into_iter())
     }
 
     /// Call a function for each circuit that is a child of this `circuit`.
-    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> ();
+    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of each circuit that is a child of this `circuit`.
-    fn each_circuit_dependency_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitId> {
+    fn each_circuit_dependency_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellId> {
         let mut v = Vec::new();
         self.for_each_circuit_dependency(circuit, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all circuits that are childs of this `circuit`.
-    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a> {
+    fn each_circuit_dependency<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
         Box::new(self.each_circuit_dependency_vec(circuit).into_iter())
     }
 
     /// Call a function for each circuit that directly depends on `circuit`.
-    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitId) -> ();
+    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of each circuit that directly depends on `circuit`.
-    fn each_dependent_circuit_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitId> {
+    fn each_dependent_circuit_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellId> {
         let mut v = Vec::new();
         self.for_each_dependent_circuit(circuit, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over each circuit that directly depends on `circuit`.
-    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitId> + 'a> {
+    fn each_dependent_circuit<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
         Box::new(self.each_dependent_circuit_vec(circuit).into_iter())
     }
 
     /// Iterate over all instances of this `circuit`, i.e. instances that use this circuit as
     /// a template.
-    fn for_each_reference<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::CircuitInstId) -> ();
+    fn for_each_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
 
     /// Get a `Vec` with all circuit instances referencing this circuit.
-    fn each_reference_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::CircuitInstId> {
+    fn each_reference_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellInstId> {
         let mut v = Vec::new();
         self.for_each_reference(circuit, |c| v.push(c.clone()));
         v
@@ -350,61 +350,61 @@ pub trait NetlistBase {
 
     /// Iterate over all instances of this `circuit`, i.e. instances that use this circuit as
     /// a template.
-    fn each_reference<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::CircuitInstId> + 'a> {
+    fn each_reference<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + 'a> {
         Box::new(self.each_reference_vec(circuit).into_iter())
     }
 
     /// Call a function for each pin of the circuit.
-    fn for_each_pin<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::PinId) -> ();
+    fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> ();
 
     /// Get a `Vec` with the IDs of all pins of this circuit.
-    fn each_pin_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::PinId> {
+    fn each_pin_vec(&self, circuit: &Self::CellId) -> Vec<Self::PinId> {
         let mut v = Vec::new();
         self.for_each_pin(circuit, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all pins of a circuit.
-    fn each_pin<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::PinId> + 'a> {
+    fn each_pin<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::PinId> + 'a> {
         Box::new(self.each_pin_vec(circuit).into_iter())
     }
 
 
     /// Call a function for each pin instance of the circuit instance.
-    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CircuitInstId, f: F) where F: FnMut(Self::PinInstId) -> ();
+    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F) where F: FnMut(Self::PinInstId) -> ();
 
     /// Get a `Vec` with the IDs of all pin instance of this circuit instance.
-    fn each_pin_instance_vec(&self, circuit_instance: &Self::CircuitInstId) -> Vec<Self::PinInstId> {
+    fn each_pin_instance_vec(&self, circuit_instance: &Self::CellInstId) -> Vec<Self::PinInstId> {
         let mut v = Vec::new();
         self.for_each_pin_instance(circuit_instance, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all pin instances of a circuit.
-    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
+    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CellInstId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_vec(circuit_instance).into_iter())
     }
 
 
     /// Iterate over all external nets connected to the circuit instance.
     /// A net might appear more than once.
-    fn each_external_net<'a>(&'a self, circuit_instance: &Self::CircuitInstId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
+    fn each_external_net<'a>(&'a self, circuit_instance: &Self::CellInstId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
         Box::new(self.each_pin_instance(circuit_instance)
             .flat_map(move |pin_id| self.net_of_pin_instance(&pin_id)))
     }
 
     /// Call a function for net of the circuit.
-    fn for_each_internal_net<F>(&self, circuit: &Self::CircuitId, f: F) where F: FnMut(Self::NetId) -> ();
+    fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::NetId) -> ();
 
     /// Get a `Vec` with all nets in this circuit.
-    fn each_internal_net_vec(&self, circuit: &Self::CircuitId) -> Vec<Self::NetId> {
+    fn each_internal_net_vec(&self, circuit: &Self::CellId) -> Vec<Self::NetId> {
         let mut v = Vec::new();
         self.for_each_internal_net(circuit, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all defined nets inside a circuit.
-    fn each_internal_net<'a>(&'a self, circuit: &Self::CircuitId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
+    fn each_internal_net<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
         Box::new(self.each_internal_net_vec(circuit).into_iter())
     }
 
@@ -428,17 +428,17 @@ pub trait NetlistBase {
     }
 
     /// Get the number of cell instances inside the `circuit`.
-    fn num_child_instances(&self, circuit: &Self::CircuitId) -> usize;
+    fn num_child_instances(&self, circuit: &Self::CellId) -> usize;
 
     /// Get the number of cells inside in this netlist.
     fn num_circuits(&self) -> usize;
 
     /// Get the number of pins of a circuit.
-    fn num_pins(&self, circuit: &Self::CircuitId) -> usize;
+    fn num_pins(&self, circuit: &Self::CellId) -> usize;
 
     /// Get the number of references that point to this circuit, i.e. the number of
     /// instances of this circuit.
-    fn num_references(&self, circuit: &Self::CircuitId) -> usize {
+    fn num_references(&self, circuit: &Self::CellId) -> usize {
         self.each_reference(circuit).count()
     }
 
@@ -475,7 +475,7 @@ pub trait NetlistBase {
 
     /// Visit all circuit instances connected to this net.
     /// An instance is touched not more than once.
-    fn for_each_circuit_instance_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(Self::CircuitInstId) -> () {
+    fn for_each_circuit_instance_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
         let mut visited = HashSet::new();
         self.for_each_pin_instance_of_net(net, |pin_inst| {
             let inst = self.parent_of_pin_instance(&pin_inst);
@@ -489,7 +489,7 @@ pub trait NetlistBase {
 
     /// Iterate over all circuit instances connected to this net.
     /// An instance is touched not more than once.
-    fn each_circuit_instance_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::CircuitInstId> {
+    fn each_circuit_instance_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::CellInstId> {
         let mut v = Vec::new();
         self.for_each_circuit_instance_of_net(net, |c| v.push(c.clone()));
         v
@@ -497,7 +497,7 @@ pub trait NetlistBase {
 
 
     /// Return a reference to the circuit with this ID.
-    fn circuit(&self, id: Self::CircuitId) -> Box<dyn CircuitRef<N=Self> + '_>
+    fn circuit(&self, id: Self::CellId) -> Box<dyn CircuitRef<N=Self> + '_>
         where Self: Sized {
         // TODO: Check that ID exists.
         Box::new(DefaultCircuitRef {
@@ -507,7 +507,7 @@ pub trait NetlistBase {
     }
 
     /// Return a reference to the circuit instance with this ID.
-    fn circuit_inst(&self, id: Self::CircuitInstId) -> Box<dyn CircuitInstRef<N=Self> + '_>
+    fn circuit_inst(&self, id: Self::CellInstId) -> Box<dyn CircuitInstRef<N=Self> + '_>
         where Self: Sized {
         // TODO: Check that ID exists.
         Box::new(DefaultCircuitInstRef {
@@ -568,27 +568,27 @@ pub trait NetlistBase {
 /// Trait for netlists that support editing.
 pub trait NetlistEdit: NetlistBase {
     /// Create a new and empty circuit.
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CircuitId;
+    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId;
 
     /// Delete the given circuit if it exists.
-    fn remove_circuit(&mut self, circuit_id: &Self::CircuitId);
+    fn remove_circuit(&mut self, circuit_id: &Self::CellId);
 
 
     /// Create a new circuit instance.
     fn create_circuit_instance(&mut self,
-                               parent_circuit: &Self::CircuitId,
-                               template_circuit: &Self::CircuitId,
-                               name: Option<Self::NameType>) -> Self::CircuitInstId;
+                               parent_circuit: &Self::CellId,
+                               template_circuit: &Self::CellId,
+                               name: Option<Self::NameType>) -> Self::CellInstId;
 
     /// Remove circuit instance if it exists.
-    fn remove_circuit_instance(&mut self, id: &Self::CircuitInstId);
+    fn remove_circuit_instance(&mut self, id: &Self::CellInstId);
 
     /// Create a net net that lives in the `parent` circuit.
-    fn create_net(&mut self, parent: &Self::CircuitId,
+    fn create_net(&mut self, parent: &Self::CellId,
                   name: Option<Self::NameType>) -> Self::NetId;
 
     /// Set a new name for the net. This might panic if the name already exists.
-    fn rename_net(&mut self, parent_circuit: &Self::CircuitId,
+    fn rename_net(&mut self, parent_circuit: &Self::CellId,
                   net_id: &Self::NetId,
                   new_name: Option<Self::NameType>);
 
@@ -653,7 +653,7 @@ pub trait NetlistEdit: NetlistBase {
     /// be set to `None`.
     ///
     /// The content of the circuit instance will be renamed by appending the names like a path.
-    fn flatten_circuit_instance(&mut self, circuit_instance: &Self::CircuitInstId) {
+    fn flatten_circuit_instance(&mut self, circuit_instance: &Self::CellInstId) {
         // assert!(self.contains_instance(circuit_instance),
         //         "Instance does not live in this circuit.");
 
@@ -784,7 +784,7 @@ pub trait NetlistEdit: NetlistBase {
     /// Flatten all instances of this circuit by replacing them with their content.
     /// Remove the circuit from the netlist afterwards.
     /// For top level circuits this is equivalent to removing them.
-    fn flatten_circuit(&mut self, circuit: &Self::CircuitId) {
+    fn flatten_circuit(&mut self, circuit: &Self::CellId) {
         // TODO: Assert that the circuit lives in this netlist.
         // Get all instances of the circuit.
 
@@ -802,7 +802,7 @@ pub trait NetlistEdit: NetlistBase {
 
     /// Delete all unconnected nets in this circuit.
     /// Return number of purged nets.
-    fn purge_nets_in_circuit(&mut self, circuit_id: &Self::CircuitId) -> usize {
+    fn purge_nets_in_circuit(&mut self, circuit_id: &Self::CellId) -> usize {
         let mut unused = Vec::new();
         self.for_each_internal_net(circuit_id, |n| {
             if self.num_net_terminals(&n) == 0 {

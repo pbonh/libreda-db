@@ -87,10 +87,10 @@ pub trait HierarchyBase {
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType;
 
     /// Get the name of the cell instance.
-    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType>;
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType>;
 
     /// Iterate over all child instance in a cell.
-    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>;
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>;
 
     /// Iterate over all cells that contain a child of type `cell`.
     fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
@@ -99,8 +99,8 @@ pub trait HierarchyBase {
     fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
 
     /// Get the ID of the parent cell of this instance.
-    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
+    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Get the ID of the template cell of this instance.
-    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
+    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 }

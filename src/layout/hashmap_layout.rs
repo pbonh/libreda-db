@@ -446,11 +446,11 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
         self.cells[cell].name.clone()
     }
 
-    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         self.cell_instances[cell_inst].name.clone()
     }
 
-    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.cells[cell].cell_instances.iter().copied())
     }
 
@@ -462,11 +462,11 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
         Box::new(self.cells[cell].dependencies.keys().copied())
     }
 
-    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.cell_instances[cell_instance].parent_cell_id
     }
 
-    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.cell_instances[cell_instance].template_cell_id
     }
 

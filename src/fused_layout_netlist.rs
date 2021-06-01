@@ -1650,11 +1650,11 @@ impl HierarchyBase for Chip<Coord> {
         self.circuit(cell).name().clone()
     }
 
-    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         self.circuit_inst(cell_inst).name.clone()
     }
 
-    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.circuit(cell).each_instance_id())
     }
 
@@ -1666,11 +1666,11 @@ impl HierarchyBase for Chip<Coord> {
         Box::new(self.circuit(cell).each_dependency_id())
     }
 
-    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.circuit_inst(cell_instance).parent_circuit_id()
     }
 
-    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.circuit_inst(cell_instance).template_circuit_id()
     }
 

@@ -380,11 +380,11 @@ impl HierarchyBase for Layout {
         cell.name().unwrap()
     }
 
-    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         None
     }
 
-    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.cells[&cell.index()].each_inst())
     }
 
@@ -396,11 +396,11 @@ impl HierarchyBase for Layout {
         Box::new(self.cells[&cell.index()].each_cell_dependency())
     }
 
-    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         cell_instance.parent_cell.upgrade().unwrap()
     }
 
-    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         cell_instance.cell().upgrade().unwrap()
     }
 }

@@ -48,6 +48,7 @@ pub mod layout;
 pub mod index;
 pub mod rc_string;
 pub mod property_storage;
+pub mod traits;
 mod flyweight;
 mod fused_layout_netlist;
 

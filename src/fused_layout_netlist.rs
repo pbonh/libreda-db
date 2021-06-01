@@ -43,6 +43,7 @@ use crate::layout::types::{LayerInfo};
 
 // Use an alternative hasher that has better performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
+use crate::traits::HierarchyBase;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -1625,29 +1626,15 @@ impl<C: CoordinateType> Shapes<C> {
 }
 
 
-impl LayoutBase for Chip<Coord> {
-    type Coord = Coord;
+
+impl HierarchyBase for Chip<Coord> {
     type NameType = RcString;
-    type LayerId = LayerId;
     type CellId = CircuitId;
     type CellInstId = CircuitInstId;
-    type ShapeId = ShapeId;
 
     /// Create a new empty layout.
     fn new() -> Self {
         Chip::default()
-    }
-
-    fn dbu(&self) -> Self::Coord {
-        self.dbu
-    }
-
-    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
-        Box::new(self.layer_info.keys().copied())
-    }
-
-    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo {
-        &self.layer_info[layer]
     }
 
     fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
@@ -1663,11 +1650,11 @@ impl LayoutBase for Chip<Coord> {
         self.circuit(cell).name().clone()
     }
 
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         self.circuit_inst(cell_inst).name.clone()
     }
 
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.circuit(cell).each_instance_id())
     }
 
@@ -1679,13 +1666,33 @@ impl LayoutBase for Chip<Coord> {
         Box::new(self.circuit(cell).each_dependency_id())
     }
 
-    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.circuit_inst(cell_instance).parent_circuit_id()
     }
 
-    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.circuit_inst(cell_instance).template_circuit_id()
     }
+
+}
+
+impl LayoutBase for Chip<Coord> {
+    type Coord = Coord;
+    type LayerId = LayerId;
+    type ShapeId = ShapeId;
+
+    fn dbu(&self) -> Self::Coord {
+        self.dbu
+    }
+
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
+        Box::new(self.layer_info.keys().copied())
+    }
+
+    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo {
+        &self.layer_info[layer]
+    }
+
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()

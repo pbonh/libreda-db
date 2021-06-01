@@ -28,27 +28,20 @@ use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
 use crate::layout::hashmap_layout::{LayerId};
+use crate::traits::HierarchyBase;
+
 
 /// Most basic trait of a layout.
 ///
 /// This traits specifies methods for accessing the components of a layout.
-pub trait LayoutBase {
+pub trait LayoutBase: HierarchyBase {
     /// Number type used for coordinates.
     type Coord: CoordinateType;
-    /// Type for names of cells, instances, etc.
-    type NameType: Eq + Hash + From<String> + Clone + Borrow<String> + Borrow<str>;
     /// Layer identifier type.
     type LayerId: Eq + Hash + Clone;
-    /// Cell/module identifier type.
-    type CellId: Eq + Hash + Clone;
-    /// Cell instance identifier type.
-    type CellInstId: Eq + Hash + Clone;
     /// Shape identifier type.
     type ShapeId: Eq + Hash + Clone;
 
-
-    /// Create a new empty netlist.
-    fn new() -> Self;
 
     /// Get the distance unit used in this layout in 'pixels per micron'.
     fn dbu(&self) -> Self::Coord;
@@ -58,35 +51,6 @@ pub trait LayoutBase {
 
     /// Get the `LayerInfo` data structure for this layer.
     fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo;
-
-    /// Find a cell by its name.
-    /// Return the cell with the given name. Returns `None` if the cell does not exist.
-    fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
-        where Self::NameType: Borrow<N>;
-
-    /// Iterate over all cells.
-    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
-
-    /// Get the name of the cell.
-    fn cell_name(&self, cell: &Self::CellId) -> Self::NameType;
-
-    /// Get the name of the cell instance.
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType>;
-
-    /// Iterate over all child instance in a cell.
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>;
-
-    /// Iterate over all cells that contain a child of type `cell`.
-    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
-
-    /// Iterate over all cells types that are instantiated in this `cell`.
-    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
-
-    /// Get the ID of the parent cell of this instance.
-    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
-
-    /// Get the ID of the template cell of this instance.
-    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;

@@ -37,6 +37,7 @@ use std::borrow::Borrow;
 use fnv::{FnvHashMap, FnvHashSet};
 use std::collections::HashMap;
 use std::ops::Deref;
+use crate::traits::HierarchyBase;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -409,13 +410,10 @@ impl<C: CoordinateType> Shapes<C> {
     }
 }
 
-impl<C: CoordinateType> LayoutBase for Layout<C> {
-    type Coord = C;
+impl<C: CoordinateType> HierarchyBase for Layout<C> {
     type NameType = RcString;
-    type LayerId = LayerId;
     type CellId = CellId<C>;
     type CellInstId = CellInstId<C>;
-    type ShapeId = ShapeId<C>;
 
     /// Create a new empty layout.
     fn new() -> Self {
@@ -435,18 +433,6 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         }
     }
 
-    fn dbu(&self) -> Self::Coord {
-        self.dbu
-    }
-
-    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
-        Box::new(self.layer_info.keys().copied())
-    }
-
-    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
-        &self.layer_info[layer]
-    }
-
     fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
         where Self::NameType: Borrow<N> {
         self.cells_by_name.get(name).copied()
@@ -460,11 +446,11 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         self.cells[cell].name.clone()
     }
 
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         self.cell_instances[cell_inst].name.clone()
     }
 
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.cells[cell].cell_instances.iter().copied())
     }
 
@@ -476,12 +462,33 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         Box::new(self.cells[cell].dependencies.keys().copied())
     }
 
-    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.cell_instances[cell_instance].parent_cell_id
     }
 
-    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.cell_instances[cell_instance].template_cell_id
+    }
+
+}
+
+
+impl<C: CoordinateType> LayoutBase for Layout<C> {
+    type Coord = C;
+    type LayerId = LayerId;
+    type ShapeId = ShapeId<C>;
+
+
+    fn dbu(&self) -> Self::Coord {
+        self.dbu
+    }
+
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
+        Box::new(self.layer_info.keys().copied())
+    }
+
+    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
+        &self.layer_info[layer]
     }
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {

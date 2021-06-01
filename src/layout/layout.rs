@@ -36,6 +36,7 @@ use crate::property_storage::{PropertyStore, WithProperties};
 use std::cell::RefCell;
 use crate::layout::traits::{LayoutBase, LayoutEdit};
 use crate::layout::hashmap_layout::LayerId;
+use crate::traits::HierarchyBase;
 
 
 /// Data structure which holds cells and cell instances.
@@ -357,28 +358,14 @@ fn test_layout_properties() {
     assert!(!layout.property_str("my_string_property").is_none());
 }
 
-impl LayoutBase for Layout {
-    type Coord = SInt;
+
+impl HierarchyBase for Layout {
     type NameType = String;
-    type LayerId = LayerIndex;
     type CellId = Rc<Cell<Coord>>;
     type CellInstId = Rc<CellInstance<Coord>>;
-    type ShapeId = Rc<Shape<Coord>>;
 
     fn new() -> Self {
         Layout::new()
-    }
-
-    fn dbu(&self) -> Self::Coord {
-        self.dbu as SInt
-    }
-
-    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
-        Box::new(self.layer_info.keys().copied())
-    }
-
-    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
-        self.get_layer_info(*layer).expect("Non existent layer ID.")
     }
 
     fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId> where Self::NameType: Borrow<N> {
@@ -393,11 +380,11 @@ impl LayoutBase for Layout {
         cell.name().unwrap()
     }
 
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         None
     }
 
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.cells[&cell.index()].each_inst())
     }
 
@@ -409,12 +396,31 @@ impl LayoutBase for Layout {
         Box::new(self.cells[&cell.index()].each_cell_dependency())
     }
 
-    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn parent(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         cell_instance.parent_cell.upgrade().unwrap()
     }
 
-    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+    fn template(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         cell_instance.cell().upgrade().unwrap()
+    }
+}
+
+
+impl LayoutBase for Layout {
+    type Coord = SInt;
+    type LayerId = LayerIndex;
+    type ShapeId = Rc<Shape<Coord>>;
+
+    fn dbu(&self) -> Self::Coord {
+        self.dbu as SInt
+    }
+
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
+        Box::new(self.layer_info.keys().copied())
+    }
+
+    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
+        self.get_layer_info(*layer).expect("Non existent layer ID.")
     }
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {

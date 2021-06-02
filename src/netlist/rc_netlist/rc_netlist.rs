@@ -38,6 +38,7 @@ use std::ops::Deref;
 
 use log::debug;
 use crate::netlist::traits::{NetlistBase, NetlistEdit};
+use crate::traits::HierarchyBase;
 
 /// Data type used for identifying a circuit instance (sub circuit).
 pub type CircuitInstIndex = Index<CircuitInstance>;
@@ -450,33 +451,13 @@ fn test_netlist_clone() {
     assert_eq!(inst_sub.net_for_pin(0), Some(net1.clone()));
 }
 
+
 impl NetlistBase for RcNetlist {
-    type NameType = String;
     type PinId = Rc<Pin>;
     type PinInstId = Rc<PinInstance>;
     type TerminalId = ();
-    type CellId = Rc<Circuit>;
-    type CellInstId = Rc<CircuitInstance>;
     type NetId = Rc<Net>;
 
-    fn new() -> Self {
-        RcNetlist::new()
-    }
-
-    fn circuit_by_name<N: ?Sized>(&self, name: &N) -> Option<Rc<Circuit>>
-        where Self::NameType: Borrow<N>,
-              N: Hash + Eq {
-        RcNetlist::circuit_by_name(self, name)
-    }
-
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
-        -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
-        parent_circuit.circuit_instance_by_name(name)
-    }
-
-    fn template_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        circuit_instance.circuit_ref().upgrade().unwrap()
-    }
 
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId {
         pin_instance.pin().clone()
@@ -493,10 +474,6 @@ impl NetlistBase for RcNetlist {
     fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId>
         where Self::NameType: Borrow<N> {
         parent_circuit.pin_by_name(name)
-    }
-
-    fn parent_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        circuit_instance.parent_circuit().upgrade().unwrap()
     }
 
     fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
@@ -532,38 +509,6 @@ impl NetlistBase for RcNetlist {
         net.name()
     }
 
-    fn circuit_name(&self, circuit: &Self::CellId) -> Self::NameType {
-        circuit.name().clone()
-    }
-
-    fn circuit_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
-        circuit_inst.name().cloned()
-    }
-
-    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
-        RcNetlist::each_circuit(self).cloned().for_each(f)
-    }
-
-    fn each_circuit(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(RcNetlist::each_circuit(self).cloned())
-    }
-
-    fn for_each_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        circuit.each_instance().for_each(f)
-    }
-
-    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        circuit.each_circuit_dependency().for_each(f)
-    }
-
-    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        circuit.each_dependent_circuit().for_each(f)
-    }
-
-
-    fn for_each_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        circuit.each_reference().for_each(f);
-    }
 
     fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
         circuit.each_pin().cloned().for_each(f)
@@ -606,6 +551,78 @@ impl NetlistBase for RcNetlist {
     fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinInstId) -> () {
         net.each_pin_instance().for_each(f)
     }
+}
+
+impl HierarchyBase for RcNetlist {
+    type NameType = String;
+    type CellId = Rc<Circuit>;
+    type CellInstId = Rc<CircuitInstance>;
+
+    fn new() -> Self {
+        RcNetlist::new()
+    }
+
+    fn cell_by_name<N: ?Sized>(&self, name: &N) -> Option<Rc<Circuit>>
+        where Self::NameType: Borrow<N>,
+              N: Hash + Eq {
+        RcNetlist::circuit_by_name(self, name)
+    }
+
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
+                                                    -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
+        parent_circuit.circuit_instance_by_name(name)
+    }
+
+    fn cell_name(&self, circuit: &Self::CellId) -> Self::NameType {
+        circuit.name().clone()
+    }
+
+    fn cell_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
+        circuit_inst.name().cloned()
+    }
+
+    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        circuit_instance.parent_circuit().upgrade().unwrap()
+    }
+
+
+    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        circuit_instance.circuit_ref().upgrade().unwrap()
+    }
+
+    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+        RcNetlist::each_circuit(self).cloned().for_each(f)
+    }
+
+    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(RcNetlist::each_circuit(self).cloned())
+    }
+
+    fn for_each_cell_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        circuit.each_instance().for_each(f)
+    }
+
+    fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        circuit.each_circuit_dependency().for_each(f)
+    }
+
+
+    fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        circuit.each_dependent_circuit().for_each(f)
+    }
+
+    fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        circuit.each_reference().for_each(f);
+    }
+
+
+    // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
+    //     circuit.num_instances()
+    // }
+    //
+    // fn num_circuits(&self) -> usize {
+    //     self.circuits.len()
+    // }
 }
 
 impl NetlistEdit for RcNetlist {

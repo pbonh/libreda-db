@@ -438,8 +438,9 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
         self.cells_by_name.get(name).copied()
     }
 
-    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.cells.keys().copied())
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId>
+        where Self::NameType: Borrow<N> {
+        self.cells[parent_circuit].cell_instances_by_name.get(name).copied()
     }
 
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
@@ -450,18 +451,6 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
         self.cell_instances[cell_inst].name.clone()
     }
 
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.cells[cell].cell_instances.iter().copied())
-    }
-
-    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.cells[cell].dependent_cells.keys().copied())
-    }
-
-    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.cells[cell].dependencies.keys().copied())
-    }
-
     fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         self.cell_instances[cell_instance].parent_cell_id
     }
@@ -470,6 +459,41 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
         self.cell_instances[cell_instance].template_cell_id
     }
 
+    fn for_each_cell<F>(&self, mut f: F) where F: FnMut(Self::CellId) -> () {
+        self.cells.keys().for_each(|&id| f(id))
+    }
+
+    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells.keys().copied())
+    }
+
+    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
+        self.cells[cell].cell_instances.iter().for_each(|&id| f(id))
+    }
+
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.cells[cell].cell_instances.iter().copied())
+    }
+
+    fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, mut f: F) where F: FnMut(Self::CellId) -> () {
+        self.cells[circuit].dependencies.keys().for_each(|&id| f(id))
+    }
+
+    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells[cell].dependencies.keys().copied())
+    }
+
+    fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, mut f: F) where F: FnMut(Self::CellId) -> () {
+        self.cells[circuit].dependent_cells.keys().for_each(|&id| f(id))
+    }
+
+    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells[cell].dependent_cells.keys().copied())
+    }
+
+    fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
+        self.cells[circuit].cell_references.iter().for_each(|&id| f(id))
+    }
 }
 
 

@@ -403,6 +403,30 @@ impl HierarchyBase for Layout {
     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
         cell_instance.cell().upgrade().unwrap()
     }
+
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
+        unimplemented!()
+    }
+
+    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+        unimplemented!()
+    }
+
+    fn for_each_cell_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        unimplemented!()
+    }
+
+    fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        unimplemented!()
+    }
+
+    fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        unimplemented!()
+    }
+
+    fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        unimplemented!()
+    }
 }
 
 

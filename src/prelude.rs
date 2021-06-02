@@ -22,5 +22,6 @@
 pub use iron_shapes::prelude::*;
 pub use crate::layout::prelude::*;
 pub use crate::netlist::prelude::*;
+pub use crate::traits::*;
 pub use crate::rc_string::RcString;
 pub use crate::property_storage::{WithProperties, PropertyValue};

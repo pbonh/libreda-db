@@ -35,6 +35,7 @@ use std::ops::Deref;
 
 // Use an alternative hasher that has good performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
+use crate::traits::HierarchyBase;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -812,7 +813,7 @@ impl<'a> CircuitRef<'a> {
     /// Iterate over all nets defined in this circuit.
     pub fn each_net_ref(&self) -> impl Iterator<Item=NetRef<'_>> {
         self.each_net_id()
-            .map(move |id|  NetRef::new(*self, self.netlist.net(&id)))
+            .map(move |id| NetRef::new(*self, self.netlist.net(&id)))
     }
 }
 
@@ -852,14 +853,11 @@ fn test_hashmap_netlist_reference_access() {
     }
 }
 
-impl NetlistBase for HashMapNetlist {
+
+impl HierarchyBase for HashMapNetlist {
     type NameType = RcString;
-    type PinId = PinId;
-    type PinInstId = PinInstId;
-    type TerminalId = TerminalId;
     type CellId = CellId;
     type CellInstId = CellInstId;
-    type NetId = NetId;
 
     /// Create an empty netlist.
     fn new() -> Self {
@@ -867,20 +865,92 @@ impl NetlistBase for HashMapNetlist {
     }
 
     /// Find a circuit by its name.
-    fn circuit_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
+    fn cell_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
         where Self::NameType: Borrow<S> {
         self.circuits_by_name.get(name).copied()
     }
 
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
-                                                       -> Option<Self::CellInstId>
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
+                                                    -> Option<Self::CellInstId>
         where Self::NameType: Borrow<N> {
         self.circuit(parent_circuit).instances_by_name.get(name).copied()
     }
 
-    fn template_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
         self.circuit_inst(circuit_instance).template_circuit_id
     }
+
+    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        self.circuit_inst(circuit_instance).parent_circuit_id
+    }
+
+    fn cell_name(&self, circuit: &Self::CellId) -> Self::NameType {
+        self.circuit(circuit).name.clone()
+    }
+
+    fn cell_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
+        self.circuit_inst(circuit_inst).name.clone()
+    }
+
+    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+        self.circuits.keys().copied().for_each(f)
+    }
+
+    /// Iterate over all circuits.
+    fn each_cell(&self) -> Box<dyn Iterator<Item=CellId> + '_> {
+        Box::new(self.circuits.keys().copied())
+    }
+
+    fn for_each_cell_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        self.circuit(circuit).instances.iter()
+            .copied().for_each(f)
+    }
+
+    fn each_cell_instance(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.circuit(circuit).instances.iter().copied())
+    }
+
+    fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        self.circuit(circuit).dependencies.keys().copied().for_each(f);
+    }
+
+    fn each_cell_dependency(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.circuit(circuit).dependencies.keys().copied())
+    }
+
+    fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
+    }
+
+    fn each_dependent_cell(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
+    }
+
+    fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        self.circuit(circuit).references.iter().copied().for_each(f)
+    }
+
+    fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.circuit(circuit).references.iter().copied())
+    }
+
+
+
+
+    // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
+    //     self.circuit(circuit).instances.len()
+    // }
+    //
+    // fn num_circuits(&self) -> usize {
+    //     self.circuits.len()
+    // }
+}
+
+impl NetlistBase for HashMapNetlist {
+    type PinId = PinId;
+    type PinInstId = PinInstId;
+    type TerminalId = TerminalId;
+    type NetId = NetId;
 
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId {
         self.pin_inst(pin_instance).template_pin_id
@@ -899,10 +969,6 @@ impl NetlistBase for HashMapNetlist {
         // TODO: Create index for pin names.
         self.circuit(&parent_circuit).pins.iter().find(|p| self.pin(*p).name.borrow() == name)
             .copied()
-    }
-
-    fn parent_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(circuit_instance).parent_circuit_id
     }
 
     fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
@@ -941,55 +1007,6 @@ impl NetlistBase for HashMapNetlist {
         self.net(net).name.clone()
     }
 
-    fn circuit_name(&self, circuit: &Self::CellId) -> Self::NameType {
-        self.circuit(circuit).name.clone()
-    }
-
-    fn circuit_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
-        self.circuit_inst(circuit_inst).name.clone()
-    }
-
-    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
-        self.circuits.keys().copied().for_each(f)
-    }
-
-    /// Iterate over all circuits.
-    fn each_circuit(&self) -> Box<dyn Iterator<Item=CellId> + '_> {
-        Box::new(self.circuits.keys().copied())
-    }
-
-    fn for_each_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        self.circuit(circuit).instances.iter()
-            .copied().for_each(f)
-    }
-
-    fn each_instance(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.circuit(circuit).instances.iter().copied())
-    }
-
-    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        self.circuit(circuit).dependencies.keys().copied().for_each(f);
-    }
-
-    fn each_circuit_dependency(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.circuit(circuit).dependencies.keys().copied())
-    }
-
-    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
-    }
-
-    fn each_dependent_circuit(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
-    }
-
-    fn for_each_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        self.circuit(circuit).references.iter().copied().for_each(f)
-    }
-
-    fn each_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.circuit(circuit).references.iter().copied())
-    }
 
     fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
         self.circuit(circuit).pins.iter().copied().for_each(f)
@@ -1354,7 +1371,7 @@ fn test_create_populated_netlist() {
                                          ("B".into(), Direction::Output)
                                      ],
     );
-    assert_eq!(Some(top), netlist.circuit_by_name("TOP"));
+    assert_eq!(Some(top), netlist.cell_by_name("TOP"));
 
     let sub_a = netlist.create_circuit("SUB_A".into(),
                                        vec![

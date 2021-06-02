@@ -722,7 +722,7 @@ impl Chip<Coord> {
             dependencies: Default::default(),
             user_data: Default::default(),
             shapes_map: Default::default(),
-            properties: Default::default()
+            properties: Default::default(),
         };
 
         self.circuits.insert(id, circuit);
@@ -1295,35 +1295,13 @@ fn test_hashmap_netlist_reference_access() {
     }
 }
 
+
 impl NetlistBase for Chip {
-    type NameType = RcString;
     type PinId = PinId;
     type PinInstId = PinInstId;
     type TerminalId = TerminalId;
-    type CellId = CellId;
-    type CellInstId = CellInstId;
     type NetId = NetId;
 
-    /// Create an empty netlist.
-    fn new() -> Self {
-        Chip::default()
-    }
-
-    /// Find a circuit by its name.
-    fn circuit_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
-        where Self::NameType: Borrow<S> {
-        Chip::circuit_by_name(self, name)
-    }
-
-    fn circuit_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
-                                                       -> Option<Self::CellInstId>
-        where Self::NameType: Borrow<N> {
-        self.circuit(parent_circuit).instances_by_name.get(name).copied()
-    }
-
-    fn template_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(circuit_instance).template_circuit_id()
-    }
 
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId {
         self.pin_inst(pin_instance).template_pin_id
@@ -1344,9 +1322,6 @@ impl NetlistBase for Chip {
             .copied()
     }
 
-    fn parent_circuit(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(circuit_instance).parent_circuit_id
-    }
 
     fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
         self.pin(pin).circuit
@@ -1382,56 +1357,6 @@ impl NetlistBase for Chip {
 
     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType> {
         self.net(net).name.clone()
-    }
-
-    fn circuit_name(&self, circuit: &Self::CellId) -> Self::NameType {
-        self.circuit(circuit).name.clone()
-    }
-
-    fn circuit_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
-        self.circuit_inst(circuit_inst).name.clone()
-    }
-
-    fn for_each_circuit<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
-        self.circuits.keys().copied().for_each(f)
-    }
-
-    /// Iterate over all circuits.
-    fn each_circuit(&self) -> Box<dyn Iterator<Item=CellId> + '_> {
-        Box::new(self.circuits.keys().copied())
-    }
-
-    fn for_each_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        self.circuit(circuit).instances.iter()
-            .copied().for_each(f)
-    }
-
-    fn each_instance(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.circuit(circuit).instances.iter().copied())
-    }
-
-    fn for_each_circuit_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        self.circuit(circuit).dependencies.keys().copied().for_each(f);
-    }
-
-    fn each_circuit_dependency(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.circuit(circuit).dependencies.keys().copied())
-    }
-
-    fn for_each_dependent_circuit<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
-    }
-
-    fn each_dependent_circuit(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
-    }
-
-    fn for_each_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        self.circuit(circuit).references.iter().copied().for_each(f)
-    }
-
-    fn each_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.circuit(circuit).references.iter().copied())
     }
 
     fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
@@ -1487,6 +1412,7 @@ impl NetlistBase for Chip {
         Box::new(self.net(net).pin_instances.iter().copied())
     }
 }
+
 
 impl NetlistEdit for Chip {
     /// Create a new circuit with a given list of pins.
@@ -1626,54 +1552,93 @@ impl<C: CoordinateType> Shapes<C> {
 }
 
 
-
 impl HierarchyBase for Chip<Coord> {
     type NameType = RcString;
     type CellId = CellId;
     type CellInstId = CellInstId;
 
-    /// Create a new empty layout.
+    /// Create an empty netlist.
     fn new() -> Self {
         Chip::default()
     }
 
-    fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
-        where Self::NameType: Borrow<N> {
+    /// Find a circuit by its name.
+    fn cell_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
+        where Self::NameType: Borrow<S> {
         Chip::circuit_by_name(self, name)
     }
 
-    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
+                                                    -> Option<Self::CellInstId>
+        where Self::NameType: Borrow<N> {
+        self.circuit(parent_circuit).instances_by_name.get(name).copied()
+    }
+
+    fn cell_name(&self, circuit: &Self::CellId) -> Self::NameType {
+        self.circuit(circuit).name.clone()
+    }
+
+    fn cell_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
+        self.circuit_inst(circuit_inst).name.clone()
+    }
+
+    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        self.circuit_inst(circuit_instance).parent_circuit_id
+    }
+
+    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        self.circuit_inst(circuit_instance).template_circuit_id()
+    }
+
+    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+        self.circuits.keys().copied().for_each(f)
+    }
+
+    /// Iterate over all circuits.
+    fn each_cell(&self) -> Box<dyn Iterator<Item=CellId> + '_> {
         Box::new(self.circuits.keys().copied())
     }
 
-    fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
-        self.circuit(cell).name().clone()
+    fn for_each_cell_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        self.circuit(circuit).instances.iter()
+            .copied().for_each(f)
     }
 
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
-        self.circuit_inst(cell_inst).name.clone()
+    fn each_cell_instance(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.circuit(circuit).instances.iter().copied())
     }
 
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.circuit(cell).each_instance_id())
+    fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        self.circuit(circuit).dependencies.keys().copied().for_each(f);
     }
 
-    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.circuit(cell).each_dependent_cell_id())
+    fn each_cell_dependency(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.circuit(circuit).dependencies.keys().copied())
     }
 
-    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.circuit(cell).each_dependency_id())
+    fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+        self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
     }
 
-    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(cell_instance).parent_circuit_id()
+    fn each_dependent_cell(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
     }
 
-    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(cell_instance).template_circuit_id()
+    fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+        self.circuit(circuit).references.iter().copied().for_each(f)
     }
 
+    fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.circuit(circuit).references.iter().copied())
+    }
+
+    // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
+    //     self.circuit(circuit).instances.len()
+    // }
+    //
+    // fn num_circuits(&self) -> usize {
+    //     self.circuits.len()
+    // }
 }
 
 impl LayoutBase for Chip<Coord> {
@@ -1752,7 +1717,7 @@ impl LayoutEdit for Chip<Coord> {
         <Chip<Self::Coord>>::remove_circuit_instance(self, id)
     }
 
-    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId{
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
         let shape_id = self.shape_index_generator.next();
 
         let shape = Shape {

@@ -372,8 +372,8 @@ impl HierarchyBase for Layout {
         self.cell_by_name(name)
     }
 
-    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.each_cell().cloned())
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
+        unimplemented!()
     }
 
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
@@ -381,19 +381,8 @@ impl HierarchyBase for Layout {
     }
 
     fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+        // TODO
         None
-    }
-
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.cells[&cell.index()].each_inst())
-    }
-
-    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.cells[&cell.index()].each_dependent_cell())
-    }
-
-    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
-        Box::new(self.cells[&cell.index()].each_cell_dependency())
     }
 
     fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
@@ -404,28 +393,40 @@ impl HierarchyBase for Layout {
         cell_instance.cell().upgrade().unwrap()
     }
 
-    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
-        unimplemented!()
+    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+        self.each_cell().cloned().for_each(f)
     }
 
-    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
-        unimplemented!()
+    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.each_cell().cloned())
     }
 
     fn for_each_cell_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        unimplemented!()
+        circuit.each_inst().for_each(f)
+    }
+
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.cells[&cell.index()].each_inst())
     }
 
     fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        unimplemented!()
+        circuit.each_cell_dependency().for_each(f)
+    }
+
+    fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells[&cell.index()].each_cell_dependency())
     }
 
     fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        unimplemented!()
+        circuit.each_dependent_cell().for_each(f)
+    }
+
+    fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.cells[&cell.index()].each_dependent_cell())
     }
 
     fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        unimplemented!()
+        circuit.each_reference().for_each(f)
     }
 }
 
@@ -519,20 +520,19 @@ impl LayoutEdit for Layout {
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
-        parent_cell.shapes(*layer)
-            .expect("Layer not found.")
+        parent_cell.shapes_get_or_create(*layer)
             .insert(geometry)
-    }
-
-    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
-                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
-                     -> Option<Geometry<Self::Coord>> {
-        unimplemented!()
     }
 
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
                     shape_id: &Self::ShapeId)
                     -> Option<Geometry<Self::Coord>> {
+        unimplemented!()
+    }
+
+    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
+                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
+                     -> Option<Geometry<Self::Coord>> {
         unimplemented!()
     }
 }

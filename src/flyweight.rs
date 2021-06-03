@@ -23,6 +23,8 @@
 //!
 //! This is mainly used to represent netlists and hierarchical layouts.
 
+#![allow(unused)]
+
 pub use crate::index::*;
 
 pub use itertools::Itertools;

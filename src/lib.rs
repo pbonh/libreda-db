@@ -50,7 +50,7 @@ pub mod rc_string;
 pub mod property_storage;
 pub mod traits;
 mod flyweight;
-mod fused_layout_netlist;
+pub mod chip;
 
 // Private modules.
 // mod refset; // Not currently used.

@@ -20,6 +20,7 @@
 //! The `prelude` helps to import most commonly used modules.
 
 pub use iron_shapes::prelude::*;
+pub use super::traits::*;
 pub use super::cell::*;
 pub use super::cell_instance::*;
 pub use super::errors::*;

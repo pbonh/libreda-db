@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 //! Chip data structure holding netlist and layout together.
 
 // TODO: Remove this when fully implemented.
@@ -890,6 +891,7 @@ impl Chip<Coord> {
         id
     }
 
+    /// Change the name of the net.
     pub fn rename_net(&mut self, parent_circuit: &CellId,
                       net_id: &NetId, new_name: Option<RcString>) {
         assert_eq!(parent_circuit, &self.nets.get(net_id).expect("Net not found.").parent_id);

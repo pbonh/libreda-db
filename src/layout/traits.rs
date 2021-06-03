@@ -21,13 +21,11 @@
 //! Traits for layout data types.
 
 
-use std::borrow::Borrow;
 use std::hash::Hash;
 use crate::layout::types::{UInt, LayerInfo};
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
-use crate::layout::hashmap_layout::{LayerId};
 use crate::traits::HierarchyBase;
 
 
@@ -73,6 +71,7 @@ pub trait LayoutBase: HierarchyBase {
 
 /// Trait for layouts that support editing.
 pub trait LayoutEdit: LayoutBase {
+
     /// Create a layer or return an existing one.
     fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
 

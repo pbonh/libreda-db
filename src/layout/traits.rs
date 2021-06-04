@@ -36,9 +36,9 @@ pub trait LayoutBase: HierarchyBase {
     /// Number type used for coordinates.
     type Coord: CoordinateType;
     /// Layer identifier type.
-    type LayerId: Eq + Hash + Clone;
+    type LayerId: Eq + Hash + Clone + std::fmt::Debug;
     /// Shape identifier type.
-    type ShapeId: Eq + Hash + Clone;
+    type ShapeId: Eq + Hash + Clone + std::fmt::Debug;
 
 
     /// Get the distance unit used in this layout in 'pixels per micron'.
@@ -59,6 +59,9 @@ pub trait LayoutBase: HierarchyBase {
     /// Call a function for each shape on this layer.
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
         where F: FnMut(&Geometry<Self::Coord>) -> ();
+
+    /// Get the geometric transform that describes the location of a cell instance relative to its parent.
+    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord>;
 
     // fn with_shapes<'a, F, R>(& self, cell: &Self::CellId, layer: &Self::LayerId, f: F) -> R
     //     where F: FnMut(dyn IntoIterator<Item=&'a Geometry<Self::Coord>>) -> R;
@@ -101,4 +104,7 @@ pub trait LayoutEdit: LayoutBase {
     /// Replace the geometry of a shape.
     fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
                      shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Option<Geometry<Self::Coord>>;
+
+    /// Set the geometric transform that describes the location of a cell instance relative to its parent.
+    fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>);
 }

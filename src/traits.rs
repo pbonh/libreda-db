@@ -85,7 +85,7 @@ pub trait HierarchyBase {
 
     /// Find a cell instance by its name.
     /// Returns `None` if the name does not exist.
-    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId>
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_cell: &Self::CellId, name: &N) -> Option<Self::CellInstId>
         where Self::NameType: Borrow<N>;
 
     // /// Iterate over all cells.
@@ -112,82 +112,82 @@ pub trait HierarchyBase {
     /// Get the ID of the template cell of this instance.
     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 
-    /// Call a function on each circuit of the netlist.
+    /// Call a function on each cell of the netlist.
     fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> ();
 
-    /// Get a `Vec` of all circuit IDs in this netlist.
+    /// Get a `Vec` of all cell IDs in this netlist.
     fn each_cell_vec(&self) -> Vec<Self::CellId> {
         let mut v = Vec::new();
         self.for_each_cell(|c| v.push(c.clone()));
         v
     }
 
-    /// Iterate over all circuits.
+    /// Iterate over all cells.
     fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
         Box::new(self.each_cell_vec().into_iter())
     }
 
-    /// Call a function on each instance in this circuit.
-    fn for_each_cell_instance<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
+    /// Call a function on each instance in this cell.
+    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
 
-    /// Get a `Vec` of the IDs of all instances in this circuit.
-    fn each_cell_instance_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellInstId> {
+    /// Get a `Vec` of the IDs of all instances in this cell.
+    fn each_cell_instance_vec(&self, cell: &Self::CellId) -> Vec<Self::CellInstId> {
         let mut v = Vec::new();
-        self.for_each_cell_instance(circuit, |c| v.push(c.clone()));
+        self.for_each_cell_instance(cell, |c| v.push(c.clone()));
         v
     }
 
-    /// Iterate over all instances in a circuit.
-    fn each_cell_instance(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
-        Box::new(self.each_cell_instance_vec(circuit).into_iter())
+    /// Iterate over all instances in a cell.
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+        Box::new(self.each_cell_instance_vec(cell).into_iter())
     }
 
-    /// Call a function for each circuit that is a child of this `circuit`.
-    fn for_each_cell_dependency<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
+    /// Call a function for each cell that is a child of this `cell`.
+    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
 
-    /// Get a `Vec` of each circuit that is a child of this `circuit`.
-    fn each_cell_dependency_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellId> {
+    /// Get a `Vec` of each cell that is a child of this `cell`.
+    fn each_cell_dependency_vec(&self, cell: &Self::CellId) -> Vec<Self::CellId> {
         let mut v = Vec::new();
-        self.for_each_cell_dependency(circuit, |c| v.push(c.clone()));
+        self.for_each_cell_dependency(cell, |c| v.push(c.clone()));
         v
     }
 
-    /// Iterate over all circuits that are childs of this `circuit`.
-    fn each_cell_dependency<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
-        Box::new(self.each_cell_dependency_vec(circuit).into_iter())
+    /// Iterate over all cells that are childs of this `cell`.
+    fn each_cell_dependency<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
+        Box::new(self.each_cell_dependency_vec(cell).into_iter())
     }
 
-    /// Call a function for each circuit that directly depends on `circuit`.
-    fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
+    /// Call a function for each cell that directly depends on `cell`.
+    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of each cell that directly depends on `cell`.
-    fn each_dependent_cell_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellId> {
+    fn each_dependent_cell_vec(&self, cell: &Self::CellId) -> Vec<Self::CellId> {
         let mut v = Vec::new();
-        self.for_each_dependent_cell(circuit, |c| v.push(c.clone()));
+        self.for_each_dependent_cell(cell, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over each cell that directly depends on `cell`.
-    fn each_dependent_cell<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
-        Box::new(self.each_dependent_cell_vec(circuit).into_iter())
+    fn each_dependent_cell<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
+        Box::new(self.each_dependent_cell_vec(cell).into_iter())
     }
 
     /// Iterate over all instances of this `cell`, i.e. instances that use this cell as
     /// a template.
-    fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
+    fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
 
     /// Get a `Vec` with all cell instances referencing this cell.
-    fn each_cell_reference_vec(&self, circuit: &Self::CellId) -> Vec<Self::CellInstId> {
+    fn each_cell_reference_vec(&self, cell: &Self::CellId) -> Vec<Self::CellInstId> {
         let mut v = Vec::new();
-        self.for_each_cell_reference(circuit, |c| v.push(c.clone()));
+        self.for_each_cell_reference(cell, |c| v.push(c.clone()));
         v
     }
 
     /// Iterate over all instances of this `cell`, i.e. instances that use this cell as
     /// a template.
-    fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_cell_reference(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         // Provide an inefficient default implementation.
-        Box::new(self.each_cell_reference_vec(circuit).into_iter())
+        Box::new(self.each_cell_reference_vec(cell).into_iter())
     }
 
     // /// Get the number of cell instances inside the `cell`.
@@ -198,7 +198,7 @@ pub trait HierarchyBase {
 
     // /// Get the number of references that point to this cell, i.e. the number of
     // /// instances of this cell.
-    // fn num_references(&self, circuit: &Self::CellId) -> usize {
-    //     self.each_reference(circuit).count()
+    // fn num_references(&self, cell: &Self::CellId) -> usize {
+    //     self.each_reference(cell).count()
     // }
 }

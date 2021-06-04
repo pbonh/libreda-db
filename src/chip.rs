@@ -248,6 +248,11 @@ impl Circuit {
     }
 }
 
+// pub enum PlacementStatus {
+//     Unplaced,
+//     Fixed
+// }
+
 /// Instance of a circuit.
 ///
 /// Template parameters:
@@ -275,6 +280,8 @@ pub struct CircuitInst<C = Coord, U = ()>
     /// Transformation to put the cell to the right place an into the right scale/rotation.
     transform: SimpleTransform<C>,
     // TODO: Repetition
+    // /// Current status of the cell placement.
+    // placement_status: PlacementStatus
 }
 
 impl CircuitInst {
@@ -340,8 +347,8 @@ pub struct Pin {
     position: usize,
 
     // == Layout == //
-    // /// List of shapes in the layout that represent the physical pin.
-    // pin_shapes: Vec<(LayerId, ShapeId)>,
+    /// List of shapes in the layout that represent the physical pin.
+    pin_shapes: Vec<(LayerId, ShapeId)>,
 }
 
 impl Pin {
@@ -488,6 +495,11 @@ pub struct Net {
     pub pins: IntHashSet<PinId>,
     /// Pin instances connected to this net.
     pub pin_instances: IntHashSet<PinInstId>,
+
+    // == Layout == //
+
+    /// List of shapes in the layout that represent the physical net.
+    pub shapes: IntHashSet<(LayerId, ShapeId)>,
 }
 
 impl Net {}
@@ -880,6 +892,7 @@ impl Chip<Coord> {
             parent_id: *parent,
             pins: Default::default(),
             pin_instances: Default::default(),
+            shapes: Default::default(),
         };
         self.nets.insert(id, net);
         let circuit = self.circuit_mut(parent);
@@ -1102,6 +1115,7 @@ impl Chip<Coord> {
             net: Default::default(),
             id,
             position,
+            pin_shapes: Default::default(),
         };
         self.pins.insert(id, pin);
         id
@@ -1262,7 +1276,7 @@ impl<'a> CircuitRef<'a> {
 }
 
 #[test]
-fn test_hashmap_netlist_reference_access() {
+fn test_netlist_reference_access() {
     let mut netlist = Chip::default();
 
     let a = netlist.create_circuit("A".into(), vec![
@@ -1320,10 +1334,10 @@ impl NetlistBase for Chip {
     fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId>
         where Self::NameType: Borrow<N> {
         // TODO: Create index for pin names.
-        self.circuit(&parent_circuit).pins.iter().find(|p| self.pin(*p).name.borrow() == name)
+        self.circuit(&parent_circuit).pins.iter()
+            .find(|p| self.pin(*p).name.borrow() == name)
             .copied()
     }
-
 
     fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
         self.pin(pin).circuit
@@ -1332,7 +1346,6 @@ impl NetlistBase for Chip {
     fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CellInstId {
         self.pin_inst(pin_inst).circuit_inst
     }
-
 
     /// Get the net connected to this pin.
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
@@ -1679,6 +1692,10 @@ impl LayoutBase for Chip<Coord> {
         self.circuit(cell).shapes_map[layer].shapes.values()
             .for_each(|s| f(&s.geometry))
     }
+
+    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
+        self.circuit_inst(cell_inst).get_transform().clone()
+    }
 }
 
 impl LayoutEdit for Chip<Coord> {
@@ -1758,5 +1775,9 @@ impl LayoutEdit for Chip<Coord> {
             .shapes_mut(layer).expect("Layer not found.")
             .shapes.insert(shape_id, shape)
             .map(|s| s.geometry)
+    }
+
+    fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
+        self.circuit_inst_mut(cell_inst).set_transform(tf)
     }
 }

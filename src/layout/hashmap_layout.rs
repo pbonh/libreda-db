@@ -532,6 +532,10 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
         self.cells[cell].shapes_map[layer].shapes.values()
             .for_each(|s| f(&s.geometry))
     }
+
+    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
+        self.cell_instances[cell_inst].transform.clone()
+    }
 }
 
 impl<C: CoordinateType> LayoutEdit for Layout<C> {
@@ -731,5 +735,9 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             .shapes_map.get_mut(layer).expect("Layer not found.")
             .shapes.insert(shape_id, shape)
             .map(|s| s.geometry)
+    }
+
+    fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
+        self.cell_instances.get_mut(cell_inst).unwrap().transform = tf
     }
 }

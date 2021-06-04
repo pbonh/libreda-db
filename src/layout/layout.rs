@@ -481,6 +481,10 @@ impl LayoutBase for Layout {
             shapes.for_each_shape(|s| f(&s.geometry))
         }
     }
+
+    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
+        cell_inst.transform.borrow().clone()
+    }
 }
 
 // pub struct GeometryIter<C: CoordinateType> {
@@ -534,5 +538,9 @@ impl LayoutEdit for Layout {
                      shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
                      -> Option<Geometry<Self::Coord>> {
         unimplemented!()
+    }
+
+    fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
+        cell_inst.transform.replace(tf);
     }
 }

@@ -26,7 +26,7 @@ use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use itertools::Itertools;
-pub use crate::traits::HierarchyBase;
+pub use crate::traits::{HierarchyBase, HierarchyEdit};
 
 /// A reference to a circuit.
 pub trait CircuitRef {
@@ -456,22 +456,9 @@ pub trait NetlistBase: HierarchyBase {
 
 
 /// Trait for netlists that support editing.
-pub trait NetlistEdit: NetlistBase {
+pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     /// Create a new and empty circuit.
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId;
-
-    /// Delete the given circuit if it exists.
-    fn remove_circuit(&mut self, circuit_id: &Self::CellId);
-
-
-    /// Create a new circuit instance.
-    fn create_circuit_instance(&mut self,
-                               parent_circuit: &Self::CellId,
-                               template_circuit: &Self::CellId,
-                               name: Option<Self::NameType>) -> Self::CellInstId;
-
-    /// Remove circuit instance if it exists.
-    fn remove_circuit_instance(&mut self, id: &Self::CellInstId);
+    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId;
 
     /// Create a net net that lives in the `parent` circuit.
     fn create_net(&mut self, parent: &Self::CellId,
@@ -614,7 +601,7 @@ pub trait NetlistEdit: NetlistBase {
             } else {
                 None
             };
-            let new_inst = self.create_circuit_instance(&parent_circuit, &sub_template,
+            let new_inst = self.create_cell_instance(&parent_circuit, &sub_template,
                                                         new_name.map(|n| n.into()));
 
             // Re-connect pins to copies of the original nets.
@@ -664,7 +651,7 @@ pub trait NetlistEdit: NetlistBase {
 
 
         // Remove old instance.
-        self.remove_circuit_instance(circuit_instance);
+        self.remove_cell_instance(circuit_instance);
 
         // TODO: Clean-up.
         // self.purge_nets();
@@ -686,8 +673,8 @@ pub trait NetlistEdit: NetlistBase {
         debug_assert_eq!(self.each_cell_reference(circuit).count(), 0,
                          "Circuit should not have any references anymore.");
 
-        // Remove the circuit.
-        self.remove_circuit(circuit);
+        // Remove the cell.
+        self.remove_cell(circuit);
     }
 
     /// Delete all unconnected nets in this circuit.

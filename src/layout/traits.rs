@@ -26,7 +26,8 @@ use crate::layout::types::{UInt, LayerInfo};
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
-use crate::traits::HierarchyBase;
+use crate::traits::{HierarchyBase, HierarchyEdit};
+use crate::prelude::PropertyValue;
 
 
 /// Most basic trait of a layout.
@@ -73,26 +74,29 @@ pub trait LayoutBase: HierarchyBase {
 
 
 /// Trait for layouts that support editing.
-pub trait LayoutEdit: LayoutBase {
+pub trait LayoutEdit: LayoutBase + HierarchyEdit {
+
+    /// Set the distance unit used in this layout in 'pixels per micron'.
+    fn set_dbu(&mut self, dbu: Self::Coord) {} // TODO: Remove default implementation.
 
     /// Create a layer or return an existing one.
     fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
 
-    /// Create a new and empty cell.
-    fn create_cell(&mut self, name: Self::NameType) -> Self::CellId;
-
-    /// Delete the given cell if it exists.
-    fn remove_cell(&mut self, cell_id: &Self::CellId);
-
-    /// Create a new instance of `template_cell` in `parent_cell`.
-    fn create_cell_instance(&mut self,
-                            parent_cell: &Self::CellId,
-                            template_cell: &Self::CellId,
-                            name: Option<Self::NameType>,
-                            transform: SimpleTransform<Self::Coord>) -> Self::CellInstId;
-
-    /// Remove cell instance if it exists.
-    fn remove_cell_instance(&mut self, id: &Self::CellInstId);
+    // /// Create a new and empty cell.
+    // fn create_cell(&mut self, name: Self::NameType) -> Self::CellId;
+    //
+    // /// Delete the given cell if it exists.
+    // fn remove_cell(&mut self, cell_id: &Self::CellId);
+    //
+    // /// Create a new instance of `template_cell` in `parent_cell`.
+    // fn create_cell_instance(&mut self,
+    //                         parent_cell: &Self::CellId,
+    //                         template_cell: &Self::CellId,
+    //                         name: Option<Self::NameType>,
+    //                         transform: SimpleTransform<Self::Coord>) -> Self::CellInstId;
+    //
+    // /// Remove cell instance if it exists.
+    // fn remove_cell_instance(&mut self, id: &Self::CellInstId);
 
     /// Insert a geometric shape into the parent cell.
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId;
@@ -107,4 +111,12 @@ pub trait LayoutEdit: LayoutBase {
 
     /// Set the geometric transform that describes the location of a cell instance relative to its parent.
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>);
+
+    /// Set a property of a shape.
+    fn set_shape_property(&mut self, cell: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {}
+
+    /// Set the name of a layer.
+    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Self::NameType) {
+        unimplemented!()
+    }
 }

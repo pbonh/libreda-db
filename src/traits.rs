@@ -22,6 +22,7 @@
 
 use std::borrow::Borrow;
 use std::hash::Hash;
+use crate::prelude::PropertyValue;
 
 /// Most basic trait for the hierarchical flyweight pattern which is
 /// used to efficiently represent chip layouts and netlists.
@@ -201,4 +202,43 @@ pub trait HierarchyBase {
     // fn num_references(&self, cell: &Self::CellId) -> usize {
     //     self.each_reference(cell).count()
     // }
+
+
+    /// Set a property of the top-level chip data structure..
+    fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {}
+
+    /// Set a property of a cell.
+    fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {}
+
+    /// Set a property of a cell instance.
+    fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {}
+
+    /// Change the name of a cell.
+    ///
+    /// # Panics
+    /// Panics if a cell with this name already exists.
+    // TODO: Move to HierarchyEdit
+    fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
+        unimplemented!()
+    }
+}
+
+/// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
+pub trait HierarchyEdit: HierarchyBase {
+
+    /// Create a new and empty cell.
+    fn create_cell(&mut self, name: Self::NameType) -> Self::CellId;
+
+    /// Delete the given cell if it exists.
+    fn remove_cell(&mut self, cell_id: &Self::CellId);
+
+    /// Create a new instance of `template_cell` in `parent_cell`.
+    fn create_cell_instance(&mut self,
+                            parent_cell: &Self::CellId,
+                            template_cell: &Self::CellId,
+                            name: Option<Self::NameType>) -> Self::CellInstId;
+
+    /// Remove cell instance if it exists.
+    fn remove_cell_instance(&mut self, inst: &Self::CellInstId);
+
 }

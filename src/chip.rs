@@ -45,6 +45,7 @@ use crate::layout::types::{LayerInfo};
 // Use an alternative hasher that has better performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
 use crate::traits::HierarchyBase;
+use crate::prelude::HierarchyEdit;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -1431,26 +1432,8 @@ impl NetlistBase for Chip {
 
 impl NetlistEdit for Chip {
     /// Create a new circuit with a given list of pins.
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CellId {
+    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CellId {
         Chip::create_circuit(self, name, pins)
-    }
-
-    /// Remove all instances inside the circuit,
-    fn remove_circuit(&mut self, circuit_id: &CellId) {
-        Chip::remove_circuit(self, circuit_id)
-    }
-
-    /// Create a new instance of `circuit_template` in the `parent` circuit.
-    fn create_circuit_instance(&mut self, parent: &CellId,
-                               circuit_template: &CellId,
-                               name: Option<Self::NameType>) -> CellInstId {
-        Chip::create_circuit_instance(self, parent, circuit_template, name)
-    }
-
-
-    /// Remove a circuit instance after disconnecting it from the nets.
-    fn remove_circuit_instance(&mut self, circuit_inst_id: &CellInstId) {
-        Chip::remove_circuit_instance(self, circuit_inst_id)
     }
 
     /// Create a new net in the `parent` circuit.
@@ -1698,6 +1681,30 @@ impl LayoutBase for Chip<Coord> {
     }
 }
 
+impl HierarchyEdit for Chip<Coord> {
+
+    /// Create a new and empty cell template.
+    fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
+        // TODO
+        self.create_circuit(name, vec![])
+    }
+
+    fn remove_cell(&mut self, cell_id: &Self::CellId) {
+        self.remove_circuit(cell_id)
+    }
+
+    /// Create an instance of a cell.
+    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>) -> Self::CellInstId {
+        let id = self.create_circuit_instance(parent_cell, template_cell, name);
+        // self.circuit_inst_mut(&id).set_transform(SimpleTransform::identity());
+        id
+    }
+
+    fn remove_cell_instance(&mut self, id: &Self::CellInstId) {
+        <Chip<Coord>>::remove_circuit_instance(self, id)
+    }
+}
+
 impl LayoutEdit for Chip<Coord> {
     fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
         let layer = self.find_layer(index, datatype);
@@ -1713,27 +1720,6 @@ impl LayoutEdit for Chip<Coord> {
             self.layer_info.insert(layer_index, info);
             layer_index
         }
-    }
-
-    fn create_cell(&mut self, name: RcString) -> Self::CellId {
-        Chip::create_circuit(self, name, vec![])
-    }
-
-    fn remove_cell(&mut self, cell_id: &Self::CellId) {
-        Chip::remove_circuit(self, cell_id)
-    }
-
-    fn create_cell_instance(&mut self, parent_cell: &Self::CellId,
-                            template_cell: &Self::CellId,
-                            name: Option<RcString>,
-                            transform: SimpleTransform<Self::Coord>) -> Self::CellInstId {
-        let id = <Chip<Self::Coord>>::create_circuit_instance(self, parent_cell, template_cell, name);
-        self.circuit_inst_mut(&id).set_transform(transform);
-        id
-    }
-
-    fn remove_cell_instance(&mut self, id: &Self::CellInstId) {
-        <Chip<Self::Coord>>::remove_circuit_instance(self, id)
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {

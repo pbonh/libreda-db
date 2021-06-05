@@ -29,7 +29,7 @@ use crate::rc_string::RcString;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
 use iron_shapes::transform::SimpleTransform;
-use crate::layout::traits::{LayoutBase, LayoutEdit};
+use crate::prelude::{LayoutBase, LayoutEdit, HierarchyEdit, HierarchyBase};
 use std::hash::Hash;
 use std::borrow::Borrow;
 
@@ -37,7 +37,6 @@ use std::borrow::Borrow;
 use fnv::{FnvHashMap, FnvHashSet};
 use std::collections::HashMap;
 use std::ops::Deref;
-use crate::traits::HierarchyBase;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -538,23 +537,7 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
     }
 }
 
-impl<C: CoordinateType> LayoutEdit for Layout<C> {
-    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
-        let layer = self.find_layer(index, datatype);
-        if let Some(layer) = layer {
-            layer
-        } else {
-            // Find next free layer index.
-            let layer_index = self.layer_index_generator.next();
-            // Create new entries in the layer lookup tables.
-            self.layers_by_index_datatype.insert((index, datatype), layer_index);
-
-            let info = LayerInfo { index, datatype, name: None };
-            self.layer_info.insert(layer_index, info);
-            layer_index
-        }
-    }
-
+impl<C: CoordinateType> HierarchyEdit for Layout<C> {
     fn create_cell(&mut self, name: RcString) -> CellId<C> {
         assert!(!self.cells_by_name.contains_key(&name), "Cell with this name already exists.");
         let id = self.cell_index_generator.next();
@@ -597,11 +580,15 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         self.cells.remove(&cell_id).unwrap();
     }
 
+    /// Create a new cell instance at location (0, 0).
     fn create_cell_instance(&mut self, parent_cell: &CellId<C>,
                             template_cell: &CellId<C>,
-                            name: Option<RcString>,
-                            transform: SimpleTransform<C>) -> CellInstId<C> {
+                            name: Option<RcString>) -> CellInstId<C> {
+
         let id = self.cell_instance_index_generator.next();
+
+        // Default location is (0, 0), no magnification, no rotation or mirroring.
+        let transform = SimpleTransform::identity();
 
         {
             // Check that creating this cell instance does not create a cycle in the dependency graph.
@@ -695,6 +682,25 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
         self.cell_instances.remove(&id).unwrap();
         self.cells.get_mut(&parent).unwrap().cell_instances.remove(id);
         self.cells.get_mut(&template).unwrap().cell_references.remove(id);
+    }
+}
+
+
+impl<C: CoordinateType> LayoutEdit for Layout<C> {
+    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
+        let layer = self.find_layer(index, datatype);
+        if let Some(layer) = layer {
+            layer
+        } else {
+            // Find next free layer index.
+            let layer_index = self.layer_index_generator.next();
+            // Create new entries in the layer lookup tables.
+            self.layers_by_index_datatype.insert((index, datatype), layer_index);
+
+            let info = LayerInfo { index, datatype, name: None };
+            self.layer_info.insert(layer_index, info);
+            layer_index
+        }
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {

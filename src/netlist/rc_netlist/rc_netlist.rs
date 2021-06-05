@@ -37,8 +37,7 @@ use itertools::Itertools;
 use std::ops::Deref;
 
 use log::debug;
-use crate::netlist::traits::{NetlistBase, NetlistEdit};
-use crate::traits::HierarchyBase;
+use crate::prelude::{NetlistBase, NetlistEdit, HierarchyBase, HierarchyEdit};
 
 /// Data type used for identifying a circuit instance (sub circuit).
 pub type CircuitInstIndex = Index<CircuitInstance>;
@@ -625,28 +624,34 @@ impl HierarchyBase for RcNetlist {
     // }
 }
 
-impl NetlistEdit for RcNetlist {
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
-        let pins = pins.into_iter()
-            .map(|(name, direction)| Pin::new(name, direction))
-            .collect();
-        RcNetlist::create_circuit(self, name, pins)
+impl HierarchyEdit for RcNetlist {
+    fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
+        self.create_circuit_with_pins(name, vec![])
     }
 
-    fn remove_circuit(&mut self, circuit_id: &Self::CellId) {
+    fn remove_cell(&mut self, circuit_id: &Self::CellId) {
         RcNetlist::remove_circuit(self, circuit_id)
     }
 
-    fn create_circuit_instance(&mut self, parent_circuit: &Self::CellId,
+    fn create_cell_instance(&mut self, parent_circuit: &Self::CellId,
                                template_circuit: &Self::CellId,
                                name: Option<Self::NameType>) -> Self::CellInstId {
         parent_circuit.create_circuit_instance(template_circuit, name)
     }
 
-    fn remove_circuit_instance(&mut self, circuit_inst: &Self::CellInstId) {
+    fn remove_cell_instance(&mut self, circuit_inst: &Self::CellInstId) {
         circuit_inst.parent_circuit().upgrade()
             .unwrap()
             .remove_circuit_instance(circuit_inst)
+    }
+}
+
+impl NetlistEdit for RcNetlist {
+    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
+        let pins = pins.into_iter()
+            .map(|(name, direction)| Pin::new(name, direction))
+            .collect();
+        RcNetlist::create_circuit(self, name, pins)
     }
 
     fn create_net(&mut self, parent: &Self::CellId, name: Option<Self::NameType>) -> Self::NetId {

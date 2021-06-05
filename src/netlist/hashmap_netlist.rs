@@ -35,7 +35,7 @@ use std::ops::Deref;
 
 // Use an alternative hasher that has good performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
-use crate::traits::HierarchyBase;
+use crate::prelude::{HierarchyBase, HierarchyEdit};
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -648,6 +648,177 @@ impl HashMapNetlist {
         c
     }
 
+    /// Create a new circuit with a given list of pins.
+    pub fn create_circuit(&mut self, name: RcString, pins: Vec<(RcString, Direction)>) -> CellId {
+        assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
+        let id = CellId(HashMapNetlist::next_id_counter_u32(&mut self.id_counter_circuit));
+
+        // Create pins.
+        let pins = pins.into_iter()
+            .enumerate()
+            .map(|(pos, (name, direction))|
+                self.create_pin(id, name, direction, pos)
+            )
+            .collect();
+
+        let circuit = Circuit {
+            id,
+            name: name.clone(),
+            pins,
+            instances: Default::default(),
+            instances_by_name: Default::default(),
+            references: Default::default(),
+            parents: Default::default(),
+            nets: Default::default(),
+            nets_by_name: Default::default(),
+            // Create LOW and HIGH nets.
+            net_low: NetId(0),
+            net_high: NetId(0),
+            dependent_circuits: Default::default(),
+            dependencies: Default::default(),
+        };
+
+        self.circuits.insert(id, circuit);
+        self.circuits_by_name.insert(name, id);
+
+        // Create LOW and HIGH nets.
+        let net_low = self.create_net(&id, None);
+        let net_high = self.create_net(&id, None);
+
+        let c = self.circuit_mut(&id);
+        c.net_low = net_low;
+        c.net_high = net_high;
+
+        id
+    }
+
+    /// Remove all instances inside the circuit,
+    pub fn remove_circuit(&mut self, circuit_id: &CellId) {
+        // Remove all instances inside this circuit.
+        let instances = self.circuit(circuit_id).instances.iter().copied().collect_vec();
+        for inst in instances {
+            self.remove_circuit_instance(&inst);
+        }
+        // Remove all instances of this circuit.
+        let references = self.circuit(circuit_id).references.iter().copied().collect_vec();
+        for inst in references {
+            self.remove_circuit_instance(&inst);
+        }
+        // Clean up pin definitions.
+        let pins = self.circuit(circuit_id).pins.clone();
+        for pin in pins {
+            self.pins.remove(&pin).unwrap();
+        }
+        // Remove the circuit.
+        let name = self.circuit(circuit_id).name.clone();
+        self.circuits_by_name.remove(&name).unwrap();
+        self.circuits.remove(&circuit_id).unwrap();
+    }
+
+    /// Create a new instance of `circuit_template` in the `parent` circuit.
+    pub fn create_circuit_instance(&mut self, parent: &CellId,
+                                   circuit_template: &CellId,
+                                   name: Option<RcString>) -> CellInstId {
+        let id = CellInstId(HashMapNetlist::next_id_counter_usize(&mut self.id_counter_circuit_inst));
+
+        {
+            // Check that creating this circuit instance does not create a cycle in the dependency graph.
+            // There can be no recursive instances.
+            let mut stack: Vec<CellId> = vec![*parent];
+            while let Some(c) = stack.pop() {
+                if &c == circuit_template {
+                    // The circuit to be instantiated depends on the current circuit.
+                    // This would insert a loop into the dependency tree.
+                    // TODO: Don't panic but return an `Err`.
+                    panic!("Cannot create recursive instances.");
+                }
+                // Follow the dependent circuits towards the root.
+                stack.extend(self.circuit(&c).dependent_circuits.keys().copied())
+            }
+        }
+
+        // Create pin instances from template pins.
+        let pins = self.circuit(&circuit_template).pins.clone()
+            .iter()
+            .map(|&p| self.create_pin_inst(id, p))
+            .collect();
+
+        let inst = CircuitInst {
+            name: name.clone(),
+            template_circuit_id: *circuit_template,
+            parent_circuit_id: *parent,
+            pins,
+        };
+
+        self.circuit_instances.insert(id, inst);
+        self.circuit_mut(&parent).instances.insert(id);
+        self.circuit_mut(&circuit_template).references.insert(id);
+
+        if let Some(name) = name {
+            debug_assert!(!self.circuit(&parent).instances_by_name.contains_key(&name),
+                          "Circuit instance name already exists.");
+            self.circuit_mut(&parent).instances_by_name.insert(name, id);
+        }
+
+        // Remember dependency.
+        {
+            self.circuit_mut(&parent).dependencies.entry(*circuit_template)
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+        }
+
+        // Remember dependency.
+        {
+            self.circuit_mut(&circuit_template).dependent_circuits.entry(*parent)
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+        }
+
+        id
+    }
+
+
+    /// Remove a circuit instance after disconnecting it from the nets.
+    pub fn remove_circuit_instance(&mut self, circuit_inst_id: &CellInstId) {
+        // Disconnect all pins first.
+        for pin in self.circuit_inst(circuit_inst_id).pins.clone() {
+            self.disconnect_pin_instance(&pin);
+        }
+        // Remove the instance and all references.
+        let parent = self.circuit_inst(&circuit_inst_id).parent_circuit_id;
+        let template = self.circuit_inst(&circuit_inst_id).template_circuit_id;
+
+        // Remove dependency.
+        {
+            // Decrement counter.
+            let count = self.circuit_mut(&parent).dependencies.entry(template)
+                .or_insert(0); // Should not happen.
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                self.circuit_mut(&parent).dependencies.remove(&template);
+            }
+        }
+
+        // Remove dependency.
+        {
+            // Decrement counter.
+            let count = self.circuit_mut(&template).dependent_circuits.entry(parent)
+                .or_insert(0); // Should not happen.
+            *count -= 1;
+
+            if *count == 0 {
+                // Remove entry.
+                self.circuit_mut(&template).dependent_circuits.remove(&parent);
+            }
+        }
+
+        self.circuit_instances.remove(&circuit_inst_id).unwrap();
+        self.circuit_mut(&parent).instances.remove(circuit_inst_id);
+        self.circuit_mut(&template).references.remove(circuit_inst_id);
+    }
+
     /// Append a new pin to the `parent` circuit.
     fn create_pin(&mut self, parent: CellId, name: RcString, direction: Direction, position: usize) -> PinId {
         let id = PinId(HashMapNetlist::next_id_counter_u32(&mut self.id_counter_pin));
@@ -853,6 +1024,24 @@ fn test_hashmap_netlist_reference_access() {
     }
 }
 
+impl HierarchyEdit for HashMapNetlist {
+    /// Create a new and empty template cell (without any pins).
+    fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
+        self.create_circuit(name, vec![])
+    }
+
+    fn remove_cell(&mut self, cell_id: &Self::CellId) {
+        self.remove_circuit(cell_id)
+    }
+
+    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>) -> Self::CellInstId {
+        HashMapNetlist::create_circuit_instance(self, parent_cell, template_cell, name)
+    }
+
+    fn remove_cell_instance(&mut self, inst: &Self::CellInstId) {
+        HashMapNetlist::remove_circuit_instance(self, inst)
+    }
+}
 
 impl HierarchyBase for HashMapNetlist {
     type NameType = RcString;
@@ -933,8 +1122,6 @@ impl HierarchyBase for HashMapNetlist {
     fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.circuit(circuit).references.iter().copied())
     }
-
-
 
 
     // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
@@ -1063,175 +1250,9 @@ impl NetlistBase for HashMapNetlist {
 }
 
 impl NetlistEdit for HashMapNetlist {
-    /// Create a new circuit with a given list of pins.
-    fn create_circuit(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CellId {
-        assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
-        let id = CellId(HashMapNetlist::next_id_counter_u32(&mut self.id_counter_circuit));
 
-        // Create pins.
-        let pins = pins.into_iter()
-            .enumerate()
-            .map(|(pos, (name, direction))|
-                self.create_pin(id, name, direction, pos)
-            )
-            .collect();
-
-        let circuit = Circuit {
-            id,
-            name: name.clone(),
-            pins,
-            instances: Default::default(),
-            instances_by_name: Default::default(),
-            references: Default::default(),
-            parents: Default::default(),
-            nets: Default::default(),
-            nets_by_name: Default::default(),
-            // Create LOW and HIGH nets.
-            net_low: NetId(0),
-            net_high: NetId(0),
-            dependent_circuits: Default::default(),
-            dependencies: Default::default(),
-        };
-
-        self.circuits.insert(id, circuit);
-        self.circuits_by_name.insert(name, id);
-
-        // Create LOW and HIGH nets.
-        let net_low = self.create_net(&id, None);
-        let net_high = self.create_net(&id, None);
-
-        let c = self.circuit_mut(&id);
-        c.net_low = net_low;
-        c.net_high = net_high;
-
-        id
-    }
-
-    /// Remove all instances inside the circuit,
-    fn remove_circuit(&mut self, circuit_id: &CellId) {
-        // Remove all instances inside this circuit.
-        let instances = self.circuit(circuit_id).instances.iter().copied().collect_vec();
-        for inst in instances {
-            self.remove_circuit_instance(&inst);
-        }
-        // Remove all instances of this circuit.
-        let references = self.circuit(circuit_id).references.iter().copied().collect_vec();
-        for inst in references {
-            self.remove_circuit_instance(&inst);
-        }
-        // Clean up pin definitions.
-        let pins = self.circuit(circuit_id).pins.clone();
-        for pin in pins {
-            self.pins.remove(&pin).unwrap();
-        }
-        // Remove the circuit.
-        let name = self.circuit(circuit_id).name.clone();
-        self.circuits_by_name.remove(&name).unwrap();
-        self.circuits.remove(&circuit_id).unwrap();
-    }
-
-    /// Create a new instance of `circuit_template` in the `parent` circuit.
-    fn create_circuit_instance(&mut self, parent: &CellId,
-                               circuit_template: &CellId,
-                               name: Option<Self::NameType>) -> CellInstId {
-        let id = CellInstId(HashMapNetlist::next_id_counter_usize(&mut self.id_counter_circuit_inst));
-
-        {
-            // Check that creating this circuit instance does not create a cycle in the dependency graph.
-            // There can be no recursive instances.
-            let mut stack: Vec<CellId> = vec![*parent];
-            while let Some(c) = stack.pop() {
-                if &c == circuit_template {
-                    // The circuit to be instantiated depends on the current circuit.
-                    // This would insert a loop into the dependency tree.
-                    // TODO: Don't panic but return an `Err`.
-                    panic!("Cannot create recursive instances.");
-                }
-                // Follow the dependent circuits towards the root.
-                stack.extend(self.circuit(&c).dependent_circuits.keys().copied())
-            }
-        }
-
-        // Create pin instances from template pins.
-        let pins = self.circuit(&circuit_template).pins.clone()
-            .iter()
-            .map(|&p| self.create_pin_inst(id, p))
-            .collect();
-
-        let inst = CircuitInst {
-            name: name.clone(),
-            template_circuit_id: *circuit_template,
-            parent_circuit_id: *parent,
-            pins,
-        };
-
-        self.circuit_instances.insert(id, inst);
-        self.circuit_mut(&parent).instances.insert(id);
-        self.circuit_mut(&circuit_template).references.insert(id);
-
-        if let Some(name) = name {
-            debug_assert!(!self.circuit(&parent).instances_by_name.contains_key(&name),
-                          "Circuit instance name already exists.");
-            self.circuit_mut(&parent).instances_by_name.insert(name, id);
-        }
-
-        // Remember dependency.
-        {
-            self.circuit_mut(&parent).dependencies.entry(*circuit_template)
-                .and_modify(|c| *c += 1)
-                .or_insert(1);
-        }
-
-        // Remember dependency.
-        {
-            self.circuit_mut(&circuit_template).dependent_circuits.entry(*parent)
-                .and_modify(|c| *c += 1)
-                .or_insert(1);
-        }
-
-        id
-    }
-
-
-    /// Remove a circuit instance after disconnecting it from the nets.
-    fn remove_circuit_instance(&mut self, circuit_inst_id: &CellInstId) {
-        // Disconnect all pins first.
-        for pin in self.circuit_inst(circuit_inst_id).pins.clone() {
-            self.disconnect_pin_instance(&pin);
-        }
-        // Remove the instance and all references.
-        let parent = self.circuit_inst(&circuit_inst_id).parent_circuit_id;
-        let template = self.circuit_inst(&circuit_inst_id).template_circuit_id;
-
-        // Remove dependency.
-        {
-            // Decrement counter.
-            let count = self.circuit_mut(&parent).dependencies.entry(template)
-                .or_insert(0); // Should not happen.
-            *count -= 1;
-
-            if *count == 0 {
-                // Remove entry.
-                self.circuit_mut(&parent).dependencies.remove(&template);
-            }
-        }
-
-        // Remove dependency.
-        {
-            // Decrement counter.
-            let count = self.circuit_mut(&template).dependent_circuits.entry(parent)
-                .or_insert(0); // Should not happen.
-            *count -= 1;
-
-            if *count == 0 {
-                // Remove entry.
-                self.circuit_mut(&template).dependent_circuits.remove(&parent);
-            }
-        }
-
-        self.circuit_instances.remove(&circuit_inst_id).unwrap();
-        self.circuit_mut(&parent).instances.remove(circuit_inst_id);
-        self.circuit_mut(&template).references.remove(circuit_inst_id);
+    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
+        self.create_circuit(name, pins)
     }
 
     /// Create a new net in the `parent` circuit.

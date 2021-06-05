@@ -34,9 +34,8 @@ use std::hash::Hash;
 use std::borrow::Borrow;
 use crate::property_storage::{PropertyStore, WithProperties};
 use std::cell::RefCell;
-use crate::layout::traits::{LayoutBase, LayoutEdit};
+use crate::prelude::{LayoutBase, LayoutEdit, HierarchyBase, HierarchyEdit};
 use crate::layout::hashmap_layout::LayerId;
-use crate::traits::HierarchyBase;
 
 
 /// Data structure which holds cells and cell instances.
@@ -501,11 +500,7 @@ impl LayoutBase for Layout {
 //     }
 // }
 
-impl LayoutEdit for Layout {
-    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
-        self.find_or_create_layer(index, datatype)
-    }
-
+impl HierarchyEdit for Layout {
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
         self.create_and_get_cell(Some(name))
     }
@@ -514,13 +509,21 @@ impl LayoutEdit for Layout {
         Layout::remove_cell(self, cell_id)
     }
 
-    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>, transform: SimpleTransform<Self::Coord>) -> Self::CellInstId {
+    /// Create a cell at location (0, 0).
+    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>) -> Self::CellInstId {
+        let transform = SimpleTransform::identity();
         parent_cell.create_instance(template_cell, transform)
     }
 
     fn remove_cell_instance(&mut self, id: &Self::CellInstId) {
         id.parent_cell().upgrade()
             .map(|p| p.remove_cell_instance(id));
+    }
+}
+
+impl LayoutEdit for Layout {
+    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
+        self.find_or_create_layer(index, datatype)
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {

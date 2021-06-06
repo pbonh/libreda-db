@@ -204,14 +204,20 @@ pub trait HierarchyBase {
     // }
 
 
-    /// Set a property of the top-level chip data structure..
-    fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {}
+    /// Get a property of the top-level chip data structure..
+    fn get_chip_property(&mut self, key: &Self::NameType) -> Option<PropertyValue> {
+        None
+    }
 
-    /// Set a property of a cell.
-    fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {}
+    /// Get a property of a cell.
+    fn get_cell_property(&mut self, cell: &Self::CellId, key: &Self::NameType) -> Option<PropertyValue> {
+        None
+    }
 
-    /// Set a property of a cell instance.
-    fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {}
+    /// Get a property of a cell instance.
+    fn get_cell_instance_property(&mut self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
+        None
+    }
 }
 
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
@@ -239,4 +245,13 @@ pub trait HierarchyEdit: HierarchyBase {
     /// Panics if a cell with this name already exists.
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType);
 
+
+    /// Set a property of the top-level chip data structure..
+    fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {}
+
+    /// Set a property of a cell.
+    fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {}
+
+    /// Set a property of a cell instance.
+    fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {}
 }

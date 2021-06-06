@@ -484,6 +484,11 @@ impl LayoutBase for Layout {
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
         cell_inst.transform.borrow().clone()
     }
+
+    /// Get a property of a shape.
+    fn get_shape_property(&mut self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
+        shape.property(key)
+    }
 }
 
 // pub struct GeometryIter<C: CoordinateType> {
@@ -524,6 +529,21 @@ impl HierarchyEdit for Layout {
         Layout::rename_cell(self, cell.index(), Some(new_name))
             .expect("Cell name already exists.");
     }
+
+    /// Set a property of the top-level chip data structure..
+    fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {
+        self.set_property(key, value);
+    }
+
+    /// Set a property of a cell.
+    fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {
+        cell.set_property(key, value);
+    }
+
+    /// Set a property of a cell instance.
+    fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {
+        inst.set_property(key, value);
+    }
 }
 
 impl LayoutEdit for Layout {
@@ -551,4 +571,11 @@ impl LayoutEdit for Layout {
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
         cell_inst.transform.replace(tf);
     }
+
+
+    /// Set a property of a shape.
+    fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {
+        shape.set_property(key, value);
+    }
+
 }

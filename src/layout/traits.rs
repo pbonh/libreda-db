@@ -70,6 +70,13 @@ pub trait LayoutBase: HierarchyBase {
     // /// Call a function for each shape on this layer.
     // fn for_each_shape_box<F>(&self, cell: &Self::CellId, layer: &Self::LayerId,
     //                          f: Box<dyn FnMut(&Geometry<Self::Coord>) -> ()>);
+
+
+    /// Get a property of a shape.
+    fn get_shape_property(&mut self, cell: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
+        None
+    }
+
 }
 
 
@@ -113,7 +120,7 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>);
 
     /// Set a property of a shape.
-    fn set_shape_property(&mut self, cell: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {}
+    fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {}
 
     /// Set the name of a layer.
     fn set_layer_name(&mut self, layer: &Self::LayerId, name: Self::NameType) {

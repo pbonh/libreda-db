@@ -705,6 +705,17 @@ impl Chip<Coord> {
         self.circuits_by_name.get(name).copied()
     }
 
+    /// Change the name of the cell.
+    ///
+    /// # Panics
+    /// Panics if the name already exists.
+    pub fn rename_cell(&mut self, cell: &CellId, name: RcString) {
+        assert!(!self.circuits_by_name.contains_key(&name), "Cell with this name already exists.");
+
+        self.circuits_by_name.remove(&name);
+        self.circuit_mut(cell).name = name.clone();
+        self.circuits_by_name.insert(name, cell.clone());
+    }
     /// Create a new circuit template.
     pub fn create_circuit(&mut self, name: RcString, pins: Vec<(RcString, Direction)>) -> CellId {
         assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
@@ -1702,6 +1713,10 @@ impl HierarchyEdit for Chip<Coord> {
 
     fn remove_cell_instance(&mut self, id: &Self::CellInstId) {
         <Chip<Coord>>::remove_circuit_instance(self, id)
+    }
+
+    fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
+        <Chip<Coord>>::rename_cell(self, cell, new_name)
     }
 }
 

@@ -212,15 +212,6 @@ pub trait HierarchyBase {
 
     /// Set a property of a cell instance.
     fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {}
-
-    /// Change the name of a cell.
-    ///
-    /// # Panics
-    /// Panics if a cell with this name already exists.
-    // TODO: Move to HierarchyEdit
-    fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
-        unimplemented!()
-    }
 }
 
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
@@ -240,5 +231,12 @@ pub trait HierarchyEdit: HierarchyBase {
 
     /// Remove cell instance if it exists.
     fn remove_cell_instance(&mut self, inst: &Self::CellInstId);
+
+
+    /// Change the name of a cell.
+    ///
+    /// # Panics
+    /// Panics if a cell with this name already exists.
+    fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType);
 
 }

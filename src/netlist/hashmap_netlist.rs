@@ -1041,6 +1041,10 @@ impl HierarchyEdit for HashMapNetlist {
     fn remove_cell_instance(&mut self, inst: &Self::CellInstId) {
         HashMapNetlist::remove_circuit_instance(self, inst)
     }
+
+    fn rename_cell(&mut self, _cell: &Self::CellId, _new_name: Self::NameType) {
+        unimplemented!()
+    }
 }
 
 impl HierarchyBase for HashMapNetlist {
@@ -1250,7 +1254,6 @@ impl NetlistBase for HashMapNetlist {
 }
 
 impl NetlistEdit for HashMapNetlist {
-
     fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
         self.create_circuit(name, pins)
     }

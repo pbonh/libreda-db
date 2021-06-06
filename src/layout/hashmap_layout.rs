@@ -683,6 +683,10 @@ impl<C: CoordinateType> HierarchyEdit for Layout<C> {
         self.cells.get_mut(&parent).unwrap().cell_instances.remove(id);
         self.cells.get_mut(&template).unwrap().cell_references.remove(id);
     }
+
+    fn rename_cell(&mut self, _cell: &Self::CellId, _new_name: Self::NameType) {
+        unimplemented!()
+    }
 }
 
 

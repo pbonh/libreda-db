@@ -493,6 +493,14 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
     fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
         self.cells[circuit].cell_references.iter().for_each(|&id| f(id))
     }
+
+    fn num_child_instances(&self, cell: &Self::CellId) -> usize {
+        self.cells[cell].cell_instances.len()
+    }
+
+    fn num_cells(&self) -> usize {
+        self.cells.len()
+    }
 }
 
 

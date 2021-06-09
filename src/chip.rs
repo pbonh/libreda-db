@@ -1411,14 +1411,6 @@ impl NetlistBase for Chip {
         Box::new(self.circuit(circuit).nets.iter().copied())
     }
 
-    fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
-        self.circuit(circuit).instances.len()
-    }
-
-    fn num_circuits(&self) -> usize {
-        self.circuits.len()
-    }
-
     fn num_pins(&self, circuit: &Self::CellId) -> usize {
         self.circuit(circuit).pins.len()
     }
@@ -1639,6 +1631,14 @@ impl HierarchyBase for Chip<Coord> {
 
     fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.circuit(circuit).references.iter().copied())
+    }
+
+    fn num_child_instances(&self, cell: &Self::CellId) -> usize {
+        self.circuit(cell).instances.len()
+    }
+
+    fn num_cells(&self) -> usize {
+        self.circuits.len()
     }
 
     // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {

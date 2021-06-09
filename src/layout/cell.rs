@@ -226,6 +226,11 @@ impl<C: CoordinateType> Cell<C> {
         self.cell_references.borrow().len()
     }
 
+    /// Get the number of cell instances that are instantiated in this cell.
+    pub fn num_child_instances(&self) -> usize {
+        self.cell_instances.borrow().len()
+    }
+
     /// Iterate over all cell instances that reference this cell.
     pub fn each_reference(&self) -> impl Iterator<Item=Rc<CellInstance<C>>> + '_ {
         let generator = Gen::new(|co| async move {

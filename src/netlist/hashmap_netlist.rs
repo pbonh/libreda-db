@@ -1069,20 +1069,20 @@ impl HierarchyBase for HashMapNetlist {
         self.circuit(parent_circuit).instances_by_name.get(name).copied()
     }
 
-    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(circuit_instance).template_circuit_id
-    }
-
-    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
-        self.circuit_inst(circuit_instance).parent_circuit_id
-    }
-
     fn cell_name(&self, circuit: &Self::CellId) -> Self::NameType {
         self.circuit(circuit).name.clone()
     }
 
     fn cell_instance_name(&self, circuit_inst: &Self::CellInstId) -> Option<Self::NameType> {
         self.circuit_inst(circuit_inst).name.clone()
+    }
+
+    fn parent_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        self.circuit_inst(circuit_instance).parent_circuit_id
+    }
+
+    fn template_cell(&self, circuit_instance: &Self::CellInstId) -> Self::CellId {
+        self.circuit_inst(circuit_instance).template_circuit_id
     }
 
     fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
@@ -1125,6 +1125,14 @@ impl HierarchyBase for HashMapNetlist {
 
     fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.circuit(circuit).references.iter().copied())
+    }
+
+    fn num_child_instances(&self, cell: &Self::CellId) -> usize {
+        self.circuit(cell).instances.len()
+    }
+
+    fn num_cells(&self) -> usize {
+        self.circuits.len()
     }
 
 
@@ -1222,14 +1230,6 @@ impl NetlistBase for HashMapNetlist {
 
     fn each_internal_net(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::NetId> + '_> {
         Box::new(self.circuit(circuit).nets.iter().copied())
-    }
-
-    fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
-        self.circuit(circuit).instances.len()
-    }
-
-    fn num_circuits(&self) -> usize {
-        self.circuits.len()
     }
 
     fn num_pins(&self, circuit: &Self::CellId) -> usize {

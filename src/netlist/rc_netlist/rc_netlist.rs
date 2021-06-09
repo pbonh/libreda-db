@@ -531,14 +531,6 @@ impl NetlistBase for RcNetlist {
         circuit.each_net().for_each(f)
     }
 
-    fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
-        circuit.num_instances()
-    }
-
-    fn num_circuits(&self) -> usize {
-        self.circuits.len()
-    }
-
     fn num_pins(&self, circuit: &Self::CellId) -> usize {
         circuit.pin_count()
     }
@@ -614,6 +606,14 @@ impl HierarchyBase for RcNetlist {
         circuit.each_reference().for_each(f);
     }
 
+    fn num_child_instances(&self, cell: &Self::CellId) -> usize {
+        cell.num_instances()
+    }
+
+    fn num_cells(&self) -> usize {
+        self.circuits.len()
+    }
+
 
     // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
     //     circuit.num_instances()
@@ -634,8 +634,8 @@ impl HierarchyEdit for RcNetlist {
     }
 
     fn create_cell_instance(&mut self, parent_circuit: &Self::CellId,
-                               template_circuit: &Self::CellId,
-                               name: Option<Self::NameType>) -> Self::CellInstId {
+                            template_circuit: &Self::CellId,
+                            name: Option<Self::NameType>) -> Self::CellInstId {
         parent_circuit.create_circuit_instance(template_circuit, name)
     }
 

@@ -317,12 +317,6 @@ pub trait NetlistBase: HierarchyBase {
         self.num_net_pins(net) + self.num_net_pin_instances(net)
     }
 
-    /// Get the number of cell instances inside the `circuit`.
-    fn num_child_instances(&self, circuit: &Self::CellId) -> usize;
-
-    /// Get the number of cells inside in this netlist.
-    fn num_circuits(&self) -> usize;
-
     /// Get the number of pins of a circuit.
     fn num_pins(&self, circuit: &Self::CellId) -> usize;
 

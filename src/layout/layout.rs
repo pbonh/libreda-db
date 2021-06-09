@@ -427,6 +427,14 @@ impl HierarchyBase for Layout {
     fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
         circuit.each_reference().for_each(f)
     }
+
+    fn num_child_instances(&self, cell: &Self::CellId) -> usize {
+        cell.num_child_instances()
+    }
+
+    fn num_cells(&self) -> usize {
+        self.cells.len()
+    }
 }
 
 

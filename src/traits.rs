@@ -196,11 +196,12 @@ pub trait HierarchyBase {
         Box::new(self.each_cell_reference_vec(cell).into_iter())
     }
 
-    // /// Get the number of cell instances inside the `cell`.
-    // fn num_child_instances(&self, cell: &Self::CellId) -> usize;
-    //
-    // /// Get the number of cells inside in this netlist.
-    // fn num_cells(&self) -> usize;
+    /// Get the number of cell instances inside the `cell`.
+    fn num_child_instances(&self, cell: &Self::CellId) -> usize;
+
+
+    /// Get the number of cell templates.
+    fn num_cells(&self) -> usize;
 
     // /// Get the number of references that point to this cell, i.e. the number of
     // /// instances of this cell.

@@ -20,6 +20,7 @@
 
 //! Traits for layout data types.
 
+#![allow(unused_variables)]
 
 use std::hash::Hash;
 use crate::layout::types::{UInt, LayerInfo};
@@ -28,7 +29,6 @@ use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
-
 
 /// Most basic trait of a layout.
 ///

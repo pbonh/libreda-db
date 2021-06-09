@@ -155,10 +155,9 @@ impl<T: CoordinateType> Shapes<T> {
         shape
     }
 
-    /// Remove the shape from the collection if it exists.
-    /// TODO: What if a shape from another `Shapes` collection is passed here?
-    pub fn remove_shape(&self, shape: &Shape<T>) {
-        self.shapes.borrow_mut().remove(&shape.index);
+    /// Remove the shape from the collection if it exists. Return the removed shape.
+    pub fn remove_shape(&self, shape_id: &Index<Shape<T>>) -> Option<Rc<Shape<T>>> {
+        self.shapes.borrow_mut().remove(shape_id)
     }
 
     /// Return number of shapes in this container.

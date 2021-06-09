@@ -20,9 +20,14 @@
 
 //! Basic traits that for the representation of chip data structures.
 
+#![allow(unused_variables)]
+
 use std::borrow::Borrow;
 use std::hash::Hash;
 use crate::prelude::PropertyValue;
+
+pub use crate::layout::traits::{LayoutBase, LayoutEdit};
+pub use crate::netlist::traits::{NetlistBase, NetlistEdit};
 
 /// Most basic trait for the hierarchical flyweight pattern which is
 /// used to efficiently represent chip layouts and netlists.

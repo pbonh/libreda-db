@@ -371,7 +371,7 @@ impl HierarchyBase for Layout {
         self.cell_by_name(name)
     }
 
-    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
+    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, _parent_circuit: &Self::CellId, _name: &N) -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
         unimplemented!()
     }
 
@@ -379,7 +379,7 @@ impl HierarchyBase for Layout {
         cell.name().unwrap()
     }
 
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+    fn cell_instance_name(&self, _cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         // TODO
         None
     }
@@ -515,7 +515,9 @@ impl HierarchyEdit for Layout {
     }
 
     /// Create a cell at location (0, 0).
-    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>) -> Self::CellInstId {
+    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, _name: Option<Self::NameType>) -> Self::CellInstId {
+        // TODO: Set the name.
+
         let transform = SimpleTransform::identity();
         parent_cell.create_instance(template_cell, transform)
     }
@@ -559,13 +561,17 @@ impl LayoutEdit for Layout {
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
                     shape_id: &Self::ShapeId)
                     -> Option<Geometry<Self::Coord>> {
-        unimplemented!()
+        parent_cell.shapes_get_or_create(*layer)
+            .remove_shape(&shape_id.index())
+            .map(|shape| shape.geometry.clone())
     }
 
-    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
-                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
+    fn replace_shape(&mut self, _parent_cell: &Self::CellId, _layer: &Self::LayerId,
+                     _shape_id: &Self::ShapeId, _geometry: Geometry<Self::Coord>)
                      -> Option<Geometry<Self::Coord>> {
+
         unimplemented!()
+
     }
 
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {

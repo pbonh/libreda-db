@@ -29,14 +29,15 @@ use crate::rc_string::RcString;
 use iron_shapes::CoordinateType;
 use iron_shapes::shape::Geometry;
 use iron_shapes::transform::SimpleTransform;
-use crate::prelude::{LayoutBase, LayoutEdit, HierarchyEdit, HierarchyBase};
+use crate::prelude::{LayoutBase, LayoutEdit, HierarchyEdit, HierarchyBase, TryBoundingBox};
 use std::hash::Hash;
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 
 // Use an alternative hasher that has good performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
 use std::collections::HashMap;
 use std::ops::Deref;
+use crate::layout::prelude::Rect;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -129,6 +130,17 @@ impl<C: CoordinateType> Layout<C> {
                 layout: self,
                 cell,
             })
+    }
+
+    /// Get a mutable reference to the shapes container of the `layer`. When none exists
+    /// a shapes object is created for this layer.
+    fn get_shapes_mut(&mut self, parent_cell: &CellId<C>, layer: &LayerId) -> &mut Shapes<C> {
+        let cell = self.cells.get_mut(parent_cell)
+            .expect("Cell ID not found.");
+
+        cell.shapes_map.entry(*layer)
+            .or_insert_with(|| Shapes::new(*parent_cell))
+            .borrow_mut()
     }
 }
 
@@ -387,25 +399,62 @@ pub struct Shape<T: CoordinateType, U = ()> {
 #[derive(Clone, Debug)]
 pub struct Shapes<C>
     where C: CoordinateType {
-    /// ID of this shape collection.
-    id: Index<Self>,
+    // /// ID of this shape collection.
+    // id: Index<Self>,
     /// Reference to the cell where this shape collection lives. Can be none.
     parent_cell: CellId<C>,
     /// Shape elements.
     shapes: IntHashMap<ShapeId<C>, Shape<C>>,
+    // /// Bounding box of the shapes in this container.
+    // /// The bounding box is computed on demand and cached in this attribute.
+    // /// A value `None` means that the bounding box is unknown and must be computed first.
+    // /// A value `Some(bbox)` means that `bbox` is the current bounding box.
+    // /// The bounding box is updated iteratively when a shape is inserted.
+    // bounding_box: Option<Option<Rect<T>>>,
     /// Property stores for the shapes.
     shape_properties: IntHashMap<ShapeId<C>, PropertyStore<RcString>>,
 }
 
 impl<C: CoordinateType> Shapes<C> {
-    /// Get the ID of this shape container.
-    pub fn id(&self) -> Index<Self> {
-        self.id
+    fn new(parent_id: CellId<C>) -> Self {
+        Self {
+            // id,
+            parent_cell: parent_id,
+            shapes: Default::default(),
+            shape_properties: Default::default(),
+        }
     }
+
+    // /// Get the ID of this shape container.
+    // pub fn id(&self) -> Index<Self> {
+    //     self.id
+    // }
 
     /// Iterate over all geometric shapes in this collection.
     pub fn each_shape(&self) -> impl Iterator<Item=&Shape<C>> {
         self.shapes.values()
+    }
+}
+
+impl<C: CoordinateType> TryBoundingBox<C> for Shapes<C> {
+    fn try_bounding_box(&self) -> Option<Rect<C>> {
+        // Compute the bounding box from scratch.
+        self.each_shape()
+            .fold(None, |bbox, shape| {
+                let bbox_new = shape.geometry.try_bounding_box();
+                match bbox {
+                    None => bbox_new,
+                    Some(bbox1) => {
+                        Some(
+                            // Compute bounding box of the two rectangles.
+                            match bbox_new {
+                                None => bbox1,
+                                Some(bbox2) => bbox1.add_rect(&bbox2)
+                            }
+                        )
+                    }
+                }
+            })
     }
 }
 
@@ -417,7 +466,7 @@ impl<C: CoordinateType> HierarchyBase for Layout<C> {
     /// Create a new empty layout.
     fn new() -> Self {
         Layout {
-            dbu: C::zero(),
+            dbu: C::one(),
             cells: Default::default(),
             cell_instances: Default::default(),
             cell_index_generator: Default::default(),
@@ -534,10 +583,15 @@ impl<C: CoordinateType> LayoutBase for Layout<C> {
     //     Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| &s.geometry))
     // }
 
-    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
+    fn for_each_shape<F>(&self, cell_id: &Self::CellId, layer: &Self::LayerId, mut f: F)
         where F: FnMut(&Geometry<Self::Coord>) -> () {
-        self.cells[cell].shapes_map[layer].shapes.values()
-            .for_each(|s| f(&s.geometry))
+        self.cells[cell_id]
+            .shapes_map.get(layer)
+            .into_iter()
+            .for_each(|s| {
+                s.shapes.values()
+                .for_each(|s| f(&s.geometry));
+            });
     }
 
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
@@ -592,7 +646,6 @@ impl<C: CoordinateType> HierarchyEdit for Layout<C> {
     fn create_cell_instance(&mut self, parent_cell: &CellId<C>,
                             template_cell: &CellId<C>,
                             name: Option<RcString>) -> CellInstId<C> {
-
         let id = self.cell_instance_index_generator.next();
 
         // Default location is (0, 0), no magnification, no rotation or mirroring.
@@ -724,9 +777,12 @@ impl<C: CoordinateType> LayoutEdit for Layout<C> {
             user_data: Default::default(),
         };
 
-        self.cells.get_mut(parent_cell).expect("Cell not found.")
-            .shapes_map.get_mut(layer).expect("Layer not found.")
+        self.get_shapes_mut(parent_cell, layer)
             .shapes.insert(shape_id, shape);
+
+        // self.cells.get_mut(parent_cell).expect("Cell not found.")
+        //     .shapes_map.exp
+        //     .shapes.insert(shape_id, shape);
 
         shape_id
     }

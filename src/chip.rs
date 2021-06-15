@@ -24,13 +24,13 @@
 #![allow(unused_variables)]
 
 use iron_shapes::CoordinateType;
-use iron_shapes::shape::Geometry;
+use iron_shapes::prelude::{Rect, Geometry};
 use iron_shapes::transform::SimpleTransform;
 
 use crate::index::*;
 use std::collections::HashMap;
 use itertools::Itertools;
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::hash::Hash;
 use crate::netlist::traits::{NetlistBase, NetlistEdit};
 use crate::netlist::direction::Direction;
@@ -45,7 +45,7 @@ use crate::layout::types::{LayerInfo};
 // Use an alternative hasher that has better performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
 use crate::traits::HierarchyBase;
-use crate::prelude::HierarchyEdit;
+use crate::prelude::{HierarchyEdit, TryBoundingBox};
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -246,6 +246,15 @@ impl Circuit {
     /// Returns `None` if the shapes object does not exist for this layer.
     fn shapes_mut(&mut self, layer_id: &LayerId) -> Option<&mut Shapes<Coord>> {
         self.shapes_map.get_mut(layer_id)
+    }
+
+    /// Get a mutable reference to the shapes container of the `layer`. When none exists
+    /// a shapes object is created for this layer.
+    fn get_or_create_shapes_mut(&mut self, layer_id: &LayerId) -> &mut Shapes<Coord> {
+        let self_id = self.id();
+        self.shapes_map.entry(*layer_id)
+            .or_insert_with(|| Shapes::new(self_id))
+            .borrow_mut()
     }
 }
 
@@ -894,6 +903,8 @@ impl Chip<Coord> {
         self.circuit_mut(&template).references.remove(circuit_inst_id);
     }
 
+
+
     /// Create a new net in the `parent` circuit.
     pub fn create_net(&mut self, parent: &CellId, name: Option<RcString>) -> NetId {
         assert!(self.circuits.contains_key(parent));
@@ -1530,8 +1541,8 @@ pub struct Shape<C: CoordinateType, U = ()> {
 #[derive(Clone, Debug)]
 pub struct Shapes<C>
     where C: CoordinateType {
-    /// ID of this shape collection.
-    id: Index<Self>,
+    // /// ID of this shape collection.
+    // id: Index<Self>,
     /// Reference to the cell where this shape collection lives. Can be none.
     parent_cell: CellId,
     /// Shape elements.
@@ -1541,10 +1552,21 @@ pub struct Shapes<C>
 }
 
 impl<C: CoordinateType> Shapes<C> {
-    /// Get the ID of this shape container.
-    pub fn id(&self) -> Index<Self> {
-        self.id
+
+    /// Create a new empty shapes container.
+    fn new(parent_id: CellId) -> Self {
+        Self {
+            // id,
+            parent_cell: parent_id,
+            shapes: Default::default(),
+            shape_properties: Default::default(),
+        }
     }
+    //
+    // /// Get the ID of this shape container.
+    // pub fn id(&self) -> Index<Self> {
+    //     self.id
+    // }
 
     /// Iterate over all geometric shapes in this collection.
     pub fn each_shape(&self) -> impl Iterator<Item=&Shape<C>> {
@@ -1552,6 +1574,27 @@ impl<C: CoordinateType> Shapes<C> {
     }
 }
 
+impl<C: CoordinateType> TryBoundingBox<C> for Shapes<C> {
+    fn try_bounding_box(&self) -> Option<Rect<C>> {
+        // Compute the bounding box from scratch.
+        self.each_shape()
+            .fold(None, |bbox, shape| {
+                let bbox_new = shape.geometry.try_bounding_box();
+                match bbox {
+                    None => bbox_new,
+                    Some(bbox1) => {
+                        Some(
+                            // Compute bounding box of the two rectangles.
+                            match bbox_new {
+                                None => bbox1,
+                                Some(bbox2) => bbox1.add_rect(&bbox2)
+                            }
+                        )
+                    }
+                }
+            })
+    }
+}
 
 impl HierarchyBase for Chip<Coord> {
     type NameType = RcString;
@@ -1681,10 +1724,15 @@ impl LayoutBase for Chip<Coord> {
     //     Box::new(self.cells[cell].shapes_map[layer].shapes.values().map(|s| &s.geometry))
     // }
 
-    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
+    fn for_each_shape<F>(&self, cell_id: &Self::CellId, layer: &Self::LayerId, mut f: F)
         where F: FnMut(&Geometry<Self::Coord>) -> () {
-        self.circuit(cell).shapes_map[layer].shapes.values()
-            .for_each(|s| f(&s.geometry))
+        self.circuits[cell_id]
+            .shapes_map.get(layer)
+            .into_iter()
+            .for_each(|s| {
+                s.shapes.values()
+                    .for_each(|s| f(&s.geometry));
+            });
     }
 
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
@@ -1721,6 +1769,11 @@ impl HierarchyEdit for Chip<Coord> {
 }
 
 impl LayoutEdit for Chip<Coord> {
+
+    fn set_dbu(&mut self, dbu: Self::Coord) {
+        self.dbu = dbu;
+    }
+
     fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
         let layer = self.find_layer(index, datatype);
         if let Some(layer) = layer {
@@ -1747,9 +1800,8 @@ impl LayoutEdit for Chip<Coord> {
         };
 
         self.circuit_mut(parent_cell)
-            .shapes_mut(layer).expect("Layer not found.")
-            .shapes
-            .insert(shape_id, shape);
+            .get_or_create_shapes_mut(layer)
+            .shapes.insert(shape_id, shape);
 
         shape_id
     }

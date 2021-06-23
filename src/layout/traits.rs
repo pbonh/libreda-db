@@ -89,22 +89,6 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     /// Create a layer or return an existing one.
     fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
 
-    // /// Create a new and empty cell.
-    // fn create_cell(&mut self, name: Self::NameType) -> Self::CellId;
-    //
-    // /// Delete the given cell if it exists.
-    // fn remove_cell(&mut self, cell_id: &Self::CellId);
-    //
-    // /// Create a new instance of `template_cell` in `parent_cell`.
-    // fn create_cell_instance(&mut self,
-    //                         parent_cell: &Self::CellId,
-    //                         template_cell: &Self::CellId,
-    //                         name: Option<Self::NameType>,
-    //                         transform: SimpleTransform<Self::Coord>) -> Self::CellInstId;
-    //
-    // /// Remove cell instance if it exists.
-    // fn remove_cell_instance(&mut self, id: &Self::CellInstId);
-
     /// Insert a geometric shape into the parent cell.
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId;
 

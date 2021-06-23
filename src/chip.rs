@@ -730,18 +730,10 @@ impl Chip<Coord> {
         assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
         let id = CellId(Self::next_id_counter_u32(&mut self.id_counter_circuit));
 
-        // Create pins.
-        let pins = pins.into_iter()
-            .enumerate()
-            .map(|(pos, (name, direction))|
-                self.create_pin(id, name, direction, pos)
-            )
-            .collect();
-
         let circuit = Circuit {
             id,
             name: name.clone(),
-            pins,
+            pins: Default::default(),
             instances: Default::default(),
             instances_by_name: Default::default(),
             references: Default::default(),
@@ -769,6 +761,12 @@ impl Chip<Coord> {
         let c = self.circuit_mut(&id);
         c.net_low = net_low;
         c.net_high = net_high;
+
+        // Create pins.
+        pins.into_iter()
+            .for_each(|(name, direction)| {
+                self.create_pin(id, name, direction);
+            });
 
         id
     }
@@ -902,7 +900,6 @@ impl Chip<Coord> {
         self.circuit_mut(&parent).instances.remove(circuit_inst_id);
         self.circuit_mut(&template).references.remove(circuit_inst_id);
     }
-
 
 
     /// Create a new net in the `parent` circuit.
@@ -1129,19 +1126,43 @@ impl Chip<Coord> {
     }
 
     /// Append a new pin to the `parent` circuit.
-    fn create_pin(&mut self, parent: CellId, name: RcString, direction: Direction, position: usize) -> PinId {
-        let id = PinId(Self::next_id_counter_u32(&mut self.id_counter_pin));
+    /// Update all circuit instances with the new pin.
+    fn create_pin(&mut self, parent: CellId, name: RcString, direction: Direction) -> PinId {
+        let pin_id = PinId(Self::next_id_counter_u32(&mut self.id_counter_pin));
+        let position = self.num_pins(&parent);
         let pin = Pin {
             name,
             direction,
             circuit: parent,
             net: Default::default(),
-            id,
+            id: pin_id,
             position,
             pin_shapes: Default::default(),
         };
-        self.pins.insert(id, pin);
-        id
+        self.pins.insert(pin_id, pin);
+
+        // Register the pin in the circuit.
+        self.circuits.get_mut(&parent).unwrap()
+            .pins.push(pin_id);
+
+        // Insert the pin in all instances of this circuit.
+        for inst in &self.circuits[&parent].references {
+
+            // Create new pin instance.
+            let pin_inst_id = PinInstId(Self::next_id_counter_usize(&mut self.id_counter_pin_inst));
+            let pin = PinInst {
+                template_pin_id: pin_id,
+                circuit_inst: *inst,
+                net: None,
+            };
+            self.pin_instances.insert(pin_inst_id, pin);
+
+            // Register the pin instance in the circuit instance.
+            self.circuit_instances.get_mut(inst).unwrap().pins
+                .push(pin_inst_id);
+        }
+
+        pin_id
     }
 
     /// Insert a new pin instance to a circuit instance.
@@ -1445,9 +1466,21 @@ impl NetlistBase for Chip {
 
 
 impl NetlistEdit for Chip {
-    /// Create a new circuit with a given list of pins.
-    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CellId {
-        Chip::create_circuit(self, name, pins)
+    // /// Create a new circuit with a given list of pins.
+    // fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CellId {
+    //     Chip::create_circuit(self, name, pins)
+    // }
+
+    fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
+        Chip::create_pin(self, *circuit, name, direction)
+    }
+
+    fn remove_pin(&mut self, id: &Self::PinId) {
+        unimplemented!()
+    }
+
+    fn rename_pin(&mut self, circuit: &Self::CellId, pin: &Self::PinId, new_name: Self::NameType) {
+        unimplemented!()
     }
 
     /// Create a new net in the `parent` circuit.
@@ -1482,9 +1515,9 @@ fn test_create_populated_netlist() {
     let top = netlist.create_circuit("TOP".into(),
                                      vec![
                                          ("A".into(), Direction::Input),
-                                         ("B".into(), Direction::Output)
                                      ],
     );
+    netlist.create_pin(top, "B".into(), Direction::Output);
     assert_eq!(Some(top), netlist.circuit_by_name("TOP"));
 
     let sub_a = netlist.create_circuit("SUB_A".into(),
@@ -1552,7 +1585,6 @@ pub struct Shapes<C>
 }
 
 impl<C: CoordinateType> Shapes<C> {
-
     /// Create a new empty shapes container.
     fn new(parent_id: CellId) -> Self {
         Self {
@@ -1741,7 +1773,6 @@ impl LayoutBase for Chip<Coord> {
 }
 
 impl HierarchyEdit for Chip<Coord> {
-
     /// Create a new and empty cell template.
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
         // TODO
@@ -1769,7 +1800,6 @@ impl HierarchyEdit for Chip<Coord> {
 }
 
 impl LayoutEdit for Chip<Coord> {
-
     fn set_dbu(&mut self, dbu: Self::Coord) {
         self.dbu = dbu;
     }

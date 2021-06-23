@@ -626,7 +626,7 @@ impl HierarchyBase for RcNetlist {
 
 impl HierarchyEdit for RcNetlist {
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
-        self.create_circuit_with_pins(name, vec![])
+        RcNetlist::create_circuit(self, name, vec![])
     }
 
     fn remove_cell(&mut self, circuit_id: &Self::CellId) {
@@ -651,12 +651,23 @@ impl HierarchyEdit for RcNetlist {
 }
 
 impl NetlistEdit for RcNetlist {
-    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
-        let pins = pins.into_iter()
-            .map(|(name, direction)| Pin::new(name, direction))
-            .collect();
-        RcNetlist::create_circuit(self, name, pins)
+    fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
+        unimplemented!()
     }
+
+    fn remove_pin(&mut self, id: &Self::PinId) {
+        unimplemented!()
+    }
+
+    fn rename_pin(&mut self, circuit: &Self::CellId, pin: &Self::PinId, new_name: Self::NameType) {
+        unimplemented!()
+    }
+    // fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId {
+    //     let pins = pins.into_iter()
+    //         .map(|(name, direction)| Pin::new(name, direction))
+    //         .collect();
+    //     RcNetlist::create_circuit(self, name, pins)
+    // }
 
     fn create_net(&mut self, parent: &Self::CellId, name: Option<Self::NameType>) -> Self::NetId {
         parent.create_net(name)

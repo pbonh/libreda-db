@@ -451,8 +451,16 @@ pub trait NetlistBase: HierarchyBase {
 
 /// Trait for netlists that support editing.
 pub trait NetlistEdit: NetlistBase + HierarchyEdit {
-    /// Create a new and empty circuit.
-    fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> Self::CellId;
+
+    /// Create a new pin in this circuit.
+    /// Also adds the pin to all instances of the circuit.
+    fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId;
+
+    /// Remove the pin from this circuit and from all instances of this circuit.
+    fn remove_pin(&mut self, id: &Self::PinId);
+
+    /// Change the name of the pin.
+    fn rename_pin(&mut self, circuit: &Self::CellId, pin: &Self::PinId, new_name: Self::NameType);
 
     /// Create a net net that lives in the `parent` circuit.
     fn create_net(&mut self, parent: &Self::CellId,

@@ -35,8 +35,9 @@ use std::borrow::Borrow;
 use crate::property_storage::{PropertyStore, WithProperties};
 use std::cell::RefCell;
 use crate::prelude::{LayoutBase, LayoutEdit, HierarchyBase, HierarchyEdit};
-use crate::layout::hashmap_layout::LayerId;
 
+/// ID for layers.
+pub type LayerId = Index<LayerInfo>;
 
 /// Data structure which holds cells and cell instances.
 ///

@@ -38,4 +38,4 @@ pub mod layout;
 pub mod repetition;
 pub mod errors;
 pub mod traits;
-pub mod hashmap_layout;
+// pub mod hashmap_layout;

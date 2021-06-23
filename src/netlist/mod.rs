@@ -45,6 +45,6 @@
 pub mod prelude;
 pub mod io;
 pub mod rc_netlist;
-pub mod hashmap_netlist;
+// pub mod hashmap_netlist;
 pub mod direction;
 pub mod traits;

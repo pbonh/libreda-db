@@ -49,7 +49,6 @@ pub mod index;
 pub mod rc_string;
 pub mod property_storage;
 pub mod traits;
-mod flyweight;
 pub mod chip;
 
 // Private modules.

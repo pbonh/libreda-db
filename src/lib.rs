@@ -51,7 +51,4 @@ pub mod property_storage;
 pub mod traits;
 pub mod chip;
 
-// Private modules.
-// mod refset; // Not currently used.
-// mod ref_wrapper; // Not currently used.
 

@@ -26,7 +26,7 @@ use std::hash::Hash;
 use crate::layout::types::{UInt, LayerInfo};
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
-use iron_shapes::shape::Geometry;
+use crate::prelude::{Geometry, Rect};
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
 
@@ -53,6 +53,21 @@ pub trait LayoutBase: HierarchyBase {
 
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;
+
+    /// Compute the bounding box of the shapes on one layer.
+    /// The bounding box also includes all child cell instances.
+    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>>;
+
+    /// Compute the bounding box of the cell over all layers.
+    fn bounding_box(&self, cell: &Self::CellId) -> Option<Rect<Self::Coord>> {
+        self.each_layer()
+            .map(|layer| self.bounding_box_per_layer(cell, &layer))
+            .fold(None, |a, b| match (a, b) {
+                (None, None) => None,
+                (Some(a), None) | (None, Some(a)) => Some(a),
+                (Some(a), Some(b)) => Some(a.add_rect(&b))
+            })
+    }
 
     /// Iterate over the IDs of all shapes in the cell on a specific layer.
     fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_>;

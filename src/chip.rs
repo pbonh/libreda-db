@@ -1747,6 +1747,12 @@ impl LayoutBase for Chip<Coord> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
     }
 
+    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Coord>> {
+        self.circuit(cell)
+            .shapes(layer)
+            .and_then(|shapes| shapes.try_bounding_box())
+    }
+
     fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
         Box::new(self.circuit(cell).shapes(layer).expect("Layer not found.")
             .each_shape().map(|s| s.index))

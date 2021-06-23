@@ -460,6 +460,10 @@ impl LayoutBase for Layout {
         self.find_layer(index, datatype)
     }
 
+    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
+        unimplemented!()
+    }
+
     fn each_shape_id<'a>(&'a self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + 'a> {
         let cell_id = cell.index();
         let layer = *layer;

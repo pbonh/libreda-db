@@ -261,3 +261,20 @@ pub trait HierarchyEdit: HierarchyBase {
     /// Set a property of a cell instance.
     fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {}
 }
+
+/// Fused layout and netlist view.
+/// This trait makes the link between netlist elements and layout elements.
+pub trait L2NBase: LayoutBase + NetlistBase {
+    /// Iterate over all shapes that are marked to belong to the specified net.
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)>>;
+    /// Iterate over all shapes that are part of the pin.
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)>>;
+    /// Get the net of a shape.
+    fn net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId>;
+}
+
+/// Fused layout and netlist view.
+/// This trait makes the link between netlist elements and layout elements.
+pub trait L2NEdit: LayoutEdit + NetlistEdit {
+
+}

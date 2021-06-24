@@ -270,11 +270,18 @@ pub trait L2NBase: LayoutBase + NetlistBase {
     /// Iterate over all shapes that are part of the pin.
     fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)>>;
     /// Get the net of a shape.
-    fn net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId>;
+    fn get_net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId>;
+    /// Get the pin that belongs to the shape (if any).
+    fn get_pin_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::PinId>;
 }
 
 /// Fused layout and netlist view.
 /// This trait makes the link between netlist elements and layout elements.
 pub trait L2NEdit: LayoutEdit + NetlistEdit {
-
+    /// Create the link between a circuit pin and its shapes in the layout.
+    /// Return the current pin.
+    fn set_pin_of_shape(&self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId>;
+    /// Set the net of a shape.
+    /// Return the current net.
+    fn set_net_of_shape(&self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId>;
 }

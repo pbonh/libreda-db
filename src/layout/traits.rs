@@ -29,6 +29,7 @@ use iron_shapes::CoordinateType;
 use crate::prelude::{Geometry, Rect};
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
+use std::borrow::Borrow;
 
 /// Most basic trait of a layout.
 ///
@@ -49,10 +50,14 @@ pub trait LayoutBase: HierarchyBase {
     fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_>;
 
     /// Get the `LayerInfo` data structure for this layer.
-    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo;
+    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo<Self::NameType>;
 
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;
+
+    /// Find layer index by the name.
+    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId>
+        where Self::NameType: Borrow<N>;
 
     /// Compute the bounding box of the shapes on one layer.
     /// The bounding box also includes all child cell instances.
@@ -75,6 +80,30 @@ pub trait LayoutBase: HierarchyBase {
     /// Call a function for each shape on this layer.
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
         where F: FnMut(&Geometry<Self::Coord>) -> ();
+
+    /// Call a function `f` for each shape of this cell and its sub cells.
+    /// Along to the geometric shape `f` also gets a transformation as argument.
+    /// The transformation describes the actual position of the geometric shape relative to the `cell`.
+    fn for_each_shape_recursive<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
+        where F: FnMut(SimpleTransform<Self::Coord>, &Geometry<Self::Coord>) -> () {
+        // Process shapes of this cell.
+        self.for_each_shape(cell,
+                            layer,
+                            |g| f(SimpleTransform::identity(), g)
+        );
+        // Process child instances.
+        self.for_each_cell_instance(cell, |inst| {
+            let template = self.template_cell(&inst);
+            let transform = self.get_transform(&inst);
+            // Recursive call.
+            self.for_each_shape_recursive(&template, &layer,
+                                          |tf, g| {
+                                              let tf2 = tf.then(&transform);
+                                              f(tf2, g)
+                                          }
+            )
+        });
+    }
 
     /// Get the geometric transform that describes the location of a cell instance relative to its parent.
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord>;
@@ -102,7 +131,19 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     fn set_dbu(&mut self, dbu: Self::Coord) {} // TODO: Remove default implementation.
 
     /// Create a layer or return an existing one.
-    fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
+    fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId {
+        self.find_layer(index, datatype)
+            .unwrap_or_else(|| self.create_layer(index, datatype))
+    }
+
+    /// Create a new layer.
+    /// Use `set_layer_name()` to define a name.
+    fn create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
+
+    /// Set the name of a layer or clear the layer name when passing `None`.
+    /// This method should not change the ID of the layer.
+    /// Returns the previous name of the layer.
+    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType>;
 
     /// Insert a geometric shape into the parent cell.
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId;
@@ -121,8 +162,4 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     /// Set a property of a shape.
     fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {}
 
-    /// Set the name of a layer.
-    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Self::NameType) {
-        unimplemented!()
-    }
 }

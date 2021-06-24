@@ -37,7 +37,7 @@ use std::cell::RefCell;
 use crate::prelude::{LayoutBase, LayoutEdit, HierarchyBase, HierarchyEdit};
 
 /// ID for layers.
-pub type LayerId = Index<LayerInfo>;
+pub type LayerId = Index<LayerInfo<String>>;
 
 /// Data structure which holds cells and cell instances.
 ///
@@ -64,7 +64,7 @@ pub struct Layout {
     /// Lookup table for finding layers by index/datatype numbers.
     layers_by_index_datatype: HashMap<(UInt, UInt), LayerIndex>,
     /// Info structures for all layers.
-    layer_info: HashMap<LayerIndex, LayerInfo>,
+    layer_info: HashMap<LayerIndex, LayerInfo<String>>,
     /// Property storage for properties related to this layout.
     property_storage: RefCell<PropertyStore<String>>,
 }
@@ -318,12 +318,12 @@ impl Layout {
     }
 
     /// Get the read-only layer info datastructure for the given layer.
-    pub fn get_layer_info(&self, layer_index: LayerIndex) -> Option<&LayerInfo> {
+    pub fn get_layer_info(&self, layer_index: LayerIndex) -> Option<&LayerInfo<String>> {
         self.layer_info.get(&layer_index)
     }
 
     /// Get the mutable layer info datastructure for the given layer.
-    pub fn get_layer_info_mut(&mut self, layer_index: LayerIndex) -> Option<&mut LayerInfo> {
+    pub fn get_layer_info_mut(&mut self, layer_index: LayerIndex) -> Option<&mut LayerInfo<String>> {
         self.layer_info.get_mut(&layer_index)
     }
 
@@ -452,12 +452,16 @@ impl LayoutBase for Layout {
         Box::new(self.layer_info.keys().copied())
     }
 
-    fn layer_info(&self, layer: &LayerId) -> &LayerInfo {
+    fn layer_info(&self, layer: &LayerId) -> &LayerInfo<String> {
         self.get_layer_info(*layer).expect("Non existent layer ID.")
     }
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
         self.find_layer(index, datatype)
+    }
+
+    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId> where Self::NameType: Borrow<N> {
+        unimplemented!()
     }
 
     fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
@@ -562,8 +566,16 @@ impl HierarchyEdit for Layout {
 }
 
 impl LayoutEdit for Layout {
-    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
-        self.find_or_create_layer(index, datatype)
+
+    fn create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
+        // Find next free layer index.
+        let layer_index = self.layer_index_generator.next();
+        // Create new entries in the layer lookup tables.
+        self.layers_by_index_datatype.insert((index, datatype), layer_index);
+
+        let info = LayerInfo { index, datatype, name: None };
+        self.layer_info.insert(layer_index, info);
+        layer_index
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
@@ -597,4 +609,7 @@ impl LayoutEdit for Layout {
         shape.set_property(key, value);
     }
 
+    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+        unimplemented!()
+    }
 }

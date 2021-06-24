@@ -110,7 +110,7 @@ pub struct NetId(usize);
 pub type ShapeId = Index<Shape<Coord>, u32>;
 
 /// ID for layers.
-pub type LayerId = Index<LayerInfo, u16>;
+pub type LayerId = Index<LayerInfo<RcString>, u16>;
 
 /// A circuit is defined by an interface (pins) and
 /// a content which consists of interconnected circuit instances.
@@ -696,13 +696,13 @@ pub struct Chip<C: CoordinateType = Coord> {
     dbu: C,
 
     /// Counter for generating the next layer index.
-    layer_index_generator: IndexGenerator<LayerInfo, u16>,
+    layer_index_generator: IndexGenerator<LayerInfo<RcString>, u16>,
     /// Lookup table for finding layers by name.
     layers_by_name: HashMap<RcString, LayerId>,
     /// Lookup table for finding layers by index/datatype numbers.
     layers_by_index_datatype: IntHashMap<(UInt, UInt), LayerId>,
     /// Info structures for all layers.
-    layer_info: IntHashMap<LayerId, LayerInfo>,
+    layer_info: IntHashMap<LayerId, LayerInfo<RcString>>,
     /// ID generator for shapes.
     shape_index_generator: IndexGenerator<Shape<C>>,
 }
@@ -1738,13 +1738,17 @@ impl LayoutBase for Chip<Coord> {
         Box::new(self.layer_info.keys().copied())
     }
 
-    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo {
+    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo<Self::NameType> {
         &self.layer_info[layer]
     }
 
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
+    }
+
+    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId> where Self::NameType: Borrow<N> {
+        self.layers_by_name.get(name).cloned()
     }
 
     fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Coord>> {
@@ -1810,20 +1814,15 @@ impl LayoutEdit for Chip<Coord> {
         self.dbu = dbu;
     }
 
-    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
-        let layer = self.find_layer(index, datatype);
-        if let Some(layer) = layer {
-            layer
-        } else {
-            // Find next free layer index.
-            let layer_index = self.layer_index_generator.next();
-            // Create new entries in the layer lookup tables.
-            self.layers_by_index_datatype.insert((index, datatype), layer_index);
+    fn create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
+        // Find next free layer index.
+        let layer_index = self.layer_index_generator.next();
+        // Create new entries in the layer lookup tables.
+        self.layers_by_index_datatype.insert((index, datatype), layer_index);
 
-            let info = LayerInfo { index, datatype, name: None };
-            self.layer_info.insert(layer_index, info);
-            layer_index
-        }
+        let info = LayerInfo { index, datatype, name: None };
+        self.layer_info.insert(layer_index, info);
+        layer_index
     }
 
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
@@ -1868,5 +1867,9 @@ impl LayoutEdit for Chip<Coord> {
 
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
         self.circuit_inst_mut(cell_inst).set_transform(tf)
+    }
+
+    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+        unimplemented!()
     }
 }

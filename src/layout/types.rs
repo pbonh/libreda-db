@@ -33,9 +33,9 @@ pub type SInt = i32;
 pub type Coord = i32;
 
 /// Data type used for identifying a layer.
-pub type LayerIndex = Index<LayerInfo>;
+pub type LayerIndex = Index<LayerInfo<String>>;
 /// Generator for layer indices.
-pub(crate) type LayerIndexGenerator = IndexGenerator<LayerInfo>;
+pub(crate) type LayerIndexGenerator = IndexGenerator<LayerInfo<String>>;
 
 /// Data type used for identifying a cell.
 pub type CellIndex = Index<Cell<Coord>>;
@@ -49,11 +49,11 @@ pub(crate) type CellInstIndexGenerator = IndexGenerator<CellInstance<Coord>>;
 
 /// Meta-data of a layer.
 #[derive(Clone, Hash, PartialEq, Debug)]
-pub struct LayerInfo {
+pub struct LayerInfo<NameType> {
     /// Identifier of the layer.
     pub index: UInt,
     /// Identifier of the layer.
     pub datatype: UInt,
     /// Name of the layer.
-    pub name: Option<String>,
+    pub name: Option<NameType>,
 }

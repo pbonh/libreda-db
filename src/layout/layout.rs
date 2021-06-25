@@ -460,11 +460,11 @@ impl LayoutBase for Layout {
         self.find_layer(index, datatype)
     }
 
-    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId> where Self::NameType: Borrow<N> {
+    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, _name: &N) -> Option<Self::LayerId> where Self::NameType: Borrow<N> {
         unimplemented!()
     }
 
-    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
+    fn bounding_box_per_layer(&self, _cell: &Self::CellId, _layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
         unimplemented!()
     }
 
@@ -492,9 +492,9 @@ impl LayoutBase for Layout {
 
 
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
-        where F: FnMut(&Geometry<Self::Coord>) -> () {
+        where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> () {
         if let Some(shapes) = cell.shapes(*layer) {
-            shapes.for_each_shape(|s| f(&s.geometry))
+            shapes.for_each_shape(|s| f(s, &s.geometry))
         }
     }
 
@@ -593,7 +593,7 @@ impl LayoutEdit for Layout {
 
     fn replace_shape(&mut self, _parent_cell: &Self::CellId, _layer: &Self::LayerId,
                      _shape_id: &Self::ShapeId, _geometry: Geometry<Self::Coord>)
-                     -> Option<Geometry<Self::Coord>> {
+                     -> Geometry<Self::Coord> {
 
         unimplemented!()
 
@@ -609,7 +609,7 @@ impl LayoutEdit for Layout {
         shape.set_property(key, value);
     }
 
-    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+    fn set_layer_name(&mut self, _layer: &Self::LayerId, _name: Option<Self::NameType>) -> Option<Self::NameType> {
         unimplemented!()
     }
 }

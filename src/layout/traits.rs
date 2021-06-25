@@ -79,42 +79,38 @@ pub trait LayoutBase: HierarchyBase {
 
     /// Call a function for each shape on this layer.
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
-        where F: FnMut(&Geometry<Self::Coord>) -> ();
+        where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> ();
 
     /// Call a function `f` for each shape of this cell and its sub cells.
     /// Along to the geometric shape `f` also gets a transformation as argument.
     /// The transformation describes the actual position of the geometric shape relative to the `cell`.
     fn for_each_shape_recursive<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, mut f: F)
-        where F: FnMut(SimpleTransform<Self::Coord>, &Geometry<Self::Coord>) -> () {
-        // Process shapes of this cell.
-        self.for_each_shape(cell,
-                            layer,
-                            |g| f(SimpleTransform::identity(), g)
-        );
-        // Process child instances.
-        self.for_each_cell_instance(cell, |inst| {
-            let template = self.template_cell(&inst);
-            let transform = self.get_transform(&inst);
-            // Recursive call.
-            self.for_each_shape_recursive(&template, &layer,
-                                          |tf, g| {
-                                              let tf2 = tf.then(&transform);
-                                              f(tf2, g)
-                                          }
-            )
-        });
+        where F: FnMut(SimpleTransform<Self::Coord>, &Self::ShapeId, &Geometry<Self::Coord>) -> () {
+
+        // This recursive iteration through the cells is implemented iteratively.
+        // A plain recursive implementation is more difficult to handle due to the type system.
+
+        // Stack for resolved recursion.
+        let mut stack = Vec::new();
+        stack.push((cell.clone(), SimpleTransform::identity()));
+
+        while let Some((cell, tf)) = stack.pop() {
+
+            // Push child instances.
+            self.for_each_cell_instance(&cell, |inst| {
+                let template = self.template_cell(&inst);
+                let transform = self.get_transform(&inst);
+                let tf2 = tf.then(&transform);
+                stack.push((template, tf2));
+            });
+
+            // Process shapes of this cell.
+            self.for_each_shape(&cell, layer,|id, g| f(tf.clone(), id, g));
+        }
     }
 
     /// Get the geometric transform that describes the location of a cell instance relative to its parent.
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord>;
-
-    // fn with_shapes<'a, F, R>(& self, cell: &Self::CellId, layer: &Self::LayerId, f: F) -> R
-    //     where F: FnMut(dyn IntoIterator<Item=&'a Geometry<Self::Coord>>) -> R;
-
-    // /// Call a function for each shape on this layer.
-    // fn for_each_shape_box<F>(&self, cell: &Self::CellId, layer: &Self::LayerId,
-    //                          f: Box<dyn FnMut(&Geometry<Self::Coord>) -> ()>);
-
 
     /// Get a property of a shape.
     fn get_shape_property(&mut self, cell: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
@@ -154,7 +150,7 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
 
     /// Replace the geometry of a shape.
     fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
-                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Option<Geometry<Self::Coord>>;
+                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord>;
 
     /// Set the geometric transform that describes the location of a cell instance relative to its parent.
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>);

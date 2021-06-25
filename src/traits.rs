@@ -266,9 +266,9 @@ pub trait HierarchyEdit: HierarchyBase {
 /// This trait makes the link between netlist elements and layout elements.
 pub trait L2NBase: LayoutBase + NetlistBase {
     /// Iterate over all shapes that are marked to belong to the specified net.
-    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)>>;
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_>;
     /// Iterate over all shapes that are part of the pin.
-    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)>>;
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_>;
     /// Get the net of a shape.
     fn get_net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId>;
     /// Get the pin that belongs to the shape (if any).

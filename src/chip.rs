@@ -32,20 +32,25 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use std::borrow::{Borrow, BorrowMut};
 use std::hash::Hash;
-use crate::netlist::traits::{NetlistBase, NetlistEdit};
+use crate::prelude::{
+    HierarchyBase, HierarchyEdit,
+    NetlistBase, NetlistEdit,
+    LayoutBase, LayoutEdit,
+    L2NBase, L2NEdit,
+};
+
 use crate::netlist::direction::Direction;
 use crate::rc_string::RcString;
 use std::fmt::Debug;
 use std::ops::Deref;
 
 use crate::property_storage::PropertyStore;
-use crate::layout::traits::{LayoutEdit, LayoutBase};
 use crate::layout::types::{LayerInfo};
 
 // Use an alternative hasher that has better performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
-use crate::traits::HierarchyBase;
-use crate::prelude::{HierarchyEdit, TryBoundingBox};
+
+use crate::prelude::{TryBoundingBox};
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -358,7 +363,7 @@ pub struct Pin {
 
     // == Layout == //
     /// List of shapes in the layout that represent the physical pin.
-    pin_shapes: Vec<(LayerId, ShapeId)>,
+    pin_shapes: IntHashSet<(LayerId, ShapeId)>,
 }
 
 impl Pin {
@@ -705,6 +710,12 @@ pub struct Chip<C: CoordinateType = Coord> {
     layer_info: IntHashMap<LayerId, LayerInfo<RcString>>,
     /// ID generator for shapes.
     shape_index_generator: IndexGenerator<Shape<C>>,
+
+    /// Link to the cell and layer that contain a shape.
+    shape_parents: IntHashMap<ShapeId, (CellId, LayerId)>,
+    
+    /// Link to the shapes of a net.
+    net_shapes: IntHashMap<NetId, IntHashSet<ShapeId>>,
 }
 
 impl Chip<Coord> {
@@ -959,6 +970,10 @@ impl Chip<Coord> {
 
     /// Disconnect all connected terminals and remove the net.
     pub fn remove_net(&mut self, net: &NetId) {
+
+        // TODO: Remove all links to shapes.
+
+        // Remove all links to pins.
         let pins = self.pins_for_net(net).collect_vec();
         let pin_insts = self.pins_instances_for_net(net).collect_vec();
         let parent_circuit = self.net(net).parent_id;
@@ -1476,6 +1491,8 @@ impl NetlistEdit for Chip {
     }
 
     fn remove_pin(&mut self, id: &Self::PinId) {
+        // TODO: Disconnect the pin for all instances, then remove it from all instances, then remove the pin from this cell.
+        // TODO: Remove links to shapes.
         unimplemented!()
     }
 
@@ -1565,6 +1582,10 @@ pub struct Shape<C: CoordinateType, U = ()> {
     pub geometry: Geometry<C>,
     // /// Reference ID to container.
     // parent_id: Index<Shapes<T>>,
+    /// Net attached to this shape.
+    net: Option<NetId>,
+    /// Pin that belongs to this shape.
+    pin: Option<PinId>,
     /// User-defined data.
     user_data: U,
 }
@@ -1742,7 +1763,6 @@ impl LayoutBase for Chip<Coord> {
         &self.layer_info[layer]
     }
 
-
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
     }
@@ -1767,13 +1787,13 @@ impl LayoutBase for Chip<Coord> {
     // }
 
     fn for_each_shape<F>(&self, cell_id: &Self::CellId, layer: &Self::LayerId, mut f: F)
-        where F: FnMut(&Geometry<Self::Coord>) -> () {
+        where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> () {
         self.circuits[cell_id]
             .shapes_map.get(layer)
             .into_iter()
             .for_each(|s| {
                 s.shapes.values()
-                    .for_each(|s| f(&s.geometry));
+                    .for_each(|s| f(&s.index, &s.geometry));
             });
     }
 
@@ -1825,12 +1845,42 @@ impl LayoutEdit for Chip<Coord> {
         layer_index
     }
 
+    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+        if let Some(name) = &name {
+            // Check that we do not shadow another layer name.
+            if self.layers_by_name.get(name) != Some(layer) {
+                panic!("Layer name already exists.")
+            }
+        }
+
+        // Remove the name.
+        let previous_name = self.layer_info
+            .get_mut(layer)
+            .expect("Layer ID not found.").name.take();
+        if let Some(prev_name) = &previous_name {
+            // Remove the name from the table.
+            self.layers_by_name.remove(prev_name);
+        }
+
+        if let Some(name) = name {
+            // Create the link from the name to the ID.
+            self.layers_by_name.insert(name.clone(), *layer);
+            // Store the name.
+            self.layer_info
+                .get_mut(layer)
+                .expect("Layer ID not found.").name = Some(name);
+        }
+        previous_name
+    }
+
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
         let shape_id = self.shape_index_generator.next();
 
         let shape = Shape {
             index: shape_id,
             geometry,
+            net: None,
+            pin: None,
             user_data: Default::default(),
         };
 
@@ -1843,6 +1893,9 @@ impl LayoutEdit for Chip<Coord> {
 
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)
                     -> Option<Geometry<Self::Coord>> {
+
+        // TODO: Remove all links to this shape.
+
         self.circuit_mut(parent_cell)
             .shapes_mut(layer).expect("Layer not found.")
             .shapes.remove(shape_id)
@@ -1851,25 +1904,63 @@ impl LayoutEdit for Chip<Coord> {
 
     fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
                      shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
-                     -> Option<Geometry<Self::Coord>> {
+                     -> Geometry<Self::Coord> {
         let shape_id = *shape_id;
-        let shape = Shape {
-            index: shape_id,
-            geometry,
-            user_data: Default::default(),
-        };
 
-        self.circuit_mut(parent_cell)
+        let g = &mut self.circuit_mut(parent_cell)
             .shapes_mut(layer).expect("Layer not found.")
-            .shapes.insert(shape_id, shape)
-            .map(|s| s.geometry)
+            .shapes.get_mut(&shape_id).expect("Shape not found.")
+            .geometry;
+        let mut new_g = geometry;
+        std::mem::swap(g, &mut new_g);
+        new_g
     }
 
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
         self.circuit_inst_mut(cell_inst).set_transform(tf)
     }
+}
 
-    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+impl L2NBase for Chip<Coord> {
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_> {
+        Box::new(self.net(net_id)
+            .shapes.iter()
+            .cloned()
+        )
+    }
+
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_> {
+        Box::new(self.pin(pin_id)
+            .pin_shapes.iter()
+            .cloned()
+        )
+    }
+
+    fn get_net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId> {
+        let (cell, layer) = self.shape_parents[shape_id];
+        self.circuit(&cell)
+            .shapes(&layer)
+            .expect("Layer not found.")
+            .shapes.get(shape_id).expect("Shape not found.")
+            .net.clone()
+    }
+
+    fn get_pin_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::PinId> {
+        let (cell, layer) = self.shape_parents[shape_id];
+        self.circuit(&cell)
+            .shapes(&layer)
+            .expect("Layer not found.")
+            .shapes.get(shape_id).expect("Shape not found.")
+            .pin.clone()
+    }
+}
+
+impl L2NEdit for Chip<Coord> {
+    fn set_pin_of_shape(&self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
+        unimplemented!()
+    }
+
+    fn set_net_of_shape(&self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId> {
         unimplemented!()
     }
 }

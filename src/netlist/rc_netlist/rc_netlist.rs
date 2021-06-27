@@ -645,6 +645,10 @@ impl HierarchyEdit for RcNetlist {
             .remove_circuit_instance(circuit_inst)
     }
 
+    fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
+        unimplemented!()
+    }
+
     fn rename_cell(&mut self, _cell: &Self::CellId, _new_name: Self::NameType) {
         unimplemented!()
     }

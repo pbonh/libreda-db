@@ -298,6 +298,14 @@ pub trait NetlistBase: HierarchyBase {
         Box::new(self.each_internal_net_vec(circuit).into_iter())
     }
 
+    /// Return the number of nets defined inside a cell.
+    fn num_internal_nets(&self, circuit: &Self::CellId) -> usize {
+        // Inefficient default implementation.
+        let mut counter = 0;
+        self.for_each_internal_net(circuit, |_| counter += 1);
+        counter
+    }
+
     /// Get the number of pins that are connected to this net.
     fn num_net_pins(&self, net: &Self::NetId) -> usize {
         let mut n = 0;

@@ -544,6 +544,10 @@ impl HierarchyEdit for Layout {
             .map(|p| p.remove_cell_instance(id));
     }
 
+    fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
+        unimplemented!()
+    }
+
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
         Layout::rename_cell(self, cell.index(), Some(new_name))
             .expect("Cell name already exists.");

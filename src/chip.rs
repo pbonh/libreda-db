@@ -363,7 +363,7 @@ pub struct Pin {
 
     // == Layout == //
     /// List of shapes in the layout that represent the physical pin.
-    pin_shapes: IntHashSet<(LayerId, ShapeId)>,
+    pin_shapes: IntHashSet<ShapeId>,
 }
 
 impl Pin {
@@ -514,7 +514,7 @@ pub struct Net {
     // == Layout == //
 
     /// List of shapes in the layout that represent the physical net.
-    pub shapes: IntHashSet<(LayerId, ShapeId)>,
+    pub net_shapes: IntHashSet<ShapeId>,
 }
 
 impl Net {}
@@ -713,7 +713,7 @@ pub struct Chip<C: CoordinateType = Coord> {
 
     /// Link to the cell and layer that contain a shape.
     shape_parents: IntHashMap<ShapeId, (CellId, LayerId)>,
-    
+
     /// Link to the shapes of a net.
     net_shapes: IntHashMap<NetId, IntHashSet<ShapeId>>,
 }
@@ -732,10 +732,39 @@ impl Chip<Coord> {
     pub fn rename_cell(&mut self, cell: &CellId, name: RcString) {
         assert!(!self.circuits_by_name.contains_key(&name), "Cell with this name already exists.");
 
-        self.circuits_by_name.remove(&name);
+        // Remove old name.
+        let old_name = &self.circuits[cell].name;
+        let id = self.circuits_by_name.remove(old_name);
+        debug_assert_eq!(id.as_ref(), Some(cell));
+
+        // Set the new name.
         self.circuit_mut(cell).name = name.clone();
         self.circuits_by_name.insert(name, cell.clone());
     }
+
+    /// Change the name of the cell instance.
+    ///
+    /// # Panics
+    /// Panics if the name already exists.
+    pub fn rename_cell_instance(&mut self, inst: &CellInstId, name: Option<RcString>) {
+        let parent = self.parent_cell(inst);
+        if let Some(name) = &name {
+            assert!(!self.circuit(&parent).instances_by_name.contains_key(name),
+                    "Cell with this name already exists.");
+        }
+
+        // Remove old name.
+        let old_name = self.circuit_inst_mut(inst).name.take();
+        if let Some(old_name) = old_name {
+            self.circuit_mut(&parent).instances_by_name.remove(&old_name);
+        }
+
+        self.circuit_inst_mut(inst).name = name.clone();
+        if let Some(name) = name {
+            self.circuit_mut(&parent).instances_by_name.insert(name, inst.clone());
+        }
+    }
+
     /// Create a new circuit template.
     pub fn create_circuit(&mut self, name: RcString, pins: Vec<(RcString, Direction)>) -> CellId {
         assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
@@ -873,6 +902,10 @@ impl Chip<Coord> {
 
     /// Remove a circuit instance after disconnecting it from the nets.
     pub fn remove_circuit_instance(&mut self, circuit_inst_id: &CellInstId) {
+
+        // Remove the instance name.
+        self.rename_cell_instance(circuit_inst_id, None);
+
         // Disconnect all pins first.
         for pin in self.circuit_inst(circuit_inst_id).pins.clone() {
             self.disconnect_pin_instance(&pin);
@@ -923,7 +956,7 @@ impl Chip<Coord> {
             parent_id: *parent,
             pins: Default::default(),
             pin_instances: Default::default(),
-            shapes: Default::default(),
+            net_shapes: Default::default(),
         };
         self.nets.insert(id, net);
         let circuit = self.circuit_mut(parent);
@@ -1240,6 +1273,28 @@ impl Chip<Coord> {
     pub fn each_net(&self) -> impl Iterator<Item=NetId> + '_ {
         self.nets.keys().copied()
     }
+
+    /// Get a mutable reference to a shape struct by its ID.
+    fn shape_mut(&mut self, shape_id: &ShapeId) -> &mut Shape<Coord> {
+        let (cell, layer) = self.shape_parents.get(shape_id)
+            .expect("Shape not found.").clone();
+        self.circuit_mut(&cell)
+            .shapes_mut(&layer)
+            .expect("Layer not found.")
+            .shapes.get_mut(shape_id)
+            .expect("Shape not found.")
+    }
+
+    /// Get a reference to a shape struct by its ID.
+    fn shape(&self, shape_id: &ShapeId) -> &Shape<Coord> {
+        let (cell, layer) = self.shape_parents.get(shape_id)
+            .expect("Shape not found.").clone();
+        self.circuit(&cell)
+            .shapes(&layer)
+            .expect("Layer not found.")
+            .shapes.get(shape_id)
+            .expect("Shape not found.")
+    }
 }
 
 
@@ -1456,6 +1511,11 @@ impl NetlistBase for Chip {
 
     fn each_internal_net(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::NetId> + '_> {
         Box::new(self.circuit(circuit).nets.iter().copied())
+    }
+
+    /// Return the number of nets defined inside a cell.
+    fn num_internal_nets(&self, circuit: &Self::CellId) -> usize {
+        self.circuit(circuit).nets.len()
     }
 
     fn num_pins(&self, circuit: &Self::CellId) -> usize {
@@ -1713,6 +1773,10 @@ impl HierarchyBase for Chip<Coord> {
         Box::new(self.circuit(circuit).dependencies.keys().copied())
     }
 
+    fn num_cell_dependencies(&self, cell: &Self::CellId) -> usize {
+        self.circuit(cell).dependencies.len()
+    }
+
     fn for_each_dependent_cell<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
         self.circuit(circuit).dependent_circuits.keys().copied().for_each(f);
     }
@@ -1721,12 +1785,21 @@ impl HierarchyBase for Chip<Coord> {
         Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
     }
 
+    /// Count all cells that are directly dependent on `cell`, i.e. contain an instance of `cell`.
+    fn num_dependent_cells(&self, cell: &Self::CellId) -> usize {
+        self.circuit(cell).dependent_circuits.len()
+    }
+
     fn for_each_cell_reference<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
         self.circuit(circuit).references.iter().copied().for_each(f)
     }
 
     fn each_cell_reference(&self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         Box::new(self.circuit(circuit).references.iter().copied())
+    }
+
+    fn num_cell_references(&self, cell: &Self::CellId) -> usize {
+        self.circuit(cell).references.len()
     }
 
     fn num_child_instances(&self, cell: &Self::CellId) -> usize {
@@ -1822,6 +1895,11 @@ impl HierarchyEdit for Chip<Coord> {
 
     fn remove_cell_instance(&mut self, id: &Self::CellInstId) {
         <Chip<Coord>>::remove_circuit_instance(self, id)
+    }
+
+
+    fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
+        <Chip<Coord>>::rename_cell_instance(self, inst, new_name)
     }
 
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
@@ -1922,14 +2000,14 @@ impl LayoutEdit for Chip<Coord> {
 }
 
 impl L2NBase for Chip<Coord> {
-    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_> {
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
         Box::new(self.net(net_id)
-            .shapes.iter()
+            .net_shapes.iter()
             .cloned()
         )
     }
 
-    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_> {
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
         Box::new(self.pin(pin_id)
             .pin_shapes.iter()
             .cloned()
@@ -1937,30 +2015,64 @@ impl L2NBase for Chip<Coord> {
     }
 
     fn get_net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId> {
-        let (cell, layer) = self.shape_parents[shape_id];
-        self.circuit(&cell)
-            .shapes(&layer)
-            .expect("Layer not found.")
-            .shapes.get(shape_id).expect("Shape not found.")
-            .net.clone()
+        self.shape(shape_id).net.clone()
     }
 
     fn get_pin_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::PinId> {
-        let (cell, layer) = self.shape_parents[shape_id];
-        self.circuit(&cell)
-            .shapes(&layer)
-            .expect("Layer not found.")
-            .shapes.get(shape_id).expect("Shape not found.")
-            .pin.clone()
+        self.shape(shape_id).pin.clone()
     }
 }
 
 impl L2NEdit for Chip<Coord> {
-    fn set_pin_of_shape(&self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
-        unimplemented!()
+    fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
+        // Create link from pin to shape.
+        if let Some(pin) = &pin {
+            let not_yet_present = self.pin_mut(pin)
+                .pin_shapes.insert(shape_id.clone());
+            if !not_yet_present {
+                // The shape is already assigned to this pin. Don't do anything more.
+                return Some(pin.clone());
+            }
+        }
+
+        // Create from shape to link.
+        let mut pin = pin;
+        std::mem::swap(&mut self.shape_mut(shape_id).pin, &mut pin);
+        let previous_pin = pin;
+
+        // Remove the old link to the pin.
+        if let Some(previous_pin) = &previous_pin {
+            assert!(self.pin_mut(previous_pin)
+                        .pin_shapes.remove(shape_id), "Pin was not linked to the shape.");
+        }
+
+        // Return the previous pin (got it by the above swap operation).
+        previous_pin
     }
 
-    fn set_net_of_shape(&self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId> {
-        unimplemented!()
+    fn set_net_of_shape(&mut self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        // Create link from net to shape.
+        if let Some(net) = &net {
+            let not_yet_present = self.net_mut(net)
+                .net_shapes.insert(shape_id.clone());
+            if !not_yet_present {
+                // The shape is already assigned to this net. Don't do anything more.
+                return Some(net.clone());
+            }
+        }
+
+        // Create from shape to link.
+        let mut net = net;
+        std::mem::swap(&mut self.shape_mut(shape_id).net, &mut net);
+        let previous_net = net;
+
+        // Remove the old link to the net.
+        if let Some(previous_net) = &previous_net {
+            assert!(self.net_mut(previous_net)
+                        .net_shapes.remove(shape_id), "net was not linked to the shape.");
+        }
+
+        // Return the previous net (got it by the above swap operation).
+        previous_net
     }
 }

@@ -158,9 +158,17 @@ pub trait HierarchyBase {
         v
     }
 
-    /// Iterate over all cells that are childs of this `cell`.
+    /// Iterate over all cells that are instantiated in this `cell`.
     fn each_cell_dependency<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
         Box::new(self.each_cell_dependency_vec(cell).into_iter())
+    }
+
+    /// Count all cells that are dependencies of `cell`.
+    fn num_cell_dependencies(&self, cell: &Self::CellId) -> usize {
+        // Inefficient default implementation.
+        let mut counter = 0;
+        self.for_each_cell_dependency(cell, |_| counter += 1);
+        counter
     }
 
     /// Call a function for each cell that directly depends on `cell`.
@@ -176,6 +184,14 @@ pub trait HierarchyBase {
     /// Iterate over each cell that directly depends on `cell`.
     fn each_dependent_cell<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
         Box::new(self.each_dependent_cell_vec(cell).into_iter())
+    }
+
+    /// Count all cells that are directly dependent on `cell`, i.e. contain an instance of `cell`.
+    fn num_dependent_cells(&self, cell: &Self::CellId) -> usize {
+        // Inefficient default implementation.
+        let mut counter = 0;
+        self.for_each_cell_dependency(cell, |_| counter += 1);
+        counter
     }
 
     /// Iterate over all instances of this `cell`, i.e. instances that use this cell as
@@ -196,9 +212,16 @@ pub trait HierarchyBase {
         Box::new(self.each_cell_reference_vec(cell).into_iter())
     }
 
+    /// Count all reference to the cell template `cell`.
+    fn num_cell_references(&self, cell: &Self::CellId) -> usize {
+        // Inefficient default implementation.
+        let mut counter = 0;
+        self.for_each_cell_reference(cell, |_| counter += 1);
+        counter
+    }
+
     /// Get the number of cell instances inside the `cell`.
     fn num_child_instances(&self, cell: &Self::CellId) -> usize;
-
 
     /// Get the number of cell templates.
     fn num_cells(&self) -> usize;
@@ -244,13 +267,20 @@ pub trait HierarchyEdit: HierarchyBase {
     /// Remove cell instance if it exists.
     fn remove_cell_instance(&mut self, inst: &Self::CellInstId);
 
+    /// Change the name of a cell instance.
+    ///
+    /// Clears the name when `None` is passed.
+    ///
+    /// # Panics
+    /// Panics if an instance with this name already exists in the parent cell.
+    fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>);
+
 
     /// Change the name of a cell.
     ///
     /// # Panics
     /// Panics if a cell with this name already exists.
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType);
-
 
     /// Set a property of the top-level chip data structure..
     fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {}
@@ -266,9 +296,9 @@ pub trait HierarchyEdit: HierarchyBase {
 /// This trait makes the link between netlist elements and layout elements.
 pub trait L2NBase: LayoutBase + NetlistBase {
     /// Iterate over all shapes that are marked to belong to the specified net.
-    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_>;
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_>;
     /// Iterate over all shapes that are part of the pin.
-    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=(Self::LayerId, Self::ShapeId)> + '_>;
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_>;
     /// Get the net of a shape.
     fn get_net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId>;
     /// Get the pin that belongs to the shape (if any).
@@ -280,8 +310,8 @@ pub trait L2NBase: LayoutBase + NetlistBase {
 pub trait L2NEdit: LayoutEdit + NetlistEdit {
     /// Create the link between a circuit pin and its shapes in the layout.
     /// Return the current pin.
-    fn set_pin_of_shape(&self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId>;
+    fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId>;
     /// Set the net of a shape.
     /// Return the current net.
-    fn set_net_of_shape(&self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId>;
+    fn set_net_of_shape(&mut self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId>;
 }

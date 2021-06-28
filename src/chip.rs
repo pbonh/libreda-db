@@ -1004,7 +1004,14 @@ impl Chip<Coord> {
     /// Disconnect all connected terminals and remove the net.
     pub fn remove_net(&mut self, net: &NetId) {
 
-        // TODO: Remove all links to shapes.
+        // Remove all links from shapes to this net.
+        let net_shapes = self.net_shapes.get(net)
+            .iter()
+            .flat_map(|shape_ids| shape_ids.iter().cloned())
+            .collect_vec();
+        for net_shape in &net_shapes {
+            self.set_net_of_shape(net_shape, None);
+        }
 
         // Remove all links to pins.
         let pins = self.pins_for_net(net).collect_vec();
@@ -1551,6 +1558,16 @@ impl NetlistEdit for Chip {
     }
 
     fn remove_pin(&mut self, id: &Self::PinId) {
+
+        // Remove all links from shapes to this pin.
+        let pin_shapes = self.pin(id).pin_shapes
+            .iter()
+            .cloned()
+            .collect_vec();
+        for pin_shape in &pin_shapes {
+            self.set_pin_of_shape(pin_shape, None);
+        }
+
         // TODO: Disconnect the pin for all instances, then remove it from all instances, then remove the pin from this cell.
         // TODO: Remove links to shapes.
         unimplemented!()

@@ -223,6 +223,14 @@ pub trait NetlistBase: HierarchyBase {
     /// Get the ID of the circuit instance that holds this pin instance.
     fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CellInstId;
 
+    /// Get the ID of a pin instance given the cell instance and the pin ID.
+    fn pin_instance(&self, cell_inst: &Self::CellInstId, pin: &Self::PinId) -> Self::PinInstId {
+        // Inefficient default implementation.
+        self.each_pin_instance(cell_inst)
+            .find(|inst| &self.template_pin(inst) == pin)
+            .expect("No such pin found in this cell.")
+    }
+
     /// Get the internal net attached to this pin.
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId>;
 

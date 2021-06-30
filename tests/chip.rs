@@ -24,7 +24,7 @@
 
 use libreda_db::chip::Chip;
 use libreda_db::prelude::{HierarchyEdit, HierarchyBase, LayoutBase, LayoutEdit, NetlistBase, NetlistEdit, L2NBase, L2NEdit, Direction};
-use itertools::{Itertools, assert_equal};
+use itertools::{Itertools};
 
 #[test]
 fn test_create_circuit() {
@@ -140,6 +140,7 @@ fn test_create_nets() {
 
 #[test]
 fn test_connect_nets() {
+    #![allow(unused_variables)]
     let mut chip = Chip::new();
     let a = chip.create_cell("A".into());
     let top = chip.create_cell("TOP".into());
@@ -158,7 +159,19 @@ fn test_connect_nets() {
     let top_net2 = chip.create_net(&top, Some("net2".into()));
     let top_clk = chip.create_net(&top, Some("clk".into()));
 
+    // Connect the clock net.
     assert_eq!(chip.connect_pin(&top_pin_clk, Some(top_clk.clone())), None);
+    assert_eq!(chip.num_net_terminals(&top_clk), 1);
+    let inst1_clk_pin = chip.pin_instance(&inst1, &a_clk);
+    let inst2_clk_pin = chip.pin_instance(&inst2, &a_clk);
+    assert_eq!(chip.connect_pin_instance(&inst1_clk_pin, Some(top_clk.clone())), None);
+    assert_eq!(chip.connect_pin_instance(&inst2_clk_pin, Some(top_clk.clone())), None);
+    assert_eq!(chip.num_net_terminals(&top_clk), 3);
+
+    let top_clk_terminals = chip.terminals_for_net(&top_clk).collect_vec();
+    assert!(top_clk_terminals.contains(&top_pin_clk.into()));
+    assert!(top_clk_terminals.contains(&inst1_clk_pin.into()));
+    assert!(top_clk_terminals.contains(&inst2_clk_pin.into()));
 
     // chip.connect_pin_instance(, Some(top_net1.clone()));
     // chip.connect_pin_instance(, Some(top_net2.clone()));
@@ -257,7 +270,7 @@ fn test_flatten_circuit_instance() {
     let a = chip.create_cell("a".into());
     let a_pin_a = chip.create_pin(&a, "A".into(), Direction::InOut);
     let b = chip.create_cell("b".into());
-    let b_pin_a = chip.create_pin(&b, "A".into(), Direction::InOut);
+    let _b_pin_a = chip.create_pin(&b, "A".into(), Direction::InOut);
 
     // Create cell instances.
     let a_inst = chip.create_cell_instance(&top, &a, Some("a_inst".into()));

@@ -498,6 +498,10 @@ impl LayoutBase for Layout {
         }
     }
 
+    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, mut f: F) -> R where F: FnMut(&Geometry<Self::Coord>) -> R {
+        f(&shape_id.geometry)
+    }
+
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
         cell_inst.transform.borrow().clone()
     }
@@ -544,7 +548,8 @@ impl HierarchyEdit for Layout {
             .map(|p| p.remove_cell_instance(id));
     }
 
-    fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
+
+    fn rename_cell_instance(&mut self, _inst: &Self::CellInstId, _new_name: Option<Self::NameType>) {
         unimplemented!()
     }
 

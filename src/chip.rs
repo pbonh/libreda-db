@@ -1887,6 +1887,10 @@ impl LayoutBase for Chip<Coord> {
             });
     }
 
+    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, mut f: F) -> R where F: FnMut(&Geometry<Self::Coord>) -> R {
+        f(&self.shape(shape_id).geometry)
+    }
+
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
         self.circuit_inst(cell_inst).get_transform().clone()
     }
@@ -1978,6 +1982,8 @@ impl LayoutEdit for Chip<Coord> {
             pin: None,
             user_data: Default::default(),
         };
+
+        self.shape_parents.insert(shape_id.clone(), (parent_cell.clone(), layer.clone()));
 
         self.circuit_mut(parent_cell)
             .get_or_create_shapes_mut(layer)

@@ -49,6 +49,7 @@ pub mod index;
 pub mod rc_string;
 pub mod property_storage;
 pub mod traits;
+pub mod reference_access;
 pub mod chip;
 
 

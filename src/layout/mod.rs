@@ -38,3 +38,4 @@ pub mod layout;
 pub mod repetition;
 pub mod errors;
 pub mod traits;
+pub mod algorithms;

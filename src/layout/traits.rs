@@ -81,6 +81,10 @@ pub trait LayoutBase: HierarchyBase {
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
         where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> ();
 
+    /// Access a shape by its ID.
+    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R
+        where F: FnMut(&Geometry<Self::Coord>) -> R;
+
     /// Call a function `f` for each shape of this cell and its sub cells.
     /// Along to the geometric shape `f` also gets a transformation as argument.
     /// The transformation describes the actual position of the geometric shape relative to the `cell`.

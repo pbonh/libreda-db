@@ -153,44 +153,7 @@ pub trait NetlistReferenceAccess: NetlistBase
 }
 
 /// Most basic trait of a netlist.
-///
-/// ## Netlist component relations
-///
-/// A netlist consists of circuits which are templates for circuit instances.
-/// Each circuit may contain such instances of other circuits.
-///
-/// The following diagram illustrates how this composition graph can be traversed using the functions
-/// defined by `NetlistBase`.
-///
-/// ```txt
-///                          each_cell_dependency
-///                      +---------------------------+
-///                      |                           |
-///                      +                           v
-///       +----------------+   each_dependent_cell  +------------------+
-///       |Circuit (Top)   |<----------------------+|Circuit (Sub)     |
-///       +----------------+                        +------------------+
-///       |+              ^|                        | ^   +            |
-///       ||each_instance ||                        | |   |            |
-///       ||              ||                        | |   |            |
-///       ||              |parent                   | |   |            |
-///       ||              ||                        | |   |            |
-///       ||+-----------+ ||                        | |   |            |
-///  +--> |>|Inst1 (Sub)|-+|                        | |   |            |
-///  |    ||+-----------+  |                        | |   |            |
-///  |    ||               |                        | |   |            |
-///  |    ||               |                        +-|---|------------+
-///  |    ||               |                          |   |
-///  |    ||+-----------+  |  template                |   |
-///  +--> |>|Inst2 (Sub)|+----------------------------+   |
-///  |    | +-----------+  |                              |
-///  |    |                |                              |
-///  |    |                |                              |
-///  |    +----------------+                              |
-///  |                                                    |
-///  |                         each_reference             |
-///  +----------------------------------------------------+
-/// ```
+/// A netlist extends the `HierarchyBase` and hence is hierarchical.
 ///
 pub trait NetlistBase: HierarchyBase {
     /// Pin identifier type.

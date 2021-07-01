@@ -181,6 +181,23 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt + std::fmt::Debug>(rpoly
 }
 
 #[test]
+fn test_decompose_rectangles_trivial() {
+    // Test trivial cases: Empty polygon and rectangle.
+    use crate::prelude::Point;
+
+    let empty: SimpleRPolygon<i32> = SimpleRPolygon::empty();
+    let rects = decompose_rectangles(&empty);
+    assert_eq!(rects, vec![]);
+
+    // Test with reversed polygon.
+    let rect = SimpleRPolygon::try_new(vec![
+        (0, 0), (2, 0), (2, 2), (0, 2)
+    ].iter().map(|t| Point::from(t)).collect()).unwrap();
+    let rects = decompose_rectangles(&rect.reversed());
+    assert_eq!(rects, vec![Rect::new((0, 0), (2, 2))]);
+}
+
+#[test]
 fn test_decompose_rectangles() {
     use crate::prelude::Point;
     //    +--+

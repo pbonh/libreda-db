@@ -77,7 +77,7 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt + std::fmt::Debug>(rpoly
                 }
             })
             // Sort edges from left to right, then by the y-coordinate of start and end point.
-            .sorted_by_key(|(e, is_left)| (e.offset, e.start, e.end))
+            .sorted_by_key(|(e, _is_left)| (e.offset, e.start, e.end))
             .collect();
 
         // Store the open rectangle as a tuple (y-start, y-end, inside count, x-position of opening vertical edge).
@@ -149,7 +149,7 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt + std::fmt::Debug>(rpoly
             // Find this by computing the intersection of the y-interval of the right boundary
             // with all open intervals that are about to be closed (which have value = -increment).
             let closed_rects = open_rects.iter()
-                .take_while(|(a, b, _value, _x)| b <= &e.end)
+                .take_while(|(_a, b, _value, _x)| b <= &e.end)
                 .filter(|(a, _b, value, _x)| a >= &e.start && value == &increment_inv)
                 .map(|&(a, b, _value, x_start)| {
                     // Compute the intersection of the intervals [a, b] and [e.start, e.end].
@@ -162,8 +162,8 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt + std::fmt::Debug>(rpoly
 
             // Update the inside-count for open rectangles that interact with the current edge.
             open_rects.iter_mut()
-                .take_while(|(a, b, _value, _x)| b <= &e.end)
-                .filter(|(a, b, _value, _x)| a >= &e.start)
+                .take_while(|(_a, b, _value, _x)| b <= &e.end)
+                .filter(|(a, _b, _value, _x)| a >= &e.start)
                 .for_each(|(_, _, count, x)| {
                     *count += increment;
                     if *count == 0 {

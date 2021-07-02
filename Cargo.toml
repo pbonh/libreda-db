@@ -16,6 +16,6 @@ log = "0.4"
 itertools = "0.10.0"
 num-traits = "0.2"
 genawaiter = { version = "0.99.1", default-features = false }
-iron-shapes = { version = "0.0.5", path = "../iron-shapes" }
-serde = { version = "1", optional = true, features = ["derive"] }
+iron-shapes = { version = "0.0.5", path = "../iron-shapes", features = ["serde"] }
+serde = { version = "1", optional = true, features = ["derive", "rc"] }
 fnv = "1.0.7" # Fast hashing for small keys.

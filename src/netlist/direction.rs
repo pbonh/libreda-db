@@ -22,6 +22,7 @@
 
 /// Signal type for pins.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Direction {
     /// No direction specified.
     None,

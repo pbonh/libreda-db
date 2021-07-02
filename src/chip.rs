@@ -65,22 +65,27 @@ pub type Coord = i32;
 
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CellId(u32);
 
 /// Circuit instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CellInstId(usize);
 
 /// Pin identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PinId(u32);
 
 /// Pin instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PinInstId(usize);
 
 /// Either a pin or pin instance identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum TerminalId {
     /// Terminal is a pin.
     Pin(PinId),
@@ -102,6 +107,7 @@ impl From<PinInstId> for TerminalId {
 
 /// Net identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NetId(usize);
 //
 // /// Cell identifier.
@@ -274,6 +280,7 @@ impl Circuit {
 ///
 /// * `U`: User defined data.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CircuitInst<C = Coord, U = ()>
     where C: CoordinateType {
     /// Name of the instance.
@@ -347,6 +354,7 @@ impl CircuitInst {
 
 /// Single bit wire pin.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Pin {
     /// The unique ID of the pin.
     id: PinId,
@@ -435,6 +443,7 @@ impl Deref for PinRef<'_> {
 
 /// Instance of a pin.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PinInst {
     /// ID of the template pin.
     pub template_pin_id: PinId,
@@ -501,6 +510,7 @@ impl Deref for PinInstRef<'_> {
 
 /// A net represents an electric potential or a wire.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Net {
     /// Name of the net.
     pub name: Option<RcString>,
@@ -681,7 +691,7 @@ impl<'a> CircuitInstanceRef<'a> {
 // // }
 
 /// A netlist is the container of circuits.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Chip<C: CoordinateType = Coord> {
     circuits: IntHashMap<CellId, Circuit<C>>,
     circuits_by_name: HashMap<RcString, CellId>,

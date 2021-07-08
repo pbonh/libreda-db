@@ -46,7 +46,7 @@ use num_traits::PrimInt;
 ///     let rects = decompose_rectangles(&poly);
 ///     assert_eq!(rects, vec![Rect::new((0, 0), (2, 1)), Rect::new((1, 1), (2, 2))]);
 /// ```
-pub fn decompose_rectangles<T: CoordinateType + PrimInt + std::fmt::Debug>(rpoly: &SimpleRPolygon<T>) -> Vec<Rect<T>> {
+pub fn decompose_rectangles<T: CoordinateType + PrimInt>(rpoly: &SimpleRPolygon<T>) -> Vec<Rect<T>> {
     // Sweep through the vertical edges from left to right. Keep track of 'open' rectangles.
     // A rectangle is opened when a left boundary is encountered and closed when a right boundary is encountered.
     // Construct a rectangle once a right boundary is encountered.

@@ -104,7 +104,7 @@ pub trait LayoutBase: HierarchyBase {
             self.for_each_cell_instance(&cell, |inst| {
                 let template = self.template_cell(&inst);
                 let transform = self.get_transform(&inst);
-                let tf2 = tf.then(&transform);
+                let tf2 = transform.then(&tf);
                 stack.push((template, tf2));
             });
 

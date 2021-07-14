@@ -252,19 +252,75 @@ pub trait HierarchyBase {
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
 pub trait HierarchyEdit: HierarchyBase {
 
-    /// Create a new and empty cell.
+    /// Create a new and empty cell template.
+    /// A cell template can be be instantiated in other cells.
+    ///
+    /// # Example
+    /// ```
+    /// use libreda_db::prelude::*;
+    /// let mut chip = Chip::new();
+    /// let my_cell = chip.create_cell("myCell".into());
+    ///
+    /// assert_eq!(chip.num_cells(), 1);
+    /// assert_eq!(chip.cell_by_name("myCell"), Some(my_cell));
+    /// ```
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId;
 
-    /// Delete the given cell if it exists.
+    /// Remove a cell and all the instances of it.
+    ///
+    /// # Example
+    /// ```
+    /// use libreda_db::prelude::*;
+    /// let mut chip = Chip::new();
+    /// let top = chip.create_cell("TOP".into());
+    /// assert_eq!(chip.num_cells(), 1);
+    /// chip.remove_cell(&top);
+    /// assert_eq!(chip.num_cells(), 0);
+    /// ```
     fn remove_cell(&mut self, cell_id: &Self::CellId);
 
     /// Create a new instance of `template_cell` in `parent_cell`.
+    /// Recursive instantiation is forbidden and might panic.
+    ///
+    /// # Example
+    /// ```
+    /// use libreda_db::prelude::*;
+    /// let mut chip = Chip::new();
+    /// let top = chip.create_cell("TOP".into());
+    /// let sub = chip.create_cell("SUB".into());
+    ///
+    /// // Create two instances of "SUB" inside "TOP".
+    /// let inst1 = chip.create_cell_instance(&top, &sub, Some("sub1".into())); // Create named instance.
+    /// let inst2 = chip.create_cell_instance(&top, &sub, None); // Create unnamed instance.
+    ///
+    /// assert_eq!(chip.num_child_instances(&top), 2);
+    /// assert_eq!(chip.num_references(&sub), 2);
+    /// ```
     fn create_cell_instance(&mut self,
                             parent_cell: &Self::CellId,
                             template_cell: &Self::CellId,
                             name: Option<Self::NameType>) -> Self::CellInstId;
 
     /// Remove cell instance if it exists.
+    /// # Example
+    /// ```
+    /// use libreda_db::prelude::*;
+    /// let mut chip = Chip::new();
+    /// let top = chip.create_cell("TOP".into());
+    /// let sub = chip.create_cell("SUB".into());
+    ///
+    /// // Create two instances of "SUB" inside "TOP".
+    /// let inst1 = chip.create_cell_instance(&top, &sub, Some("sub1".into())); // Create named instance.
+    /// let inst2 = chip.create_cell_instance(&top, &sub, None); // Create unnamed instance.
+    ///
+    /// assert_eq!(chip.num_child_instances(&top), 2);
+    /// assert_eq!(chip.num_references(&sub), 2);
+    ///
+    /// chip.remove_cell_instance(&inst2);
+    ///
+    /// assert_eq!(chip.num_child_instances(&top), 1);
+    /// assert_eq!(chip.num_references(&sub), 1);
+    /// ```
     fn remove_cell_instance(&mut self, inst: &Self::CellInstId);
 
     /// Change the name of a cell instance.

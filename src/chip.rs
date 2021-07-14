@@ -1480,7 +1480,6 @@ fn test_netlist_reference_access() {
 impl NetlistBase for Chip {
     type PinId = PinId;
     type PinInstId = PinInstId;
-    type TerminalId = TerminalId;
     type NetId = NetId;
 
 
@@ -1512,12 +1511,10 @@ impl NetlistBase for Chip {
         self.pin_inst(pin_inst).circuit_inst
     }
 
-    /// Get the net connected to this pin.
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
         self.pin(pin).net
     }
 
-    /// Get the net connected to this pin instance.
     fn net_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Option<Self::NetId> {
         self.pin_inst(pin_inst).net
     }
@@ -1543,7 +1540,6 @@ impl NetlistBase for Chip {
         self.circuit(circuit).pins.iter().copied().for_each(f)
     }
 
-    /// Iterate over all pins of a circuit.
     fn each_pin(&self, circuit_id: &CellId) -> Box<dyn Iterator<Item=PinId> + '_> {
         Box::new(self.circuit(circuit_id).pins.iter().copied())
     }
@@ -1564,7 +1560,6 @@ impl NetlistBase for Chip {
         Box::new(self.circuit(circuit).nets.iter().copied())
     }
 
-    /// Return the number of nets defined inside a cell.
     fn num_internal_nets(&self, circuit: &Self::CellId) -> usize {
         self.circuit(circuit).nets.len()
     }
@@ -1592,10 +1587,6 @@ impl NetlistBase for Chip {
 
 
 impl NetlistEdit for Chip {
-    // /// Create a new circuit with a given list of pins.
-    // fn create_circuit_with_pins(&mut self, name: Self::NameType, pins: Vec<(Self::NameType, Direction)>) -> CellId {
-    //     Chip::create_circuit(self, name, pins)
-    // }
 
     fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
         Chip::create_pin(self, *circuit, name, direction)
@@ -1621,7 +1612,6 @@ impl NetlistEdit for Chip {
         unimplemented!()
     }
 
-    /// Create a new net in the `parent` circuit.
     fn create_net(&mut self, parent: &CellId, name: Option<Self::NameType>) -> NetId {
         Chip::create_net(self, parent, name)
     }
@@ -1631,17 +1621,14 @@ impl NetlistEdit for Chip {
         Chip::rename_net(self, parent_circuit, net_id, new_name)
     }
 
-    /// Disconnect all connected terminals and remove the net.
     fn remove_net(&mut self, net: &NetId) {
         Chip::remove_net(self, net)
     }
 
-    /// Connect the pin to a net.
     fn connect_pin(&mut self, pin: &PinId, net: Option<NetId>) -> Option<NetId> {
         Chip::connect_pin(self, pin, net)
     }
 
-    /// Connect the pin to a net.
     fn connect_pin_instance(&mut self, pin: &PinInstId, net: Option<NetId>) -> Option<Self::NetId> {
         Chip::connect_pin_instance(self, pin, net)
     }
@@ -1742,7 +1729,7 @@ impl<C: CoordinateType> Shapes<C> {
     //     self.id
     // }
 
-    /// Iterate over all geometric shapes in this collection.
+    /// Iterate over all shapes in this container.
     pub fn each_shape(&self) -> impl Iterator<Item=&Shape<C>> {
         self.shapes.values()
     }
@@ -1775,12 +1762,10 @@ impl HierarchyBase for Chip<Coord> {
     type CellId = CellId;
     type CellInstId = CellInstId;
 
-    /// Create an empty netlist.
     fn new() -> Self {
         Chip::default()
     }
 
-    /// Find a circuit by its name.
     fn cell_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
         where Self::NameType: Borrow<S> {
         Chip::circuit_by_name(self, name)
@@ -1812,7 +1797,6 @@ impl HierarchyBase for Chip<Coord> {
         self.circuits.keys().copied().for_each(f)
     }
 
-    /// Iterate over all circuits.
     fn each_cell(&self) -> Box<dyn Iterator<Item=CellId> + '_> {
         Box::new(self.circuits.keys().copied())
     }
@@ -1846,7 +1830,6 @@ impl HierarchyBase for Chip<Coord> {
         Box::new(self.circuit(circuit).dependent_circuits.keys().copied())
     }
 
-    /// Count all cells that are directly dependent on `cell`, i.e. contain an instance of `cell`.
     fn num_dependent_cells(&self, cell: &Self::CellId) -> usize {
         self.circuit(cell).dependent_circuits.len()
     }
@@ -1879,17 +1862,14 @@ impl HierarchyBase for Chip<Coord> {
     //     self.circuits.len()
     // }
 
-    /// Get a property of the top-level chip data structure..
     fn get_chip_property(&self, key: &Self::NameType) -> Option<PropertyValue> {
         self.properties.get(key).cloned()
     }
 
-    /// Get a property of a cell.
     fn get_cell_property(&self, cell: &Self::CellId, key: &Self::NameType) -> Option<PropertyValue> {
         self.circuit(cell).properties.get(key).cloned()
     }
 
-    /// Get a property of a cell instance.
     fn get_cell_instance_property(&self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
         self.circuit_inst(inst).properties.get(key).cloned()
     }
@@ -1955,7 +1935,6 @@ impl LayoutBase for Chip<Coord> {
         self.circuit_inst(cell_inst).get_transform().clone()
     }
 
-    /// Get a property of a shape.
     fn get_shape_property(&mut self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
         let (cell, layer) = self.shape_parents[shape].clone();
         self.circuit(&cell)
@@ -1967,7 +1946,7 @@ impl LayoutBase for Chip<Coord> {
 }
 
 impl HierarchyEdit for Chip<Coord> {
-    /// Create a new and empty cell template.
+
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
         // TODO
         self.create_circuit(name, vec![])
@@ -1977,7 +1956,6 @@ impl HierarchyEdit for Chip<Coord> {
         self.remove_circuit(cell_id)
     }
 
-    /// Create an instance of a cell.
     fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>) -> Self::CellInstId {
         let id = self.create_circuit_instance(parent_cell, template_cell, name);
         // self.circuit_inst_mut(&id).set_transform(SimpleTransform::identity());
@@ -2001,12 +1979,10 @@ impl HierarchyEdit for Chip<Coord> {
         self.properties.insert(key, value);
     }
 
-    /// Set a property of a cell.
     fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {
         self.circuit_mut(cell).properties.insert(key, value);
     }
 
-    /// Set a property of a cell instance.
     fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {
         self.circuit_inst_mut(inst).properties.insert(key, value);
     }

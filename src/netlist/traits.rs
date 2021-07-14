@@ -152,6 +152,15 @@ pub trait NetlistReferenceAccess: NetlistBase
     type CircuitInstRefType: CircuitInstRef;
 }
 
+/// Either a pin or a pin instance ID.
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
+pub enum TerminalId<N: NetlistBase> {
+    /// Terminal is a pin.
+    PinId(N::PinId),
+    /// Terminal is a pin instance.
+    PinInstId(N::PinInstId)
+}
+
 /// Most basic trait of a netlist.
 /// A netlist extends the `HierarchyBase` and hence is hierarchical.
 ///
@@ -161,8 +170,6 @@ pub trait NetlistBase: HierarchyBase {
     /// Pin instance identifier type.
     /// A pin instance is a pin of a circuit instance.
     type PinInstId: Eq + Hash + Clone + std::fmt::Debug;
-    /// Either a pin or a pin instance ID.
-    type TerminalId: Eq + Hash + Clone + std::fmt::Debug;
     /// Net identifier type.
     type NetId: Eq + Hash + Clone + std::fmt::Debug;
 

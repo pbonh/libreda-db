@@ -23,7 +23,11 @@
 #![cfg(test)]
 
 use libreda_db::chip::Chip;
-use libreda_db::prelude::{HierarchyEdit, HierarchyBase, LayoutBase, LayoutEdit, NetlistBase, NetlistEdit, L2NBase, L2NEdit, Direction};
+use libreda_db::prelude::{HierarchyEdit, HierarchyBase,
+                          // LayoutBase, LayoutEdit,
+                          NetlistBase, NetlistEdit,
+                          // L2NBase, L2NEdit,
+                          Direction};
 use itertools::{Itertools};
 
 #[test]

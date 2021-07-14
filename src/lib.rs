@@ -17,19 +17,56 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-//! This crate is a database for VLSI physical design. The core components are data structures for efficient
-//! representation of geometries and circuit netlists for chip layouts.
+
+//! This crate is a database for VLSI physical design. The core components are traits that define
+//! how netlist and layouts can be accessed and modified. Additionally the crate provides default
+//! implementations of those traits for representation of chip layouts and netlists.
 //!
 //! # Core parts
 //!
-//! * Two dimensional geometrical primitives (implemented by the [`iron_shapes`] crate)
-//! * [`Netlist`]s
+//! An important part of this crate are trait definitions that describe the access methods
+//! of cell hierarchies, netlists and layouts. The idea is that most algorithms should not be implemented
+//! for concrete types but for this traits. For instance an algorithm that analyzes a netlist without looking at the layout
+//! might be implemented for all types that implement the [`NetlistBase`] trait. In many
+//! cases this allows to be agnostic of the actual netlist implementation. Hence the algorithm implementation
+//! might be more portable.
+//!
+//! A fundamental idea is that all things (cells, instances, pins, nets, shapes, etc.) have unique
+//! identifiers. The type of the identifiers is generically defined as an associated type of the traits.
+//! In practice the identifiers might be for example integers but they can also some sort of smart pointer.
+//!
+//! * [`HierarchyBase`] - traverse cell hierarchies
+//! * [`HierarchyEdit`] - edit cell hierarchies
+//! * [`NetlistBase`] - traverse netlists
+//! * [`NetlistEdit`] - edit netlists
+//! * [`LayoutBase`] - access layout shapes
+//! * [`LayoutEdit`] - edit layout shapes
+//! * [`L2NBase`] - access the links between layout shapes and netlist
+//! * [`L2NEdit`] - edit the links between layout shapes and netlists
+//! * [`Netlist`]
 //! * [`Layout`]
 //!
+//! The [`Chip`] struct implements the above traits and hence can be used as a default data base structure.
+//!
+//! # Input/output
+//! Reading and writing data base structures is generally left to other crates such as `libreda-oasis`,
+//! `libreda-lefdef`, ...
+//!
+//! # Geometric primitives
+//! Two dimensional geometrical primitives (polygons, rectangles, etc.) are re-exported from the [`iron_shapes`] crate.
+//!
 //! [`iron_shapes`]: iron_shapes
+//! [`HierarchyBase`]: traits::HierarchyBase
+//! [`HierarchyEdit`]: traits::HierarchyEdit
+//! [`NetlistBase`]: netlist::traits::NetlistBase
+//! [`NetlistEdit`]: netlist::traits::NetlistEdit
+//! [`LayoutBase`]: netlist::traits::NetlistBase
+//! [`LayoutEdit`]: netlist::traits::NetlistEdit
+//! [`L2NBase`]: traits::L2NBase
+//! [`L2NEdit`]: traits::L2NEdit
 //! [`Netlist`]: netlist
-//! [`RcNetlist`]: netlist::rc_netlist::rc_netlist::RcNetlist
 //! [`Layout`]: layout
+//! [`Chip`]: chip::Chip
 
 // Enforce documentation of the public API.
 #![deny(missing_docs)]

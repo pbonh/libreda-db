@@ -1,6 +1,6 @@
 [package]
 name = "libreda-db"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Thomas Kramer <code@tkramer.ch>"]
 edition = "2018"
 license = "AGPL-3.0"
@@ -15,7 +15,6 @@ repository = "https://codeberg.org/libreda/libreda-db"
 log = "0.4"
 itertools = "0.10.0"
 num-traits = "0.2"
-genawaiter = { version = "0.99.1", default-features = false }
 iron-shapes = { version = "0.0.5", path = "../iron-shapes", features = ["serde"] }
 serde = { version = "1", optional = true, features = ["derive", "rc"] }
 fnv = "1.0.7" # Fast hashing for small keys.

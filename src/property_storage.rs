@@ -68,6 +68,12 @@ impl From<&Rc<String>> for PropertyValue {
     }
 }
 
+impl From<&str> for PropertyValue {
+    fn from(v: &str) -> Self {
+        PropertyValue::String(Rc::new(v.to_string()))
+    }
+}
+
 impl From<Vec<u8>> for PropertyValue {
     fn from(v: Vec<u8>) -> Self {
         PropertyValue::Bytes(v)

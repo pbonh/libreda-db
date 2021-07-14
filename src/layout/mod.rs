@@ -29,13 +29,9 @@
 
 
 pub mod prelude;
-pub mod types;
-pub mod shape_collection;
-pub mod cell;
-pub mod cell_instance;
+
 pub mod io;
-pub mod layout;
-pub mod repetition;
-pub mod errors;
+
 pub mod traits;
 pub mod algorithms;
+pub mod types;

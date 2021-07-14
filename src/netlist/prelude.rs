@@ -22,5 +22,4 @@
 
 pub use super::direction::*;
 pub use super::io::*;
-pub use super::rc_netlist::prelude::*;
 pub use super::traits::*;

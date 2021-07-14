@@ -17,15 +17,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 //! The `prelude` helps to import most commonly used modules.
 
 pub use iron_shapes::prelude::*;
 pub use super::traits::*;
-pub use super::cell::*;
-pub use super::cell_instance::*;
-pub use super::errors::*;
-pub use crate::index::*;
 pub use super::io::*;
-pub use super::layout::*;
-pub use super::shape_collection::*;
 pub use super::types::*;

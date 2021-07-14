@@ -20,19 +20,22 @@
 
 //! Container structs for user defined properties.
 
-// use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::borrow::Borrow;
 use std::convert::TryInto;
 use std::rc::Rc;
+use crate::rc_string::RcString;
+
+// trait AnyValue: Any + Clone + std::fmt::Debug {}
 
 /// Property value type.
 /// Properties can hold different types that are encapsulated in this enum.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum PropertyValue {
     /// Property is a string.
-    String(Rc<String>),
+    String(RcString),
     /// Property is a byte string.
     Bytes(Vec<u8>),
     /// Property is a signed integer.
@@ -42,7 +45,66 @@ pub enum PropertyValue {
     /// Property is a float.
     Float(f64),
     // /// Dynamically typed value.
-    // Any(Box<dyn Any>),
+    // Any(Box<dyn AnyValue>),
+}
+
+
+impl PropertyValue {
+    /// Try to get a string value.
+    pub fn get_string(&self) -> Option<RcString> {
+        match self {
+            PropertyValue::String(s) => Some(s.clone()),
+            _ => None
+        }
+    }
+
+    /// Try to get a `&str` value. Works for `String` property values.
+    pub fn get_str(&self) -> Option<&str> {
+        match self {
+            PropertyValue::String(s) => Some(s.as_str()),
+            _ => None
+        }
+    }
+
+    /// Try to get a byte string value.
+    pub fn get_bytes(&self) -> Option<&Vec<u8>> {
+        match self {
+            PropertyValue::Bytes(s) => Some(s),
+            _ => None
+        }
+    }
+
+    /// Try to get a float value.
+    pub fn get_float(&self) -> Option<f64> {
+        match self {
+            PropertyValue::Float(v) => Some(*v),
+            _ => None
+        }
+    }
+
+    /// Try to get an i32 value.
+    pub fn get_sint(&self) -> Option<i32> {
+        match self {
+            PropertyValue::SInt(v) => Some(*v),
+            _ => None
+        }
+    }
+
+    /// Try to get an i32 value.
+    pub fn get_uint(&self) -> Option<u32> {
+        match self {
+            PropertyValue::UInt(v) => Some(*v),
+            _ => None
+        }
+    }
+
+    // /// Try to get a dynamically typed value.
+    // pub fn get_any(&self) -> Option<&Box<dyn AnyValue>> {
+    //     match self {
+    //         PropertyValue::Any(v) => Some(v),
+    //         _ => None
+    //     }
+    // }
 }
 
 // pub enum PropertyKey {
@@ -52,25 +114,25 @@ pub enum PropertyValue {
 
 impl From<String> for PropertyValue {
     fn from(v: String) -> Self {
-        PropertyValue::String(Rc::new(v))
+        PropertyValue::String(v.into())
     }
 }
 
 impl From<Rc<String>> for PropertyValue {
     fn from(v: Rc<String>) -> Self {
-        PropertyValue::String(v)
+        PropertyValue::String(v.into())
     }
 }
 
 impl From<&Rc<String>> for PropertyValue {
     fn from(v: &Rc<String>) -> Self {
-        PropertyValue::String(v.clone())
+        PropertyValue::String(v.into())
     }
 }
 
 impl From<&str> for PropertyValue {
     fn from(v: &str) -> Self {
-        PropertyValue::String(Rc::new(v.to_string()))
+        PropertyValue::String(v.into())
     }
 }
 
@@ -130,6 +192,7 @@ impl From<f64> for PropertyValue {
 
 /// Look-up table for property values.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PropertyStore<K>
     where K: Hash + Eq {
     content: HashMap<K, PropertyValue>
@@ -171,7 +234,7 @@ impl<K: Hash + Eq> PropertyStore<K> {
 
     /// Get a string property value by key.
     /// If the property value is not a string `None` is returned.
-    pub fn get_string<Q: ?Sized>(&self, key: &Q) -> Option<&Rc<String>>
+    pub fn get_string<Q: ?Sized>(&self, key: &Q) -> Option<&RcString>
         where K: Borrow<Q>,
               Q: Eq + Hash {
         self.get(key)
@@ -210,7 +273,7 @@ pub trait WithProperties {
 
     /// Get a string property value by key.
     /// If the property value is not a string `None` is returned.
-    fn property_str<Q: ?Sized>(&self, key: &Q) -> Option<Rc<String>>
+    fn property_str<Q: ?Sized>(&self, key: &Q) -> Option<RcString>
         where Self::Key: Borrow<Q>,
               Q: Eq + Hash {
         self.with_properties(|p|

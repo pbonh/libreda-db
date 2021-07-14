@@ -44,13 +44,14 @@ use crate::rc_string::RcString;
 use std::fmt::Debug;
 use std::ops::Deref;
 
-use crate::property_storage::PropertyStore;
+use crate::property_storage::{PropertyStore, PropertyValue};
 use crate::layout::types::{LayerInfo};
 
 // Use an alternative hasher that has better performance for integer keys.
 use fnv::{FnvHashMap, FnvHashSet};
 
 use crate::prelude::{TryBoundingBox};
+use num_traits::One;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -289,6 +290,8 @@ pub struct CircuitInst<C = Coord, U = ()>
     template_circuit_id: CellId,
     /// The ID of the parent circuit where this instance lives in.
     parent_circuit_id: CellId,
+    /// Properties related to this instance.
+    properties: PropertyStore<RcString>,
 
     /// User-defined data.
     user_data: U,
@@ -691,7 +694,7 @@ impl<'a> CircuitInstanceRef<'a> {
 // // }
 
 /// A netlist is the container of circuits.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Chip<C: CoordinateType = Coord> {
     circuits: IntHashMap<CellId, Circuit<C>>,
     circuits_by_name: HashMap<RcString, CellId>,
@@ -699,6 +702,9 @@ pub struct Chip<C: CoordinateType = Coord> {
     nets: IntHashMap<NetId, Net>,
     pins: IntHashMap<PinId, Pin>,
     pin_instances: IntHashMap<PinInstId, PinInst>,
+
+    /// Top-level properties.
+    properties: PropertyStore<RcString>,
 
     id_counter_circuit: u32,
     id_counter_circuit_inst: usize,
@@ -726,6 +732,33 @@ pub struct Chip<C: CoordinateType = Coord> {
 
     /// Link to the shapes of a net.
     net_shapes: IntHashMap<NetId, IntHashSet<ShapeId>>,
+}
+
+impl<C: CoordinateType + One> Default for Chip<C> {
+    fn default() -> Self {
+        Self {
+            circuits: Default::default(),
+            circuits_by_name: Default::default(),
+            circuit_instances: Default::default(),
+            nets: Default::default(),
+            pins: Default::default(),
+            pin_instances: Default::default(),
+            properties: Default::default(),
+            id_counter_circuit: 0,
+            id_counter_circuit_inst: 0,
+            id_counter_pin: 0,
+            id_counter_pin_inst: 0,
+            id_counter_net: 0,
+            dbu: C::one(),
+            layer_index_generator: Default::default(),
+            layers_by_name: Default::default(),
+            layers_by_index_datatype: Default::default(),
+            layer_info: Default::default(),
+            shape_index_generator: Default::default(),
+            shape_parents: Default::default(),
+            net_shapes: Default::default()
+        }
+    }
 }
 
 impl Chip<Coord> {
@@ -877,6 +910,7 @@ impl Chip<Coord> {
             name: name.clone(),
             template_circuit_id: *circuit_template,
             parent_circuit_id: *parent,
+            properties: Default::default(),
             user_data: (),
             pins: pins,
             transform: Default::default(),
@@ -1844,6 +1878,22 @@ impl HierarchyBase for Chip<Coord> {
     // fn num_circuits(&self) -> usize {
     //     self.circuits.len()
     // }
+
+    /// Get a property of the top-level chip data structure..
+    fn get_chip_property(&self, key: &Self::NameType) -> Option<PropertyValue> {
+        self.properties.get(key).cloned()
+    }
+
+    /// Get a property of a cell.
+    fn get_cell_property(&self, cell: &Self::CellId, key: &Self::NameType) -> Option<PropertyValue> {
+        self.circuit(cell).properties.get(key).cloned()
+    }
+
+    /// Get a property of a cell instance.
+    fn get_cell_instance_property(&self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
+        self.circuit_inst(inst).properties.get(key).cloned()
+    }
+
 }
 
 impl LayoutBase for Chip<Coord> {
@@ -1904,6 +1954,16 @@ impl LayoutBase for Chip<Coord> {
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
         self.circuit_inst(cell_inst).get_transform().clone()
     }
+
+    /// Get a property of a shape.
+    fn get_shape_property(&mut self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
+        let (cell, layer) = self.shape_parents[shape].clone();
+        self.circuit(&cell)
+            .shapes_map[&layer]
+            .shape_properties.get(shape)
+            .and_then(|props| props.get(key))
+            .cloned()
+    }
 }
 
 impl HierarchyEdit for Chip<Coord> {
@@ -1936,6 +1996,21 @@ impl HierarchyEdit for Chip<Coord> {
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
         <Chip<Coord>>::rename_cell(self, cell, new_name)
     }
+
+    fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {
+        self.properties.insert(key, value);
+    }
+
+    /// Set a property of a cell.
+    fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {
+        self.circuit_mut(cell).properties.insert(key, value);
+    }
+
+    /// Set a property of a cell instance.
+    fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {
+        self.circuit_inst_mut(inst).properties.insert(key, value);
+    }
+
 }
 
 impl LayoutEdit for Chip<Coord> {
@@ -2030,6 +2105,17 @@ impl LayoutEdit for Chip<Coord> {
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
         self.circuit_inst_mut(cell_inst).set_transform(tf)
     }
+
+    fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {
+        let (cell, layer) = self.shape_parents[shape].clone();
+        self.circuit_mut(&cell)
+            .shapes_map.get_mut(&layer).expect("Layer not found.")
+            .shape_properties.entry(shape.clone())
+            .or_insert(Default::default())
+            .insert(key, value);
+    }
+
+
 }
 
 impl L2NBase for Chip<Coord> {

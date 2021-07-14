@@ -234,17 +234,17 @@ pub trait HierarchyBase {
 
 
     /// Get a property of the top-level chip data structure..
-    fn get_chip_property(&mut self, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_chip_property(&self, key: &Self::NameType) -> Option<PropertyValue> {
         None
     }
 
     /// Get a property of a cell.
-    fn get_cell_property(&mut self, cell: &Self::CellId, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_cell_property(&self, cell: &Self::CellId, key: &Self::NameType) -> Option<PropertyValue> {
         None
     }
 
     /// Get a property of a cell instance.
-    fn get_cell_instance_property(&mut self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_cell_instance_property(&self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
         None
     }
 }

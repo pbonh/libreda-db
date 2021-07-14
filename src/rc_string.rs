@@ -104,6 +104,12 @@ impl From<Rc<String>> for RcString {
     }
 }
 
+impl From<&Rc<String>> for RcString {
+    fn from(string: &Rc<String>) -> Self {
+        Self { string: string.clone() }
+    }
+}
+
 impl From<&str> for RcString {
     fn from(s: &str) -> Self {
         Self::new(s.to_string())

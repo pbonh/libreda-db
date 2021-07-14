@@ -152,13 +152,13 @@ pub trait NetlistReferenceAccess: NetlistBase
     type CircuitInstRefType: CircuitInstRef;
 }
 
-/// Either a pin or a pin instance ID.
+/// A terminal is a generalization of pins and pin instances.
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
-pub enum TerminalId<N: NetlistBase> {
+pub enum TerminalId<PinId, PinInstId> {
     /// Terminal is a pin.
-    PinId(N::PinId),
+    PinId(PinId),
     /// Terminal is a pin instance.
-    PinInstId(N::PinInstId)
+    PinInstId(PinInstId)
 }
 
 /// Most basic trait of a netlist.
@@ -207,6 +207,14 @@ pub trait NetlistBase: HierarchyBase {
     /// Get the external net attached to this pin instance.
     fn net_of_pin_instance(&self, pin_instance: &Self::PinInstId) -> Option<Self::NetId>;
 
+    /// Get the net that is attached to this terminal.
+    fn net_of_terminal(&self, terminal: &TerminalId<Self::PinId, Self::PinInstId>) -> Option<Self::NetId> {
+        match terminal {
+            TerminalId::PinId(p) => self.net_of_pin(p),
+            TerminalId::PinInstId(p) => self.net_of_pin_instance(p),
+        }
+    }
+
     /// Get the net of the logical constant zero.
     fn net_zero(&self, parent_circuit: &Self::CellId) -> Self::NetId;
 
@@ -237,7 +245,6 @@ pub trait NetlistBase: HierarchyBase {
         Box::new(self.each_pin_vec(circuit).into_iter())
     }
 
-
     /// Call a function for each pin instance of the circuit instance.
     fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F) where F: FnMut(Self::PinInstId) -> ();
 
@@ -252,7 +259,6 @@ pub trait NetlistBase: HierarchyBase {
     fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CellInstId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_vec(circuit_instance).into_iter())
     }
-
 
     /// Iterate over all external nets connected to the circuit instance.
     /// A net might appear more than once.
@@ -341,6 +347,24 @@ pub trait NetlistBase: HierarchyBase {
     /// Iterate over all pins of a net.
     fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_of_net_vec(net).into_iter())
+    }
+
+    /// Call a function for each terminal (pins and pin instances) connected to this net.
+    fn for_each_terminal_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(TerminalId<Self::PinId, Self::PinInstId>) -> () {
+        self.for_each_pin_of_net(net, |p| f(TerminalId::PinId(p)));
+        self.for_each_pin_instance_of_net(net, |p| f(TerminalId::PinInstId(p)));
+    }
+
+    /// Get a `Vec` with all terminal IDs (pins and pin instances) connected to this net.
+    fn each_terminal_of_net_vec(&self, net: &Self::NetId) -> Vec<TerminalId<Self::PinId, Self::PinInstId>> {
+        let mut v = Vec::new();
+        self.for_each_terminal_of_net(net, |c| v.push(c.clone()));
+        v
+    }
+
+    /// Iterate over all terminals (pins and pin instances) of a net.
+    fn each_terminal_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=TerminalId<Self::PinId, Self::PinInstId>> + 'a> {
+        Box::new(self.each_terminal_of_net_vec(net).into_iter())
     }
 
     /// Visit all circuit instances connected to this net.

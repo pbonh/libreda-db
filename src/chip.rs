@@ -1503,7 +1503,7 @@ impl NetlistBase for Chip {
             .copied()
     }
 
-    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
+    fn parent_cell_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
         self.pin(pin).circuit
     }
 

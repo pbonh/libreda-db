@@ -153,12 +153,22 @@ pub trait NetlistReferenceAccess: NetlistBase
 }
 
 /// A terminal is a generalization of pins and pin instances.
-#[derive(Eq, PartialEq, Hash, Clone, Debug)]
-pub enum TerminalId<PinId, PinInstId> {
+#[derive(Eq, PartialEq, Hash, Debug)]
+pub enum TerminalId<N: NetlistBase + ?Sized> {
     /// Terminal is a pin.
-    PinId(PinId),
+    PinId(N::PinId),
     /// Terminal is a pin instance.
-    PinInstId(PinInstId)
+    PinInstId(N::PinInstId),
+}
+
+impl<N: NetlistBase + ?Sized> Clone for TerminalId<N>
+    where N::PinId: Clone, N::PinInstId: Clone {
+    fn clone(&self) -> Self {
+        match self {
+            TerminalId::PinId(p) => Self::PinId(p.clone()),
+            TerminalId::PinInstId(p) => Self::PinInstId(p.clone()),
+        }
+    }
 }
 
 /// Most basic trait of a netlist.
@@ -188,7 +198,7 @@ pub trait NetlistBase: HierarchyBase {
         where Self::NameType: Borrow<N>;
 
     /// Get the ID of the parent circuit of this pin.
-    fn parent_circuit_of_pin(&self, pin: &Self::PinId) -> Self::CellId;
+    fn parent_cell_of_pin(&self, pin: &Self::PinId) -> Self::CellId;
 
     /// Get the ID of the circuit instance that holds this pin instance.
     fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CellInstId;
@@ -208,7 +218,7 @@ pub trait NetlistBase: HierarchyBase {
     fn net_of_pin_instance(&self, pin_instance: &Self::PinInstId) -> Option<Self::NetId>;
 
     /// Get the net that is attached to this terminal.
-    fn net_of_terminal(&self, terminal: &TerminalId<Self::PinId, Self::PinInstId>) -> Option<Self::NetId> {
+    fn net_of_terminal(&self, terminal: &TerminalId<Self>) -> Option<Self::NetId> {
         match terminal {
             TerminalId::PinId(p) => self.net_of_pin(p),
             TerminalId::PinInstId(p) => self.net_of_pin_instance(p),
@@ -349,21 +359,23 @@ pub trait NetlistBase: HierarchyBase {
         Box::new(self.each_pin_instance_of_net_vec(net).into_iter())
     }
 
-    /// Call a function for each terminal (pins and pin instances) connected to this net.
-    fn for_each_terminal_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(TerminalId<Self::PinId, Self::PinInstId>) -> () {
+    /// Call a function for each terminal connected to this net.
+    fn for_each_terminal_of_net<F>(&self, net: &Self::NetId, mut f: F)
+        where F: FnMut(TerminalId<Self>) -> () {
         self.for_each_pin_of_net(net, |p| f(TerminalId::PinId(p)));
         self.for_each_pin_instance_of_net(net, |p| f(TerminalId::PinInstId(p)));
     }
 
-    /// Get a `Vec` with all terminal IDs (pins and pin instances) connected to this net.
-    fn each_terminal_of_net_vec(&self, net: &Self::NetId) -> Vec<TerminalId<Self::PinId, Self::PinInstId>> {
+    /// Get a `Vec` with all terminal IDs connected to this net.
+    fn each_terminal_of_net_vec(&self, net: &Self::NetId) -> Vec<TerminalId<Self>> {
         let mut v = Vec::new();
         self.for_each_terminal_of_net(net, |c| v.push(c.clone()));
         v
     }
 
-    /// Iterate over all terminals (pins and pin instances) of a net.
-    fn each_terminal_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=TerminalId<Self::PinId, Self::PinInstId>> + 'a> {
+    /// Iterate over all terminals of a net.
+    fn each_terminal_of_net<'a>(&'a self, net: &Self::NetId)
+                                -> Box<dyn Iterator<Item=TerminalId<Self>> + 'a> {
         Box::new(self.each_terminal_of_net_vec(net).into_iter())
     }
 
@@ -461,7 +473,6 @@ pub trait NetlistBase: HierarchyBase {
 
 /// Trait for netlists that support editing.
 pub trait NetlistEdit: NetlistBase + HierarchyEdit {
-
     /// Create a new pin in this circuit.
     /// Also adds the pin to all instances of the circuit.
     fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId;
@@ -502,6 +513,22 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     /// Returns the old connected net, if any.
     fn disconnect_pin_instance(&mut self, pin_instance: &Self::PinInstId) -> Option<Self::NetId> {
         self.connect_pin_instance(pin_instance, None)
+    }
+
+
+    /// Connect a terminal to a net.
+    /// Returns the old connected net, if any.
+    fn connect_terminal(&mut self, terminal: &TerminalId<Self>, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        match terminal {
+            TerminalId::PinId(p) => self.connect_pin(p, net),
+            TerminalId::PinInstId(p) => self.connect_pin_instance(p, net),
+        }
+    }
+
+    /// Disconnect the terminal from any connected net.
+    /// Returns the old connected net, if any.
+    fn disconnect_terminal(&mut self, terminal: &TerminalId<Self>) -> Option<Self::NetId> {
+        self.connect_terminal(terminal, None)
     }
 
     /// Take all terminals that are connected to `old_net` and connect them to `new_net` instead.
@@ -614,7 +641,7 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
                 None
             };
             let new_inst = self.create_cell_instance(&parent_circuit, &sub_template,
-                                                        new_name.map(|n| n.into()));
+                                                     new_name.map(|n| n.into()));
 
             // Re-connect pins to copies of the original nets.
             // Loop over old/new pin instances.

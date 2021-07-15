@@ -64,6 +64,8 @@ pub trait LayoutBase: HierarchyBase {
     fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>>;
 
     /// Compute the bounding box of the cell over all layers.
+    /// The bounding box is not defined if the cell is empty. In this
+    /// case return `None`.
     fn bounding_box(&self, cell: &Self::CellId) -> Option<Rect<Self::Coord>> {
         self.each_layer()
             .map(|layer| self.bounding_box_per_layer(cell, &layer))
@@ -83,7 +85,7 @@ pub trait LayoutBase: HierarchyBase {
 
     /// Access a shape by its ID.
     fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R
-        where F: FnMut(&Geometry<Self::Coord>) -> R;
+        where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R;
 
     /// Call a function `f` for each shape of this cell and its sub cells.
     /// Along to the geometric shape `f` also gets a transformation as argument.

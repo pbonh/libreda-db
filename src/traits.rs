@@ -94,23 +94,11 @@ pub trait HierarchyBase {
     fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_cell: &Self::CellId, name: &N) -> Option<Self::CellInstId>
         where Self::NameType: Borrow<N>;
 
-    // /// Iterate over all cells.
-    // fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
-
     /// Get the name of the cell.
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType;
 
     /// Get the name of the cell instance.
     fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType>;
-
-    // /// Iterate over all child instance in a cell.
-    // fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>;
-
-    // /// Iterate over all cells that contain a child of type `cell`.
-    // fn each_dependent_cell(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
-    //
-    // /// Iterate over all cells types that are instantiated in this `cell`.
-    // fn each_cell_dependency(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + '_>;
 
     /// Get the ID of the parent cell of this instance.
     fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
@@ -226,13 +214,6 @@ pub trait HierarchyBase {
     /// Get the number of cell templates.
     fn num_cells(&self) -> usize;
 
-    // /// Get the number of references that point to this cell, i.e. the number of
-    // /// instances of this cell.
-    // fn num_references(&self, cell: &Self::CellId) -> usize {
-    //     self.each_reference(cell).count()
-    // }
-
-
     /// Get a property of the top-level chip data structure..
     fn get_chip_property(&self, key: &Self::NameType) -> Option<PropertyValue> {
         None
@@ -294,7 +275,7 @@ pub trait HierarchyEdit: HierarchyBase {
     /// let inst2 = chip.create_cell_instance(&top, &sub, None); // Create unnamed instance.
     ///
     /// assert_eq!(chip.num_child_instances(&top), 2);
-    /// assert_eq!(chip.num_references(&sub), 2);
+    /// assert_eq!(chip.num_cell_references(&sub), 2);
     /// ```
     fn create_cell_instance(&mut self,
                             parent_cell: &Self::CellId,
@@ -314,12 +295,12 @@ pub trait HierarchyEdit: HierarchyBase {
     /// let inst2 = chip.create_cell_instance(&top, &sub, None); // Create unnamed instance.
     ///
     /// assert_eq!(chip.num_child_instances(&top), 2);
-    /// assert_eq!(chip.num_references(&sub), 2);
+    /// assert_eq!(chip.num_cell_references(&sub), 2);
     ///
     /// chip.remove_cell_instance(&inst2);
     ///
     /// assert_eq!(chip.num_child_instances(&top), 1);
-    /// assert_eq!(chip.num_references(&sub), 1);
+    /// assert_eq!(chip.num_cell_references(&sub), 1);
     /// ```
     fn remove_cell_instance(&mut self, inst: &Self::CellInstId);
 

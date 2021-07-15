@@ -1,14 +1,15 @@
 
-use std::fs::File;
-use std::io::Read;
+// use std::fs::File;
+// use std::io::Read;
 
-/// Read a whole file into a byte vector.
-fn read_file(path: &str) -> Vec<u8> {
-    let mut f = File::open(path).unwrap();
-    let mut data = Vec::new();
-    f.read_to_end(&mut data).unwrap();
-    data
-}
+// /// Read a whole file into a byte vector.
+// fn read_file(path: &str) -> Vec<u8> {
+//     let mut f = File::open(path).unwrap();
+//     let mut data = Vec::new();
+//     f.read_to_end(&mut data).unwrap();
+//     data
+// }
+
 // GDS tests
 // #[test]
 // fn test_load_inverter_cell() {

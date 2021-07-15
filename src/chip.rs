@@ -37,6 +37,7 @@ use crate::prelude::{
     NetlistBase, NetlistEdit,
     LayoutBase, LayoutEdit,
     L2NBase, L2NEdit,
+    MapPointwise
 };
 
 use crate::netlist::direction::Direction;
@@ -1738,6 +1739,7 @@ impl<C: CoordinateType> Shapes<C> {
 impl<C: CoordinateType> TryBoundingBox<C> for Shapes<C> {
     fn try_bounding_box(&self) -> Option<Rect<C>> {
         // Compute the bounding box from scratch.
+
         self.each_shape()
             .fold(None, |bbox, shape| {
                 let bbox_new = shape.geometry.try_bounding_box();
@@ -1902,9 +1904,26 @@ impl LayoutBase for Chip<Coord> {
     }
 
     fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Coord>> {
-        self.circuit(cell)
+        // Compute the bounding box of the cell's own shapes.
+        let mut bbox = self.circuit(cell)
             .shapes(layer)
-            .and_then(|shapes| shapes.try_bounding_box())
+            .and_then(|shapes| shapes.try_bounding_box());
+        // Update the bounding box with the children cells.
+        self.for_each_cell_instance(cell, |i| {
+            let template = self.template_cell(&i);
+            let tf = self.get_transform(&i);
+            let child_bbox = self.bounding_box_per_layer(&template, layer)
+                // Transform the child bounding box to ther correct position.
+                .map(|b| b.transform(|p| tf.transform_point(p)));
+
+            bbox = match (bbox, child_bbox) {
+                (None, None) => None,
+                (Some(b), None) | (None, Some(b)) => Some(b),
+                (Some(a), Some(b)) => Some(a.add_rect(&b))
+            }
+        });
+
+        bbox
     }
 
     fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
@@ -1927,8 +1946,11 @@ impl LayoutBase for Chip<Coord> {
             });
     }
 
-    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, mut f: F) -> R where F: FnMut(&Geometry<Self::Coord>) -> R {
-        f(&self.shape(shape_id).geometry)
+    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, mut f: F) -> R
+        where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R {
+        let shape = self.shape(shape_id);
+        let (_, layer) = &self.shape_parents[shape_id];
+        f(layer, &shape.geometry)
     }
 
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {

@@ -35,3 +35,4 @@ pub mod io;
 pub mod traits;
 pub mod algorithms;
 pub mod types;
+pub mod util;

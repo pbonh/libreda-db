@@ -277,6 +277,25 @@ pub trait NetlistBase: HierarchyBase {
             .flat_map(move |pin_id| self.net_of_pin_instance(&pin_id)))
     }
 
+    /// Iterate over all external nets connected to the circuit instance.
+    /// A net might appear more than once.
+    fn for_each_external_net<F>(&self, circuit_instance: &Self::CellInstId, mut f: F)
+        where F: FnMut(Self::NetId) {
+        self.for_each_pin_instance(circuit_instance, |i| {
+            self.net_of_pin_instance(&i).iter()
+                .cloned()
+                .for_each(|n| f(n))
+        });
+    }
+
+    /// Get a vector of all external nets connected to the circuit instance.
+    /// A net might appear more than once.
+    fn each_external_net_vec(&self, circuit_instance: &Self::CellInstId) -> Vec<Self::NetId> {
+        let mut v = Vec::new();
+        self.for_each_external_net(circuit_instance, |n| v.push(n.clone()));
+        v
+    }
+
     /// Call a function for net of the circuit.
     fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::NetId) -> ();
 

@@ -29,6 +29,7 @@ use libreda_db::prelude::{HierarchyEdit, HierarchyBase,
                           // L2NBase, L2NEdit,
                           Direction};
 use itertools::{Itertools};
+use libreda_db::netlist::traits::TerminalId;
 
 #[test]
 fn test_create_circuit() {
@@ -172,10 +173,11 @@ fn test_connect_nets() {
     assert_eq!(chip.connect_pin_instance(&inst2_clk_pin, Some(top_clk.clone())), None);
     assert_eq!(chip.num_net_terminals(&top_clk), 3);
 
-    let top_clk_terminals = chip.terminals_for_net(&top_clk).collect_vec();
-    assert!(top_clk_terminals.contains(&top_pin_clk.into()));
-    assert!(top_clk_terminals.contains(&inst1_clk_pin.into()));
-    assert!(top_clk_terminals.contains(&inst2_clk_pin.into()));
+    let top_clk_terminals = chip.each_terminal_of_net(&top_clk).collect_vec();
+
+    assert!(top_clk_terminals.contains(&TerminalId::PinId(top_pin_clk)));
+    assert!(top_clk_terminals.contains(&TerminalId::PinInstId(inst1_clk_pin)));
+    assert!(top_clk_terminals.contains(&TerminalId::PinInstId(inst2_clk_pin)));
 
     // chip.connect_pin_instance(, Some(top_net1.clone()));
     // chip.connect_pin_instance(, Some(top_net2.clone()));

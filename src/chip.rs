@@ -1277,12 +1277,6 @@ impl Chip<Coord> {
         id
     }
 
-    /// Get all nets that are connected to the circuit instance.
-    fn circuit_inst_nets(&self, circuit_inst_id: &CellInstId) -> impl Iterator<Item=NetId> + '_ {
-        self.circuit_inst(circuit_inst_id).pins.iter()
-            .flat_map(move |p| self.pin_inst(p).net)
-    }
-
     /// Iterate over all pins connected to a net.
     fn pins_for_net(&self, net: &NetId) -> impl Iterator<Item=PinId> + '_ {
         self.net(net).pins.iter().copied()
@@ -1293,37 +1287,11 @@ impl Chip<Coord> {
         self.net(net).pin_instances.iter().copied()
     }
 
-    /// Iterate over all pins and pin instances connected to a net.
-    fn terminals_for_net(&self, net: &NetId) -> impl Iterator<Item=TerminalId> + '_ {
-        self.pins_for_net(net).map(|p| TerminalId::Pin(p))
-            .chain(self.pins_instances_for_net(net).map(|p| TerminalId::PinInst(p)))
-    }
-
-    /// Remove all unconnected nets.
-    /// Return number of purged nets.
-    fn purge_nets(&mut self) -> usize {
-        let unconnected: Vec<_> = self.nets.iter()
-            .filter(|(_, n)| n.pin_instances.len() + n.pins.len() == 0)
-            .map(|(&id, _)| id)
-            .collect();
-        let num = unconnected.len();
-        for net in unconnected {
-            self.remove_net(&net);
-        }
-        num
-    }
-
-
     /// Return number of top level circuits (roots of the circuit tree).
     pub fn top_circuit_count(&self) -> usize {
         self.circuits.values()
             .filter(|c| c.parents.len() == 0)
             .count()
-    }
-
-    /// Iterate through all nets that are defined in the netlist.
-    fn each_net(&self) -> impl Iterator<Item=NetId> + '_ {
-        self.nets.keys().copied()
     }
 
     /// Get a mutable reference to a shape struct by its ID.
@@ -1677,9 +1645,6 @@ fn test_create_populated_netlist() {
 
     netlist.connect_pin(&pins_top[0], Some(net_a));
     netlist.connect_pin(&pins_top[1], Some(net_b));
-
-    dbg!(&netlist);
-    dbg!(netlist.terminals_for_net(&net_a).collect_vec());
 
     assert_eq!(netlist.num_net_terminals(&net_a), 2);
     assert_eq!(netlist.num_net_terminals(&net_b), 2);

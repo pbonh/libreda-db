@@ -32,6 +32,12 @@ pub trait NetlistUtil: NetlistBase {
         net == &self.net_zero(&parent) || net == &self.net_one(&parent)
     }
 
+    /// Get all nets that are connected to the circuit instance.
+    fn nets_of_cell_instance(&self, inst: &Self::CellInstId) -> Box<dyn Iterator<Item=Self::NetId> + '_> {
+        Box::new(self.each_pin_instance(inst)
+            .flat_map(move |p| self.net_of_pin_instance(&p)))
+    }
+
 }
 
 impl<N: NetlistBase> NetlistUtil for N {}

@@ -946,7 +946,7 @@ impl Chip<Coord> {
 
 
     /// Remove a circuit instance after disconnecting it from the nets.
-    pub fn remove_circuit_instance(&mut self, circuit_inst_id: &CellInstId) {
+    fn remove_circuit_instance(&mut self, circuit_inst_id: &CellInstId) {
 
         // Remove the instance name.
         self.rename_cell_instance(circuit_inst_id, None);
@@ -992,7 +992,7 @@ impl Chip<Coord> {
 
 
     /// Create a new net in the `parent` circuit.
-    pub fn create_net(&mut self, parent: &CellId, name: Option<RcString>) -> NetId {
+    fn create_net(&mut self, parent: &CellId, name: Option<RcString>) -> NetId {
         assert!(self.circuits.contains_key(parent));
 
         let id = NetId(Self::next_id_counter_usize(&mut self.id_counter_net));
@@ -1014,7 +1014,7 @@ impl Chip<Coord> {
     }
 
     /// Change the name of the net.
-    pub fn rename_net(&mut self, parent_circuit: &CellId,
+    fn rename_net(&mut self, parent_circuit: &CellId,
                       net_id: &NetId, new_name: Option<RcString>) {
         assert_eq!(parent_circuit, &self.nets.get(net_id).expect("Net not found.").parent_id);
 
@@ -1047,7 +1047,7 @@ impl Chip<Coord> {
     }
 
     /// Disconnect all connected terminals and remove the net.
-    pub fn remove_net(&mut self, net: &NetId) {
+    fn remove_net(&mut self, net: &NetId) {
 
         // Remove all links from shapes to this net.
         let net_shapes = self.net_shapes.get(net)
@@ -1079,12 +1079,12 @@ impl Chip<Coord> {
     }
 
     /// Disconnect pin and return the ID of the net that was connected.
-    pub fn disconnect_pin(&mut self, pin: &PinId) -> Option<NetId> {
+    fn disconnect_pin(&mut self, pin: &PinId) -> Option<NetId> {
         self.connect_pin(pin, None)
     }
 
     /// Connect the pin to a net.
-    pub fn connect_pin(&mut self, pin: &PinId, net: Option<NetId>) -> Option<NetId> {
+    fn connect_pin(&mut self, pin: &PinId, net: Option<NetId>) -> Option<NetId> {
         if let Some(net) = net {
             // Sanity check.
             assert_eq!(self.pin(&pin).circuit, self.net(&net).parent_id,
@@ -1111,12 +1111,12 @@ impl Chip<Coord> {
     }
 
     /// Disconnect the pin instance and return the net to which it was connected.
-    pub fn disconnect_pin_instance(&mut self, pin: &PinInstId) -> Option<NetId> {
+    fn disconnect_pin_instance(&mut self, pin: &PinInstId) -> Option<NetId> {
         self.connect_pin_instance(pin, None)
     }
 
     /// Connect the pin to a net.
-    pub fn connect_pin_instance(&mut self, pin: &PinInstId, net: Option<NetId>) -> Option<NetId> {
+    fn connect_pin_instance(&mut self, pin: &PinInstId, net: Option<NetId>) -> Option<NetId> {
         if let Some(net) = net {
             assert_eq!(self.circuit_inst(&self.pin_inst(pin).circuit_inst).parent_circuit_id,
                        self.net(&net).parent_id, "Pin and net do not live in the same circuit.");
@@ -1147,7 +1147,7 @@ impl Chip<Coord> {
     }
 
     /// Get a fat circuit reference by its ID.
-    pub fn circuit_ref(&self, id: &CellId) -> CircuitRef {
+    fn circuit_ref(&self, id: &CellId) -> CircuitRef {
         CircuitRef {
             netlist: self,
             circuit: &self.circuits[id],
@@ -1160,12 +1160,12 @@ impl Chip<Coord> {
     }
 
     /// Get a reference to a circuit instance.
-    pub fn circuit_inst(&self, id: &CellInstId) -> &CircuitInst {
+    fn circuit_inst(&self, id: &CellInstId) -> &CircuitInst {
         &self.circuit_instances[id]
     }
 
     /// Get a mutable reference to a circuit instance.
-    pub fn circuit_inst_mut(&mut self, id: &CellInstId) -> &mut CircuitInst {
+    fn circuit_inst_mut(&mut self, id: &CellInstId) -> &mut CircuitInst {
         self.circuit_instances.get_mut(id).unwrap()
     }
 
@@ -1175,7 +1175,7 @@ impl Chip<Coord> {
     }
 
     /// Get a reference to a net by its ID.
-    pub fn net(&self, id: &NetId) -> &Net {
+    fn net(&self, id: &NetId) -> &Net {
         &self.nets[id]
     }
 
@@ -1185,14 +1185,14 @@ impl Chip<Coord> {
     }
 
     /// Get a fat reference to the net by its ID.
-    pub fn net_ref(&self, id: &NetId) -> NetRef {
+    fn net_ref(&self, id: &NetId) -> NetRef {
         let net = self.net(id);
         let parent_circuit = self.circuit_ref(&net.parent_id);
         NetRef::new(parent_circuit, net)
     }
 
     /// Get a reference to a pin by its ID.
-    pub fn pin(&self, id: &PinId) -> &Pin {
+    fn pin(&self, id: &PinId) -> &Pin {
         &self.pins[id]
     }
 
@@ -1202,7 +1202,7 @@ impl Chip<Coord> {
     }
 
     /// Get a reference to a pin instance by its ID.
-    pub fn pin_inst(&self, id: &PinInstId) -> &PinInst {
+    fn pin_inst(&self, id: &PinInstId) -> &PinInst {
         &self.pin_instances[id]
     }
 
@@ -1278,30 +1278,30 @@ impl Chip<Coord> {
     }
 
     /// Get all nets that are connected to the circuit instance.
-    pub fn circuit_inst_nets(&self, circuit_inst_id: &CellInstId) -> impl Iterator<Item=NetId> + '_ {
+    fn circuit_inst_nets(&self, circuit_inst_id: &CellInstId) -> impl Iterator<Item=NetId> + '_ {
         self.circuit_inst(circuit_inst_id).pins.iter()
             .flat_map(move |p| self.pin_inst(p).net)
     }
 
     /// Iterate over all pins connected to a net.
-    pub fn pins_for_net(&self, net: &NetId) -> impl Iterator<Item=PinId> + '_ {
+    fn pins_for_net(&self, net: &NetId) -> impl Iterator<Item=PinId> + '_ {
         self.net(net).pins.iter().copied()
     }
 
     /// Iterate over all pin instances connected to a net.
-    pub fn pins_instances_for_net(&self, net: &NetId) -> impl Iterator<Item=PinInstId> + '_ {
+    fn pins_instances_for_net(&self, net: &NetId) -> impl Iterator<Item=PinInstId> + '_ {
         self.net(net).pin_instances.iter().copied()
     }
 
     /// Iterate over all pins and pin instances connected to a net.
-    pub fn terminals_for_net(&self, net: &NetId) -> impl Iterator<Item=TerminalId> + '_ {
+    fn terminals_for_net(&self, net: &NetId) -> impl Iterator<Item=TerminalId> + '_ {
         self.pins_for_net(net).map(|p| TerminalId::Pin(p))
             .chain(self.pins_instances_for_net(net).map(|p| TerminalId::PinInst(p)))
     }
 
     /// Remove all unconnected nets.
     /// Return number of purged nets.
-    pub fn purge_nets(&mut self) -> usize {
+    fn purge_nets(&mut self) -> usize {
         let unconnected: Vec<_> = self.nets.iter()
             .filter(|(_, n)| n.pin_instances.len() + n.pins.len() == 0)
             .map(|(&id, _)| id)
@@ -1322,7 +1322,7 @@ impl Chip<Coord> {
     }
 
     /// Iterate through all nets that are defined in the netlist.
-    pub fn each_net(&self) -> impl Iterator<Item=NetId> + '_ {
+    fn each_net(&self) -> impl Iterator<Item=NetId> + '_ {
         self.nets.keys().copied()
     }
 

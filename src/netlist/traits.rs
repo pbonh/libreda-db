@@ -492,6 +492,11 @@ pub trait NetlistBase: HierarchyBase {
 
 /// Trait for netlists that support editing.
 pub trait NetlistEdit: NetlistBase + HierarchyEdit {
+
+    // /// Create a multi-bit port.
+    // /// Internally creates a pin for every bit of the port.
+    // fn create_bus(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction, width: usize) -> Vec<Self::PinId>;
+
     /// Create a new pin in this circuit.
     /// Also adds the pin to all instances of the circuit.
     fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId;
@@ -598,8 +603,14 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
 
         assert!(template != parent_circuit);
 
+
         // Mapping from old to new nets.
         let mut net_mapping: HashMap<Self::NetId, Self::NetId> = HashMap::new();
+
+        // Constant HIGH and LOW nets are special cases.
+        // Connect previous constant nets to the equivalent constant nets of the parent cell.
+        net_mapping.insert(self.net_zero(&template), self.net_zero(&parent_circuit));
+        net_mapping.insert(self.net_one(&template), self.net_one(&parent_circuit));
 
         // Get or create a new net as an equivalent of the old.
         let mut get_new_net = |netlist: &mut Self, old_net: &Self::NetId| -> Self::NetId {
@@ -668,6 +679,11 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
                 .zip(self.each_pin_instance(&new_inst))
                 .collect();
             for (old_pin, new_pin) in pin_mapping {
+
+                // Sanity check: Ordering of the pin instances in both cell instances must be consistent.
+                debug_assert_eq!(self.template_pin(&old_pin), self.template_pin(&new_pin),
+                "Unexpected pin ordering.");
+
                 // Get net on old pin.
                 if let Some(old_net) = self.net_of_pin_instance(&old_pin) {
                     let new_net = get_new_net(self, &old_net);
@@ -682,7 +698,8 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
             // First create a the mapping from inner nets to outer nets.
             // This is necessary for the case when multiple internal pins are connected to the same
             // internal net.
-            let net_replacement_mapping: HashMap<_, _> = self.each_pin_instance_vec(circuit_instance)
+            let net_replacement_mapping: Vec<_> =
+                self.each_pin_instance_vec(circuit_instance)
                 .into_iter()
                 .filter_map(|old_pin| {
                     let outer_old_net = self.net_of_pin_instance(&old_pin);

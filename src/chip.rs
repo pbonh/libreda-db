@@ -839,8 +839,8 @@ impl Chip<Coord> {
         self.circuits_by_name.insert(name, id);
 
         // Create LOW and HIGH nets.
-        let net_low = self.create_net(&id, None);
-        let net_high = self.create_net(&id, None);
+        let net_low = self.create_net(&id, Some("__LOW__".into()));
+        let net_high = self.create_net(&id, Some("__HIGH__".into()));
 
         let c = self.circuit_mut(&id);
         c.net_low = net_low;
@@ -1510,6 +1510,10 @@ impl NetlistBase for Chip {
 
     fn parent_of_pin_instance(&self, pin_inst: &Self::PinInstId) -> Self::CellInstId {
         self.pin_inst(pin_inst).circuit_inst
+    }
+
+    fn parent_cell_of_net(&self, net: &Self::NetId) -> Self::CellId {
+        self.nets[net].parent_id
     }
 
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {

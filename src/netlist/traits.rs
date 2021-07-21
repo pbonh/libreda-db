@@ -221,6 +221,10 @@ pub trait NetlistBase: HierarchyBase {
             .expect("No such pin found in this cell.")
     }
 
+
+    /// Get the ID of the parent circuit of this net.
+    fn parent_cell_of_net(&self, net: &Self::NetId) -> Self::CellId;
+
     /// Get the internal net attached to this pin.
     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId>;
 
@@ -765,9 +769,12 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     /// Delete all unconnected nets in this circuit.
     /// Return number of purged nets.
     fn purge_nets_in_circuit(&mut self, circuit_id: &Self::CellId) -> usize {
+        let high = self.net_one(circuit_id);
+        let low = self.net_zero(circuit_id);
         let mut unused = Vec::new();
         self.for_each_internal_net(circuit_id, |n| {
-            if self.num_net_terminals(&n) == 0 {
+            // Purge floating nets but keep the constant-value nets.
+            if self.num_net_terminals(&n) == 0 && n != high && n != low {
                 unused.push(n)
             }
         });

@@ -153,12 +153,22 @@ pub trait NetlistReferenceAccess: NetlistBase
 }
 
 /// A terminal is a generalization of pins and pin instances.
-#[derive(Eq, PartialEq, Hash, Debug)]
+#[derive(Eq, Hash, Debug)]
 pub enum TerminalId<N: NetlistBase + ?Sized> {
     /// Terminal is a pin.
     PinId(N::PinId),
     /// Terminal is a pin instance.
     PinInstId(N::PinInstId),
+}
+
+impl<N: NetlistBase + ?Sized> PartialEq for TerminalId<N> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::PinId(p1), Self::PinId(p2)) => p1 == p2,
+            (Self::PinInstId(p1), Self::PinInstId(p2)) => p1 == p2,
+            (_, _) => false
+        }
+    }
 }
 
 impl<N: NetlistBase + ?Sized> Clone for TerminalId<N>

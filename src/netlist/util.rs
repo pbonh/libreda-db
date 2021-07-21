@@ -42,4 +42,4 @@ pub trait NetlistEditUtil: NetlistEdit {
 
 }
 
-impl<N: NetlistEdit> NetlistEditUtil for N {}
+impl<N: NetlistEdit + ?Sized> NetlistEditUtil for N {}

@@ -230,6 +230,7 @@ pub trait HierarchyBase {
     }
 }
 
+
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
 pub trait HierarchyEdit: HierarchyBase {
 

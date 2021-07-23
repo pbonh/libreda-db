@@ -774,7 +774,8 @@ impl Chip<Coord> {
     /// # Panics
     /// Panics if the name already exists.
     pub fn rename_cell(&mut self, cell: &CellId, name: RcString) {
-        assert!(!self.circuits_by_name.contains_key(&name), "Cell with this name already exists.");
+        assert!(!self.circuits_by_name.contains_key(&name),
+                "Cell with this name already exists: {}", &name);
 
         // Remove old name.
         let old_name = &self.circuits[cell].name;
@@ -794,7 +795,7 @@ impl Chip<Coord> {
         let parent = self.parent_cell(inst);
         if let Some(name) = &name {
             assert!(!self.circuit(&parent).instances_by_name.contains_key(name),
-                    "Cell with this name already exists.");
+                    "Cell with this name already exists: {}", name);
         }
 
         // Remove old name.
@@ -811,7 +812,8 @@ impl Chip<Coord> {
 
     /// Create a new circuit template.
     pub fn create_circuit(&mut self, name: RcString, pins: Vec<(RcString, Direction)>) -> CellId {
-        assert!(!self.circuits_by_name.contains_key(&name), "Circuit with this name already exists.");
+        assert!(!self.circuits_by_name.contains_key(&name),
+                "Circuit with this name already exists: {}", &name);
         let id = CellId(Self::next_id_counter_u32(&mut self.id_counter_circuit));
 
         let circuit = Circuit {
@@ -2155,7 +2157,7 @@ impl L2NEdit for Chip<Coord> {
         // Remove the old link to the net.
         if let Some(previous_net) = &previous_net {
             assert!(self.net_mut(previous_net)
-                        .net_shapes.remove(shape_id), "net was not linked to the shape.");
+                        .net_shapes.remove(shape_id), "Net was not linked to the shape.");
         }
 
         // Return the previous net (got it by the above swap operation).

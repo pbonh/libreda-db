@@ -575,28 +575,29 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     /// This is a default implementation that can possibly be implemented more efficiently for a concrete
     /// netlist type.
     fn replace_net(&mut self, old_net: &Self::NetId, new_net: &Self::NetId) {
-        // Check that the nets live in this circuit.
-        // TODO:
-        // assert!(old_net.parent_circuit().ptr_eq(&self.self_reference()));
-        // assert!(new_net.parent_circuit().ptr_eq(&self.self_reference()));
-        // assert!(self.nets.borrow().contains_key(&old_net.id), "Old net does not exist in this circuit.");
-        // assert!(self.nets.borrow().contains_key(&new_net.id), "New net does not exist in this circuit.");
+        if old_net == new_net {
+            // Nothing needs to be done.
+        } else {
+            // Check that the nets live in this circuit.
+            assert_eq!(self.parent_cell_of_net(old_net), self.parent_cell_of_net(new_net),
+                       "Old net and new net must live in the same cell.");
 
-        // Get terminals connected to the old net.
-        let terminals: Vec<_> = self.each_pin_of_net(&old_net).collect();
-        // Connect each terminal to the new net.
-        for pin in terminals {
-            self.connect_pin(&pin, Some(new_net.clone()));
-        }
-        // Get terminals connected to the old net.
-        let terminals: Vec<_> = self.each_pin_instance_of_net(&old_net).collect();
-        // Connect each terminal to the new net.
-        for pin in terminals {
-            self.connect_pin_instance(&pin, Some(new_net.clone()));
-        }
+            // Get terminals connected to the old net.
+            let terminals: Vec<_> = self.each_pin_of_net(&old_net).collect();
+            // Connect each terminal to the new net.
+            for pin in terminals {
+                self.connect_pin(&pin, Some(new_net.clone()));
+            }
+            // Get terminals connected to the old net.
+            let terminals: Vec<_> = self.each_pin_instance_of_net(&old_net).collect();
+            // Connect each terminal to the new net.
+            for pin in terminals {
+                self.connect_pin_instance(&pin, Some(new_net.clone()));
+            }
 
-        // Remove the now unused old net.
-        self.remove_net(&old_net);
+            // Remove the now unused old net.
+            self.remove_net(&old_net);
+        }
     }
 
     /// Replace the circuit instance with its contents. Remove the circuit instance afterwards.
@@ -608,23 +609,15 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     ///
     /// The content of the circuit instance will be renamed by appending the names like a path.
     fn flatten_circuit_instance(&mut self, circuit_instance: &Self::CellInstId) {
-        // assert!(self.contains_instance(circuit_instance),
-        //         "Instance does not live in this circuit.");
 
         // Get the template circuit.
         let template = self.template_cell(circuit_instance);
         let parent_circuit = self.parent_cell(circuit_instance);
 
-        assert!(template != parent_circuit);
-
+        assert_ne!(template, parent_circuit, "Recursive instances are not allowed."); // Should not happen.
 
         // Mapping from old to new nets.
         let mut net_mapping: HashMap<Self::NetId, Self::NetId> = HashMap::new();
-
-        // Constant HIGH and LOW nets are special cases.
-        // Connect previous constant nets to the equivalent constant nets of the parent cell.
-        net_mapping.insert(self.net_zero(&template), self.net_zero(&parent_circuit));
-        net_mapping.insert(self.net_one(&template), self.net_one(&parent_circuit));
 
         // Get or create a new net as an equivalent of the old.
         let mut get_new_net = |netlist: &mut Self, old_net: &Self::NetId| -> Self::NetId {
@@ -659,6 +652,12 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
                 new_net
             }
         };
+
+
+        // Constant HIGH and LOW nets are special cases.
+        // Connect previous constant nets to the equivalent constant nets of the parent cell.
+        let new_net_zero = get_new_net(self, &self.net_zero(&template));
+        let new_net_one = get_new_net(self, &self.net_one(&template));
 
         // Copy all sub instances into this circuit.
         // And connect their pins to copies of the original nets.
@@ -709,33 +708,49 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
         // Connect the newly created sub-instances and nets to this circuit
         // according to the old connections to the instance which is about to be flattened.
         {
-            // First create a the mapping from inner nets to outer nets.
+            // First create the mapping from inner nets to outer nets.
             // This is necessary for the case when multiple internal pins are connected to the same
             // internal net.
-            let net_replacement_mapping: Vec<_> =
+            let mut net_replacement_mapping: HashMap<_, _> =
                 self.each_pin_instance_vec(circuit_instance)
                 .into_iter()
                 .filter_map(|old_pin| {
-                    let outer_old_net = self.net_of_pin_instance(&old_pin);
+                    let outer_net = self.net_of_pin_instance(&old_pin);
                     let inner_old_net = self.net_of_pin(&self.template_pin(&old_pin));
                     // If the pin was either not connected on the outside or not connected inside, nothing
                     // needs to be done.
-                    if let (Some(outer_net), Some(inner_old_net)) = (outer_old_net, inner_old_net) {
+                    if let (Some(outer_net), Some(inner_old_net)) = (outer_net, inner_old_net) {
                         // Get the new copy of the inner net.
                         let inner_new_net = get_new_net(self, &inner_old_net);
                         // Attach the new inner net to the outer net (by replacement).
-                        Some((inner_new_net, outer_net))
+                        if inner_new_net != outer_net {
+                            Some((inner_new_net, outer_net))
+                        } else {
+                            // If the nets are the same, no replacement is necessary.
+                            // This can happen for LOW and HIGH nets, since the mapping
+                            // is already correct.
+                            None
+                        }
                     } else {
                         // Inner and outer pin were not connected, nothing needs to be done.
                         None
                     }
                 })
                 .collect();
+
+            // Handle special cases: LOW and HIGH nets.
+            net_replacement_mapping.insert(new_net_zero, self.net_zero(&parent_circuit));
+            net_replacement_mapping.insert(new_net_one, self.net_one(&parent_circuit));
+
             // Make the net replacement.
             net_replacement_mapping.iter()
                 .for_each(|(inner_new_net, outer_net)|
                     self.replace_net(inner_new_net, outer_net)
                 );
+            //
+            // // Handle special cases: LOW and HIGH nets.
+            // self.replace_net(&new_net_zero, &self.net_zero(&parent_circuit));
+            // self.replace_net(&new_net_one, &self.net_one(&parent_circuit));
         }
 
 

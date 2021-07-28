@@ -1051,6 +1051,11 @@ impl Chip<Coord> {
     /// Disconnect all connected terminals and remove the net.
     fn remove_net(&mut self, net: &NetId) {
 
+        let parent_circuit = self.net(net).parent_id;
+
+        assert_ne!(net, &self.net_zero(&parent_circuit), "Cannot remove constant LOW net.");
+        assert_ne!(net, &self.net_one(&parent_circuit), "Cannot remove constant HIGH net.");
+
         // Remove all links from shapes to this net.
         let net_shapes = self.net_shapes.get(net)
             .iter()
@@ -1063,7 +1068,6 @@ impl Chip<Coord> {
         // Remove all links to pins.
         let pins = self.pins_for_net(net).collect_vec();
         let pin_insts = self.pins_instances_for_net(net).collect_vec();
-        let parent_circuit = self.net(net).parent_id;
 
         for p in pins {
             self.disconnect_pin(&p);
@@ -1178,7 +1182,7 @@ impl Chip<Coord> {
 
     /// Get a reference to a net by its ID.
     fn net(&self, id: &NetId) -> &Net {
-        &self.nets[id]
+        &self.nets.get(id).expect("Net ID does not exist in this netlist.")
     }
 
     /// Get a mutable reference to a net by its ID.
@@ -1580,11 +1584,12 @@ impl NetlistEdit for Chip {
 
         // TODO: Disconnect the pin for all instances, then remove it from all instances, then remove the pin from this cell.
         // TODO: Remove links to shapes.
-        unimplemented!()
+        unimplemented!("remove_pin()")
     }
 
     fn rename_pin(&mut self, circuit: &Self::CellId, pin: &Self::PinId, new_name: Self::NameType) {
-        unimplemented!()
+        // TODO: Implement `rename_pin()`
+        unimplemented!("rename_pin()")
     }
 
     fn create_net(&mut self, parent: &CellId, name: Option<Self::NameType>) -> NetId {
@@ -2049,7 +2054,13 @@ impl LayoutEdit for Chip<Coord> {
     fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)
                     -> Option<Geometry<Self::Coord>> {
 
-        // TODO: Remove all links to this shape.
+        // Remove all links to this shape.
+        if let Some(net) = self.get_net_of_shape(shape_id) {
+            self.net_mut(&net).net_shapes.remove(shape_id);
+        }
+        if let Some(pin) = self.get_pin_of_shape(shape_id) {
+            self.pin_mut(&pin).pin_shapes.remove(shape_id);
+        }
 
         self.circuit_mut(parent_cell)
             .shapes_mut(layer).expect("Layer not found.")

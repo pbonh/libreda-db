@@ -273,6 +273,7 @@ fn test_flatten_circuit_instance() {
     // Create cells.
     let top = chip.create_cell("top".into());
     let top_pin_a = chip.create_pin(&top, "A".into(), Direction::InOut);
+
     let a = chip.create_cell("a".into());
     let a_pin_a = chip.create_pin(&a, "A".into(), Direction::InOut);
     let b = chip.create_cell("b".into());

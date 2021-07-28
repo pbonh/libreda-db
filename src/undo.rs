@@ -32,7 +32,6 @@ use crate::traits::*;
 use std::hash::Hash;
 use std::borrow::Borrow;
 use crate::netlist::direction::Direction;
-use crate::netlist::traits::TerminalId;
 
 /// Undo operations on the netlist.
 pub enum NetlistUndoOp<T: NetlistBase> {
@@ -139,7 +138,7 @@ impl<'a, T: NetlistEdit> Undo<'a, T, NetlistUndoOp<T>> {
                 {self.chip.connect_pin_instance(&p, n);}
             NetlistUndoOp::RenameNet(net, name) =>
                 {self.chip.rename_net(&net, name);}
-            
+
         }
     }
 
@@ -183,10 +182,6 @@ impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
     type NameType = T::NameType;
     type CellId = T::CellId;
     type CellInstId = T::CellInstId;
-
-    fn new() -> Self {
-        unimplemented!()
-    }
 
     fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId> where Self::NameType: Borrow<N> {
         self.chip.cell_by_name(name)
@@ -242,6 +237,11 @@ impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
 }
 
 impl<'a, T: HierarchyEdit, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {
+
+    fn new() -> Self {
+        unimplemented!()
+    }
+
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
         let id = self.chip.create_cell(name);
         self.transactions.push(HierarchyUndoOp::CreateCell(id.clone()).into());

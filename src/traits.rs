@@ -70,6 +70,33 @@ pub use crate::netlist::traits::{NetlistBase, NetlistEdit};
 ///  +----------------------------------------------------+
 /// ```
 ///
+/// # Example
+///
+/// Basic hierchy operations:
+///
+/// ```
+/// use libreda_db::chip::Chip;
+/// use libreda_db::traits::{HierarchyBase, HierarchyEdit};
+///
+/// // Create a simple hierarchical structure.
+/// let mut chip = Chip::new();
+/// let top_cell = chip.create_cell("MyTopCell".into());
+/// let sub_cell = chip.create_cell("MySubCell".into());
+/// // Create an instance of `sub_cell` inside `top_cell`.
+/// let inst = chip.create_circuit_instance(&top_cell, &sub_cell, Some("inst1".into()));
+///
+/// // Get all cells.
+/// assert_eq!(chip.each_cell().count(), 2);
+///
+/// // Iterate over child instances.
+/// assert_eq!(chip.each_cell_instance(&top_cell).next().as_ref(), Some(&inst));
+///
+/// // Get the template of an instance.
+/// assert_eq!(&chip.template_cell(&inst), &sub_cell);
+///
+/// // Get the parent of an instance.
+/// assert_eq!(&chip.parent_cell(&inst), &top_cell);
+/// ```
 pub trait HierarchyBase {
     /// Type for names of cells, instances, etc.
     type NameType: Eq + Hash + From<String> + Into<String> + Clone
@@ -80,9 +107,6 @@ pub trait HierarchyBase {
     type CellId: Eq + Hash + Clone + std::fmt::Debug;
     /// Cell instance identifier type.
     type CellInstId: Eq + Hash + Clone + std::fmt::Debug;
-
-    /// Create a new empty data structure.
-    fn new() -> Self;
 
     /// Find a cell by its name.
     /// Return the cell with the given name. Returns `None` if the cell does not exist.
@@ -233,6 +257,9 @@ pub trait HierarchyBase {
 
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
 pub trait HierarchyEdit: HierarchyBase {
+
+    /// Create a new empty data structure.
+    fn new() -> Self;
 
     /// Create a new and empty cell template.
     /// A cell template can be be instantiated in other cells.

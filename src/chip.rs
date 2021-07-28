@@ -1772,10 +1772,6 @@ impl HierarchyBase for Chip<Coord> {
     type CellId = CellId;
     type CellInstId = CellInstId;
 
-    fn new() -> Self {
-        Chip::default()
-    }
-
     fn cell_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
         where Self::NameType: Borrow<S> {
         Chip::circuit_by_name(self, name)
@@ -1976,6 +1972,10 @@ impl LayoutBase for Chip<Coord> {
 }
 
 impl HierarchyEdit for Chip<Coord> {
+
+    fn new() -> Self {
+        Chip::default()
+    }
 
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
         // TODO

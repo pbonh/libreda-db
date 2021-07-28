@@ -865,6 +865,15 @@ impl Chip<Coord> {
         for inst in instances {
             self.remove_circuit_instance(&inst);
         }
+
+        // Clean up links to cell shapes.
+        for shape_id in self.circuits[&circuit_id]
+            .shapes_map.iter()
+            .flat_map(|(layer, shapes)| shapes.shapes.keys()) {
+
+            self.shape_parents.remove(shape_id);
+        }
+
         // Remove all instances of this circuit.
         let references = self.circuit(circuit_id).references.iter().copied().collect_vec();
         for inst in references {
@@ -1016,18 +1025,18 @@ impl Chip<Coord> {
     }
 
     /// Change the name of the net.
-    fn rename_net(&mut self, parent_circuit: &CellId,
-                      net_id: &NetId, new_name: Option<RcString>) {
-        assert_eq!(parent_circuit, &self.nets.get(net_id).expect("Net not found.").parent_id);
+    fn rename_net(&mut self, net_id: &NetId, new_name: Option<RcString>) -> Option<RcString>{
 
+        let parent_circuit = self.parent_cell_of_net(net_id);
 
         // Check if a net with this name already exists.
         if let Some(name) = &new_name {
-            if let Some(other) = self.circuit(parent_circuit).nets_by_name.get(name) {
+            if let Some(other) = self.circuit(&parent_circuit).nets_by_name.get(name) {
                 if other != net_id {
                     panic!("Net name already exists.")
                 } else {
-                    return;
+                    // Name is the same as before.
+                    return new_name;
                 }
             }
         }
@@ -1035,8 +1044,8 @@ impl Chip<Coord> {
         let maybe_old_name = self.net_mut(net_id).name.take();
 
         // Remove the old name mapping.
-        if let Some(old_name) = maybe_old_name {
-            self.circuit_mut(parent_circuit).nets_by_name.remove(&old_name);
+        if let Some(old_name) = &maybe_old_name {
+            self.circuit_mut(&parent_circuit).nets_by_name.remove(old_name);
         }
 
         // Add the new name mapping.
@@ -1044,8 +1053,10 @@ impl Chip<Coord> {
             self.nets.get_mut(net_id)
                 .expect("Net not found.")
                 .name.replace(new_name.clone());
-            self.circuit_mut(parent_circuit).nets_by_name.insert(new_name, *net_id);
+            self.circuit_mut(&parent_circuit).nets_by_name.insert(new_name, *net_id);
         }
+
+        maybe_old_name
     }
 
     /// Disconnect all connected terminals and remove the net.
@@ -1582,23 +1593,44 @@ impl NetlistEdit for Chip {
             self.set_pin_of_shape(pin_shape, None);
         }
 
-        // TODO: Disconnect the pin for all instances, then remove it from all instances, then remove the pin from this cell.
-        // TODO: Remove links to shapes.
-        unimplemented!("remove_pin()")
+        // Disconnect the pin for all instances.
+        let cell = self.parent_cell_of_pin(id);
+        for inst in self.each_cell_instance_vec(&cell) {
+            let pin_inst = self.pin_instance(&inst, id);
+            self.disconnect_pin_instance(&pin_inst);
+
+            // Remove pin instance.
+            self.circuit_inst_mut(&inst)
+                .pins.retain(|p| p != &pin_inst);
+            // Delete the pin instance struct.
+            self.pin_instances.remove(&pin_inst);
+        }
+
+        // Disconnect this pin from internal nets.
+        self.disconnect_pin(id);
+
+        // Remove the pin from the cell.
+        self.circuit_mut(&cell).pins.retain(|p| p != id);
+        // Delete the pin struct.
+        self.pins.remove(id);
     }
 
-    fn rename_pin(&mut self, circuit: &Self::CellId, pin: &Self::PinId, new_name: Self::NameType) {
-        // TODO: Implement `rename_pin()`
-        unimplemented!("rename_pin()")
+    fn rename_pin(&mut self, pin: &Self::PinId, new_name: Self::NameType) -> Self::NameType {
+        let cell = self.parent_cell_of_pin(&pin);
+        let existing = self.pin_by_name(&cell, &new_name);
+        if existing.is_some() {
+            panic!("Pin name already exists in cell '{}': '{}'", self.cell_name(&cell), new_name)
+        }
+        let old_name = std::mem::replace(&mut self.pin_mut(pin).name, new_name);
+        old_name
     }
 
     fn create_net(&mut self, parent: &CellId, name: Option<Self::NameType>) -> NetId {
         Chip::create_net(self, parent, name)
     }
 
-    fn rename_net(&mut self, parent_circuit: &Self::CellId,
-                  net_id: &Self::NetId, new_name: Option<Self::NameType>) {
-        Chip::rename_net(self, parent_circuit, net_id, new_name)
+    fn rename_net(&mut self, net_id: &Self::NetId, new_name: Option<Self::NameType>) -> Option<Self::NameType> {
+        Chip::rename_net(self, net_id, new_name)
     }
 
     fn remove_net(&mut self, net: &NetId) {

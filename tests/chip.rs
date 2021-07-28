@@ -253,15 +253,15 @@ fn test_rename_net() {
     assert_eq!(Some(&net1), chip.net_by_name(&top, "Net1").as_ref());
 
     // Change name.
-    chip.rename_net(&top, &net1, Some("NewName".into()));
+    chip.rename_net(&net1, Some("NewName".into()));
     assert_eq!(Some(&net1), chip.net_by_name(&top, "NewName").as_ref());
 
     // Change back to original.
-    chip.rename_net(&top, &net1, Some("Net1".into()));
+    chip.rename_net(&net1, Some("Net1".into()));
     assert_eq!(Some(&net1), chip.net_by_name(&top, "Net1").as_ref());
 
     // No name.
-    chip.rename_net(&top, &net1, None);
+    chip.rename_net(&net1, None);
     assert_eq!(None, chip.net_by_name(&top, "Net1"));
 
 }

@@ -518,17 +518,19 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     /// Remove the pin from this circuit and from all instances of this circuit.
     fn remove_pin(&mut self, id: &Self::PinId);
 
-    /// Change the name of the pin.
-    fn rename_pin(&mut self, circuit: &Self::CellId, pin: &Self::PinId, new_name: Self::NameType);
+    /// Change the name of the pin, returns the old name.
+    /// # Panics
+    /// Panics when the name is already occupied.
+    fn rename_pin(&mut self, pin: &Self::PinId, new_name: Self::NameType) -> Self::NameType;
 
     /// Create a net net that lives in the `parent` circuit.
     fn create_net(&mut self, parent: &Self::CellId,
                   name: Option<Self::NameType>) -> Self::NetId;
 
     /// Set a new name for the net. This might panic if the name already exists.
-    fn rename_net(&mut self, parent_circuit: &Self::CellId,
-                  net_id: &Self::NetId,
-                  new_name: Option<Self::NameType>);
+    /// Returns the old name.
+    fn rename_net(&mut self, net_id: &Self::NetId,
+                  new_name: Option<Self::NameType>) -> Option<Self::NameType>;
 
     /// Delete the net if it exists and disconnect all connected terminals.
     fn remove_net(&mut self, net: &Self::NetId);

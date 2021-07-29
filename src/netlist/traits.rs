@@ -19,6 +19,18 @@
  */
 
 //! Traits for netlist data types.
+//!
+//! Instead of putting a netlist data structure into the center of the world,
+//! this data base concentrates on the way *how* a netlist can be accessed and modified.
+//! The basic necessary operations are defined in the [`NetlistBase'] trait and in the
+//! [`NetlistEdit`] trait.
+//!
+//! More complex operations on netlist are provided by the [`NetlistUtil`] and [`NetlistUtilEdit`] traits.
+//!
+//! [`NetlistBase`]: NetlistBase
+//! [`NetlistEdit`]: NetlistEdit
+//! [`NetlistUtil`]: crate::netlist::util::NetlistUtil
+//! [`NetlistUtilEdit`]: crate::netlist::util::NetlistUtilEdit
 
 use std::hash::Hash;
 use crate::netlist::direction::Direction;

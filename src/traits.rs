@@ -257,7 +257,6 @@ pub trait HierarchyBase {
 
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
 pub trait HierarchyEdit: HierarchyBase {
-
     /// Create a new empty data structure.
     fn new() -> Self;
 
@@ -372,7 +371,7 @@ pub trait L2NBase: LayoutBase + NetlistBase {
 
 /// Fused layout and netlist view.
 /// This trait makes the link between netlist elements and layout elements.
-pub trait L2NEdit: L2NBase + LayoutEdit + NetlistEdit{
+pub trait L2NEdit: L2NBase + LayoutEdit + NetlistEdit {
     /// Create the link between a circuit pin and its shapes in the layout.
     /// Return the current pin.
     fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId>;

@@ -1957,6 +1957,12 @@ impl LayoutBase for Chip<Coord> {
         f(layer, &shape.geometry)
     }
 
+    fn parent_of_shape(&self, shape_id: &Self::ShapeId) -> (Self::CellId, Self::LayerId) {
+        self.shape_parents.get(shape_id)
+            .expect("Shape ID not found.")
+            .clone()
+    }
+
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
         self.circuit_inst(cell_inst).get_transform().clone()
     }
@@ -2083,7 +2089,7 @@ impl LayoutEdit for Chip<Coord> {
         shape_id
     }
 
-    fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, shape_id: &Self::ShapeId)
+    fn remove_shape(&mut self, shape_id: &Self::ShapeId)
                     -> Option<Geometry<Self::Coord>> {
 
         // Remove all links to this shape.
@@ -2094,19 +2100,23 @@ impl LayoutEdit for Chip<Coord> {
             self.pin_mut(&pin).pin_shapes.remove(shape_id);
         }
 
-        self.circuit_mut(parent_cell)
-            .shapes_mut(layer).expect("Layer not found.")
+        let (parent_cell, layer) = self.shape_parents[shape_id].clone();
+        self.shape_parents.remove(shape_id);
+
+        self.circuit_mut(&parent_cell)
+            .shapes_mut(&layer).expect("Layer not found.")
             .shapes.remove(shape_id)
             .map(|s| s.geometry)
+
     }
 
-    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
-                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
+    fn replace_shape(&mut self, shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
                      -> Geometry<Self::Coord> {
+        let (parent_cell, layer) = self.shape_parents[shape_id].clone();
         let shape_id = *shape_id;
 
-        let g = &mut self.circuit_mut(parent_cell)
-            .shapes_mut(layer).expect("Layer not found.")
+        let g = &mut self.circuit_mut(&parent_cell)
+            .shapes_mut(&layer).expect("Layer not found.")
             .shapes.get_mut(&shape_id).expect("Shape not found.")
             .geometry;
         let mut new_g = geometry;

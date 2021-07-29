@@ -87,6 +87,9 @@ pub trait LayoutBase: HierarchyBase {
     fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R
         where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R;
 
+    /// Get the parent cell and the layer of a shape as a (cell, layer) tuple.
+    fn parent_of_shape(&self, shape_id: &Self::ShapeId) -> (Self::CellId, Self::LayerId);
+
     /// Call a function `f` for each shape of this cell and its sub cells.
     /// Along to the geometric shape `f` also gets a transformation as argument.
     /// The transformation describes the actual position of the geometric shape relative to the `cell`.
@@ -151,12 +154,10 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId;
 
     /// Remove shape from the parent cell.
-    fn remove_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
-                    shape_id: &Self::ShapeId) -> Option<Geometry<Self::Coord>>;
+    fn remove_shape(&mut self, shape_id: &Self::ShapeId) -> Option<Geometry<Self::Coord>>;
 
     /// Replace the geometry of a shape.
-    fn replace_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId,
-                     shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord>;
+    fn replace_shape(&mut self, shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord>;
 
     /// Set the geometric transform that describes the location of a cell instance relative to its parent.
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>);

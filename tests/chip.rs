@@ -28,6 +28,7 @@ use libreda_db::prelude::{HierarchyEdit, HierarchyBase,
                           NetlistBase, NetlistEdit,
                           // L2NBase, L2NEdit,
                           Direction};
+use libreda_db::netlist::util::*;
 use itertools::{Itertools};
 use libreda_db::netlist::traits::TerminalId;
 

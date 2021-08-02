@@ -31,105 +31,50 @@ impl<T: HierarchyBase> HierarchyReferenceAccess for T {}
 pub trait HierarchyReferenceAccess: HierarchyBase
 {
     /// Get a cell object by its ID.
-    fn cell(&self, cell_id: &Self::CellId) -> Box<dyn CellRef<H=Self> + '_> where Self: Sized {
-        Box::new(
-            DefaultCellRef {
-                base_struct: self,
-                id: cell_id.clone(),
-            }
-        )
+    fn cell(&self, cell_id: &Self::CellId) -> CellRef<'_, Self> {
+        CellRef {
+            base_struct: self,
+            id: cell_id.clone(),
+        }
     }
 
     /// Get a cell instance object by its ID.
-    fn cell_instance(&self, inst_id: &Self::CellInstId) -> Box<dyn CellInstRef<H=Self> + '_> where Self: Sized {
-        Box::new(
-            DefaultCellInstRef {
-                base_struct: self,
-                id: inst_id.clone(),
-            }
-        )
+    fn cell_instance(&self, inst_id: &Self::CellInstId) -> CellInstRef<'_, Self> {
+        CellInstRef {
+            base_struct: self,
+            id: inst_id.clone(),
+        }
     }
 }
 
+
 /// A reference to a cell.
-pub trait CellRef {
-    /// Base type of the hierarchical structure.
-    type H: HierarchyBase;
-
-    /// Get the ID of this cell.
-    fn id(&self) -> <<Self as CellRef>::H as HierarchyBase>::CellId;
-
-    /// Get the name of the cell.
-    fn name(&self) -> <<Self as CellRef>::H as HierarchyBase>::NameType;
-
-    /// Iterate over the IDs of all child instances.
-    fn each_cell_instance_id(&self) -> Box<dyn Iterator<Item=<<Self as CellRef>::H as HierarchyBase>::CellInstId> + '_>;
-
-    /// Iterate over the IDs of all instances of this cell.
-    fn each_reference_id(&self) -> Box<dyn Iterator<Item=<<Self as CellRef>::H as HierarchyBase>::CellInstId> + '_>;
-}
-
-/// A reference to a cell instance.
-pub trait CellInstRef {
-    /// Base type of the hierarchical structure.
-    type H: HierarchyBase;
-
-    /// Get the ID of this cell.
-    fn id(&self) -> <<Self as CellInstRef>::H as HierarchyBase>::CellInstId;
-
-    /// Get the name of the cell.
-    fn name(&self) -> Option<<<Self as CellInstRef>::H as HierarchyBase>::NameType>;
-
-    /// Get the the parent cell.
-    fn parent(&self) -> Box<dyn CellRef<H=Self::H> + '_>;
-
-    /// Get the the template cell.
-    fn template(&self) -> Box<dyn CellRef<H=Self::H> + '_>;
-
-    /// Get the ID of the parent cell.
-    fn parent_id(&self) -> <<Self as CellInstRef>::H as HierarchyBase>::CellId;
-
-    /// Get the ID of the template cell.
-    fn template_id(&self) -> <<Self as CellInstRef>::H as HierarchyBase>::CellId;
-}
-//
-// /// Default implementation.
-// pub struct DefaultReferenceAccess<'a, H: HierarchyBase + ?Sized> {
-//     /// Reference to the parent data structure.
-//     base_struct: &'a H,
-// }
-//
-//
-// /// Wrapper trait.
-// pub trait DefaultReferenceAccessWrapper: HierarchyBase {
-//
-// }
-
-/// Default implementation for `CellRef`.
 /// This is just a wrapper around a netlist and a cell ID.
-pub struct DefaultCellRef<'a, H: HierarchyBase + ?Sized> {
+pub struct CellRef<'a, H: HierarchyBase + ?Sized> {
     /// Reference to the parent data structure.
     base_struct: &'a H,
     /// ID of the corresponding cell.
     id: H::CellId,
 }
 
-impl<'a, H: HierarchyBase> CellRef for DefaultCellRef<'a, H> {
-    type H = H;
-
-    fn id(&self) -> H::CellId {
+impl<'a, H: HierarchyBase> CellRef<'a, H> {
+    /// Get the ID of this cell.
+    pub fn id(&self) -> H::CellId {
         self.id.clone()
     }
 
-    fn name(&self) -> H::NameType {
+    /// Get the name of the cell.
+    pub fn name(&self) -> H::NameType {
         self.base_struct.cell_name(&self.id)
     }
 
-    fn each_cell_instance_id(&self) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellInstId> + '_> {
+    /// Iterate over the IDs of all child instances.
+    pub fn each_cell_instance_id(&self) -> Box<dyn Iterator<Item=H::CellInstId> + '_> {
         self.base_struct.each_cell_instance(&self.id)
     }
 
-    fn each_reference_id(&self) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellInstId> + '_> {
+    /// Iterate over the IDs of all instances of this cell.
+    pub fn each_reference_id(&self) -> Box<dyn Iterator<Item=H::CellInstId> + '_> {
         self.base_struct.each_cell_reference(&self.id)
     }
 }
@@ -137,46 +82,46 @@ impl<'a, H: HierarchyBase> CellRef for DefaultCellRef<'a, H> {
 
 /// Default implementation for `CellInstRef`.
 /// This is just a wrapper around a netlist and a cell ID.
-pub struct DefaultCellInstRef<'a, H: HierarchyBase + ?Sized> {
+pub struct CellInstRef<'a, H: HierarchyBase + ?Sized> {
     /// Reference to the parent netlist.
     base_struct: &'a H,
     /// ID of the corresponding cell instance.
     id: H::CellInstId,
 }
 
-impl<'a, H: HierarchyBase> CellInstRef for DefaultCellInstRef<'a, H> {
-    type H = H;
-
+impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
+    /// Get the ID of this cell instance.
     fn id(&self) -> H::CellInstId {
         self.id.clone()
     }
 
+    /// Get the name of the cell instance.
     fn name(&self) -> Option<H::NameType> {
         self.base_struct.cell_instance_name(&self.id)
     }
 
-    fn parent(&self) -> Box<dyn CellRef<H=Self::H> + '_> {
-        Box::new(
-            DefaultCellRef {
+    /// Get the parent cell of this instance.
+    fn parent(&self) -> CellRef<'_, H> {
+            CellRef {
                 base_struct: self.base_struct,
                 id: self.parent_id(),
             }
-        )
     }
 
-    fn template(&self) -> Box<dyn CellRef<H=Self::H> + '_> {
-        Box::new(
-            DefaultCellRef {
-                base_struct: self.base_struct,
-                id: self.template_id(),
-            }
-        )
+    /// Get the template cell of this instance.
+    fn template(&self) -> CellRef<'_, H> {
+        CellRef {
+            base_struct: self.base_struct,
+            id: self.template_id(),
+        }
     }
 
+    /// Get the ID of the parent cell of this instance.
     fn parent_id(&self) -> H::CellId {
         self.base_struct.parent_cell(&self.id)
     }
 
+    /// Get the ID of the template cell of this instance.
     fn template_id(&self) -> H::CellId {
         self.base_struct.template_cell(&self.id)
     }
@@ -185,7 +130,6 @@ impl<'a, H: HierarchyBase> CellInstRef for DefaultCellInstRef<'a, H> {
 
 #[test]
 fn test_chip_reference_access() {
-
     use crate::prelude::*;
     use crate::chip::Chip;
 

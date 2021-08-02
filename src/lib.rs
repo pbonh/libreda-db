@@ -89,5 +89,6 @@ pub mod traits;
 pub mod reference_access;
 pub mod chip;
 pub mod undo;
+pub mod hierarchy_utils;
 
 

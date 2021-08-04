@@ -22,7 +22,7 @@
 //! how netlist and layouts can be accessed and modified. Additionally the crate provides default
 //! implementations of those traits for representation of chip layouts and netlists.
 //!
-//! # Core parts
+//! ## Core parts
 //!
 //! An important part of this crate are trait definitions that describe the access methods
 //! of cell hierarchies, netlists and layouts. The idea is that most algorithms should not be implemented
@@ -35,6 +35,8 @@
 //! identifiers. The type of the identifiers is generically defined as an associated type of the traits.
 //! In practice the identifiers might be for example integers but they can also some sort of smart pointer.
 //!
+//! The following are important traits which define how netlist and layouts can be accessed
+//! and modified:
 //! * [`HierarchyBase`] - traverse cell hierarchies
 //! * [`HierarchyEdit`] - edit cell hierarchies
 //! * [`NetlistBase`] - traverse netlists
@@ -43,10 +45,19 @@
 //! * [`LayoutEdit`] - edit layout shapes
 //! * [`L2NBase`] - access the links between layout shapes and netlist
 //! * [`L2NEdit`] - edit the links between layout shapes and netlists
+//!
+//! Read more about netlists and layouts in the following modules:
 //! * [`Netlist`]
 //! * [`Layout`]
 //!
 //! The [`Chip`] struct implements the above traits and hence can be used as a default data base structure.
+//!
+//! ## Netlist/layout wrappers
+//!
+//! Additional functionality can be added to netlists and layout structures with the
+//! following wrappers:
+//!
+//! * [`Undo`] - Make modifications reversible
 //!
 //! # Input/output
 //! Reading and writing data base structures is generally left to other crates such as `libreda-oasis`,
@@ -67,6 +78,7 @@
 //! [`Netlist`]: netlist
 //! [`Layout`]: layout
 //! [`Chip`]: chip::Chip
+//! [`Undo`]: undo
 
 // Enforce documentation of the public API.
 #![deny(missing_docs)]
@@ -90,5 +102,6 @@ pub mod reference_access;
 pub mod chip;
 pub mod undo;
 pub mod hierarchy_utils;
+pub mod flat_view;
 
 

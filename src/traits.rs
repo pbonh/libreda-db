@@ -110,13 +110,11 @@ pub trait HierarchyBase {
 
     /// Find a cell by its name.
     /// Return the cell with the given name. Returns `None` if the cell does not exist.
-    fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId>
-        where Self::NameType: Borrow<N>;
+    fn cell_by_name(&self, name: &str) -> Option<Self::CellId>;
 
     /// Find a cell instance by its name.
     /// Returns `None` if the name does not exist.
-    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_cell: &Self::CellId, name: &N) -> Option<Self::CellInstId>
-        where Self::NameType: Borrow<N>;
+    fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId>;
 
     /// Get the name of the cell.
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType;

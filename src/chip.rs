@@ -37,7 +37,7 @@ use crate::prelude::{
     NetlistBase, NetlistEdit,
     LayoutBase, LayoutEdit,
     L2NBase, L2NEdit,
-    MapPointwise
+    MapPointwise,
 };
 
 use crate::netlist::direction::Direction;
@@ -757,7 +757,7 @@ impl<C: CoordinateType + One> Default for Chip<C> {
             layer_info: Default::default(),
             shape_index_generator: Default::default(),
             shape_parents: Default::default(),
-            net_shapes: Default::default()
+            net_shapes: Default::default(),
         }
     }
 }
@@ -870,7 +870,6 @@ impl Chip<Coord> {
         for shape_id in self.circuits[&circuit_id]
             .shapes_map.iter()
             .flat_map(|(layer, shapes)| shapes.shapes.keys()) {
-
             self.shape_parents.remove(shape_id);
         }
 
@@ -1025,8 +1024,7 @@ impl Chip<Coord> {
     }
 
     /// Change the name of the net.
-    fn rename_net(&mut self, net_id: &NetId, new_name: Option<RcString>) -> Option<RcString>{
-
+    fn rename_net(&mut self, net_id: &NetId, new_name: Option<RcString>) -> Option<RcString> {
         let parent_circuit = self.parent_cell_of_net(net_id);
 
         // Check if a net with this name already exists.
@@ -1061,7 +1059,6 @@ impl Chip<Coord> {
 
     /// Disconnect all connected terminals and remove the net.
     fn remove_net(&mut self, net: &NetId) {
-
         let parent_circuit = self.net(net).parent_id;
 
         assert_ne!(net, &self.net_zero(&parent_circuit), "Cannot remove constant LOW net.");
@@ -1481,11 +1478,11 @@ impl NetlistBase for Chip {
         self.pin(pin).name.clone()
     }
 
-    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId>
-        where Self::NameType: Borrow<N> {
+    fn pin_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::PinId>
+    {
         // TODO: Create index for pin names.
         self.circuit(&parent_circuit).pins.iter()
-            .find(|p| self.pin(*p).name.borrow() == name)
+            .find(|p| self.pin(*p).name.as_str() == name)
             .copied()
     }
 
@@ -1577,7 +1574,6 @@ impl NetlistBase for Chip {
 
 
 impl NetlistEdit for Chip {
-
     fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
         Chip::create_pin(self, *circuit, name, direction)
     }
@@ -1772,14 +1768,12 @@ impl HierarchyBase for Chip<Coord> {
     type CellId = CellId;
     type CellInstId = CellInstId;
 
-    fn cell_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
-        where Self::NameType: Borrow<S> {
+    fn cell_by_name(&self, name: &str) -> Option<CellId> {
         Chip::circuit_by_name(self, name)
     }
 
-    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N)
-                                                    -> Option<Self::CellInstId>
-        where Self::NameType: Borrow<N> {
+    fn cell_instance_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::CellInstId>
+    {
         self.circuit(parent_circuit).instances_by_name.get(name).copied()
     }
 
@@ -1879,7 +1873,6 @@ impl HierarchyBase for Chip<Coord> {
     fn get_cell_instance_property(&self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
         self.circuit_inst(inst).properties.get(key).cloned()
     }
-
 }
 
 impl LayoutBase for Chip<Coord> {
@@ -1978,7 +1971,6 @@ impl LayoutBase for Chip<Coord> {
 }
 
 impl HierarchyEdit for Chip<Coord> {
-
     fn new() -> Self {
         Chip::default()
     }
@@ -2022,7 +2014,6 @@ impl HierarchyEdit for Chip<Coord> {
     fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {
         self.circuit_inst_mut(inst).properties.insert(key, value);
     }
-
 }
 
 impl LayoutEdit for Chip<Coord> {
@@ -2044,8 +2035,15 @@ impl LayoutEdit for Chip<Coord> {
     fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
         if let Some(name) = &name {
             // Check that we do not shadow another layer name.
-            if self.layers_by_name.get(name) != Some(layer) {
-                panic!("Layer name already exists.")
+            let existing = self.layers_by_name.get(name);
+
+            if existing == Some(layer) {
+                // Nothing to be done.
+                return Some(name.clone());
+            }
+
+            if existing.is_some() {
+                panic!("Layer name already exists: '{}'", name)
             }
         }
 
@@ -2107,7 +2105,6 @@ impl LayoutEdit for Chip<Coord> {
             .shapes_mut(&layer).expect("Layer not found.")
             .shapes.remove(shape_id)
             .map(|s| s.geometry)
-
     }
 
     fn replace_shape(&mut self, shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>)
@@ -2136,8 +2133,6 @@ impl LayoutEdit for Chip<Coord> {
             .or_insert(Default::default())
             .insert(key, value);
     }
-
-
 }
 
 impl L2NBase for Chip<Coord> {

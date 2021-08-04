@@ -224,8 +224,7 @@ pub trait NetlistBase: HierarchyBase {
 
     /// Find a pin by its name.
     /// Returns `None` if no such pin can be found.
-    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId>
-        where Self::NameType: Borrow<N>;
+    fn pin_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::PinId>;
 
     /// Get the ID of the parent circuit of this pin.
     fn parent_cell_of_pin(&self, pin: &Self::PinId) -> Self::CellId;

@@ -331,11 +331,11 @@ impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
     type CellId = T::CellId;
     type CellInstId = T::CellInstId;
 
-    fn cell_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::CellId> where Self::NameType: Borrow<N> {
+    fn cell_by_name(&self, name: &str) -> Option<Self::CellId> {
         self.chip.cell_by_name(name)
     }
 
-    fn cell_instance_by_name<N: ?Sized + Eq + Hash>(&self, parent_cell: &Self::CellId, name: &N) -> Option<Self::CellInstId> where Self::NameType: Borrow<N> {
+    fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId> {
         self.chip.cell_instance_by_name(parent_cell, name)
     }
 
@@ -439,7 +439,7 @@ impl<'a, T: NetlistBase, U> NetlistBase for Undo<'a, T, U> {
         self.chip.pin_name(pin)
     }
 
-    fn pin_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::PinId> where Self::NameType: Borrow<N> {
+    fn pin_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::PinId> {
         self.chip.pin_by_name(parent_circuit, name)
     }
 

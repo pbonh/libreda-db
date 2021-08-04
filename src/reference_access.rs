@@ -20,7 +20,8 @@
 
 
 //! # Experimental
-//! Wrapper around the `HierarchyBase` trait. Provides more object like access methods.
+//! Wrappers around the `HierarchyBase` and `NetlistBase` traits which
+//! provide more object like access methods.
 //!
 
 use crate::traits::{HierarchyBase, NetlistBase};
@@ -432,7 +433,9 @@ fn test_chip_reference_access() {
 
     let mut chip = Chip::new();
     let top = chip.create_cell("TOP".into());
+    chip.create_pin(&top, "A".into(), Direction::Input);
     let sub = chip.create_cell("SUB".into());
+    chip.create_pin(&sub, "B".into(), Direction::Input);
     let sub_inst1 = chip.create_cell_instance(&top, &sub, Some("inst1".into()));
 
     let top_ref = chip.cell(&top);
@@ -442,4 +445,9 @@ fn test_chip_reference_access() {
     assert_eq!(&sub_inst1_ref.id(), &sub_inst1);
     assert_eq!(sub_inst1_ref.parent().id(), top_ref.id());
     assert_eq!(&sub_inst1_ref.template().id(), &sub);
+
+    // Access nets and pins.
+    assert_eq!(top_ref.each_net().count(), 2, "LOW and HIGH nets should be there.");
+    assert_eq!(top_ref.each_pin().count(), 1);
+    assert_eq!(sub_inst1_ref.each_pin_instance().count(), 1);
 }

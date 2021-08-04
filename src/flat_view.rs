@@ -46,11 +46,33 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
     type CellInstId = Vec<N::CellInstId>;
 
     fn cell_by_name(&self, name: &str) -> Option<Self::CellId> {
-        unimplemented!()
+        self.base.cell_by_name(name)
     }
 
     fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId> {
-        unimplemented!()
+        let path = name.split(&self.path_separator);
+        let mut parent_cell = parent_cell.clone();
+        let mut current_inst = vec![];
+        // Resolve the path.
+        // For each path element...
+        for name in path {
+            // Find the child in the current parent.
+            let inst = self.base.cell_instance_by_name(&parent_cell, name);
+            if let Some(inst) = inst {
+                // Descend into the child.
+                parent_cell = self.base.template_cell(&inst);
+                current_inst.push(inst);
+            } else {
+                // No child could be found.
+                current_inst.clear();
+                break
+            }
+        }
+        if current_inst.is_empty() {
+            None
+        } else {
+            Some(current_inst)
+        }
     }
 
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {

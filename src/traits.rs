@@ -200,7 +200,7 @@ pub trait HierarchyBase {
     fn num_dependent_cells(&self, cell: &Self::CellId) -> usize {
         // Inefficient default implementation.
         let mut counter = 0;
-        self.for_each_cell_dependency(cell, |_| counter += 1);
+        self.for_each_dependent_cell(cell, |_| counter += 1);
         counter
     }
 

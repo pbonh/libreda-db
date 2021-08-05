@@ -29,7 +29,6 @@ use iron_shapes::CoordinateType;
 use crate::prelude::{Geometry, Rect};
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
-use std::borrow::Borrow;
 
 /// Most basic trait of a layout.
 ///
@@ -56,8 +55,7 @@ pub trait LayoutBase: HierarchyBase {
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;
 
     /// Find layer index by the name.
-    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId>
-        where Self::NameType: Borrow<N>;
+    fn layer_by_name(&self, name: &str) -> Option<Self::LayerId>;
 
     /// Compute the bounding box of the shapes on one layer.
     /// The bounding box also includes all child cell instances.

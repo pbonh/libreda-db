@@ -34,7 +34,6 @@
 
 use std::hash::Hash;
 use crate::netlist::direction::Direction;
-use std::borrow::Borrow;
 use std::collections::{HashSet};
 use std::fmt;
 use itertools::Itertools;
@@ -266,8 +265,7 @@ pub trait NetlistBase: HierarchyBase {
 
     /// Find a net by its name inside the parent circuit.
     /// Returns `None` if no such net can be found.
-    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::NetId>
-        where Self::NameType: Borrow<N>;
+    fn net_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::NetId>;
 
     /// Get the name of the net.
     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType>;

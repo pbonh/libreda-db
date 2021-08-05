@@ -29,8 +29,6 @@
 //! will have the same properties but different IDs.
 
 use crate::traits::*;
-use std::hash::Hash;
-use std::borrow::Borrow;
 use crate::netlist::direction::Direction;
 use crate::layout::prelude::{Rect, LayerInfo, Geometry, SimpleTransform};
 use std::ops::Deref;
@@ -471,7 +469,7 @@ impl<'a, T: NetlistBase, U> NetlistBase for Undo<'a, T, U> {
         self.chip.net_one(parent_circuit)
     }
 
-    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::NetId> where Self::NameType: Borrow<N> {
+    fn net_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::NetId> {
         self.chip.net_by_name(parent_circuit, name)
     }
 
@@ -581,7 +579,7 @@ impl<'a, T: LayoutBase, U> LayoutBase for Undo<'a, T, U> {
         self.chip.find_layer(index, datatype)
     }
 
-    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId> where Self::NameType: Borrow<N> {
+    fn layer_by_name(&self, name: &str) -> Option<Self::LayerId> {
         self.chip.layer_by_name(name)
     }
 

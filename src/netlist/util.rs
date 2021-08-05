@@ -22,6 +22,7 @@
 
 use crate::traits::{NetlistBase, NetlistEdit};
 use std::collections::HashMap;
+use std::borrow::Borrow;
 
 /// Non-modifying utility functions for netlists.
 /// Import the this trait to use the utility functions all types that implement the `NetlistBase` trait.
@@ -105,7 +106,7 @@ pub trait NetlistEditUtil: NetlistEdit {
                 // It is possible that the net name already exists in this circuit.
                 let net_name = if let Some(net_name) = net_name {
                     // Check if net name already exists.
-                    if let Some(_) = netlist.net_by_name(&parent_circuit, &net_name) {
+                    if let Some(_) = netlist.net_by_name(&parent_circuit, net_name.borrow()) {
                         // Net name already exists in this circuit.
                         // Don't use it.
                         // TODO: Create a qualified name?

@@ -1514,8 +1514,7 @@ impl NetlistBase for Chip {
         self.circuit(parent_circuit).net_high
     }
 
-    fn net_by_name<N: ?Sized + Eq + Hash>(&self, parent_circuit: &Self::CellId, name: &N) -> Option<Self::NetId>
-        where Self::NameType: Borrow<N> {
+    fn net_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::NetId> {
         self.circuit(parent_circuit).nets_by_name.get(name).copied()
     }
 
@@ -1896,7 +1895,7 @@ impl LayoutBase for Chip<Coord> {
         self.layers_by_index_datatype.get(&(index, datatype)).copied()
     }
 
-    fn layer_by_name<N: ?Sized + Eq + Hash>(&self, name: &N) -> Option<Self::LayerId> where Self::NameType: Borrow<N> {
+    fn layer_by_name(&self, name: &str) -> Option<Self::LayerId> {
         self.layers_by_name.get(name).cloned()
     }
 

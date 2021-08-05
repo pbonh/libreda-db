@@ -26,6 +26,7 @@ pub use crate::chip::Chip;
 pub use crate::traits::*;
 pub use crate::rc_string::RcString;
 pub use crate::property_storage::{WithProperties, PropertyValue};
+pub use crate::flat_view::FlatView;
 
 /// Re-export of most traits.
 /// This can be useful if only traits should be used but not the rest.

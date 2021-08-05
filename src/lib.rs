@@ -58,6 +58,7 @@
 //! following wrappers:
 //!
 //! * [`Undo`] - Make modifications reversible
+//! * [`FlatView`] - Create an on-the-fly flattened view of a hierarchical structure.
 //!
 //! # Input/output
 //! Reading and writing data base structures is generally left to other crates such as `libreda-oasis`,
@@ -79,6 +80,7 @@
 //! [`Layout`]: layout
 //! [`Chip`]: chip::Chip
 //! [`Undo`]: undo
+//! [`FlatView`]: flat_view
 
 // Enforce documentation of the public API.
 #![deny(missing_docs)]

@@ -24,6 +24,13 @@
 
 use crate::traits::{HierarchyBase};
 use std::collections::{HashMap, HashSet};
+// use crate::netlist::direction::Direction;
+
+/// Wrapper around ID types.
+/// This wrapper makes sure that the flat view uses other ID types than the
+/// underlying hierarchical view.
+#[derive(Clone, Debug, Hash, PartialEq)]
+pub struct FlatId<T>(T);
 
 /// Wrapper around a netlist which provides an on-the-fly flat view of a certain cell.
 /// The presented view is flattened until leaf cells.
@@ -113,6 +120,7 @@ impl<'a, N: HierarchyBase> FlatView<'a, N> {
     }
 
 }
+
 
 impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
     type NameType = N::NameType;
@@ -317,6 +325,91 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
         count
     }
 }
+
+// impl<'a, N: NetlistBase> NetlistBase for FlatView<'a, N> {
+//     type PinId = N::PinId;
+//     type PinInstId = (Self::CellInstId, N::PinInstId); // Pin instances need to be extended with the path through the hierarhcy.
+//     type NetId = (Self::CellInstId, N::NetId);
+//
+//     fn template_pin(&self, (_, pin_instance): &Self::PinInstId) -> Self::PinId {
+//         self.base.template_pin(pin_instance)
+//     }
+//
+//     fn pin_direction(&self, pin: &Self::PinId) -> Direction {
+//         self.base.pin_direction(pin)
+//     }
+//
+//     fn pin_name(&self, pin: &Self::PinId) -> Self::NameType {
+//         self.base.pin_name(pin)
+//     }
+//
+//     fn pin_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::PinId> {
+//         self.base.pin_by_name(parent_circuit, name)
+//     }
+//
+//     fn parent_cell_of_pin(&self, pin: &Self::PinId) -> Self::CellId {
+//         self.base.parent_cell_of_pin(pin)
+//     }
+//
+//     fn parent_of_pin_instance(&self, (cell_inst, _pin_inst): &Self::PinInstId) -> Self::CellInstId {
+//         cell_inst.clone()
+//     }
+//
+//     fn parent_cell_of_net(&self, net: &Self::NetId) -> Self::CellId {
+//         unimplemented!()
+//     }
+//
+//     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
+//         unimplemented!()
+//     }
+//
+//     fn net_of_pin_instance(&self, pin_instance: &Self::PinInstId) -> Option<Self::NetId> {
+//         unimplemented!()
+//     }
+//
+//     fn net_zero(&self, parent_circuit: &Self::CellId) -> Self::NetId {
+//         (vec![], self.base.net_zero(parent_circuit))
+//     }
+//
+//     fn net_one(&self, parent_circuit: &Self::CellId) -> Self::NetId {
+//         (vec![], self.base.net_one(parent_circuit))
+//     }
+//
+//     fn net_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::NetId> {
+//         unimplemented!()
+//     }
+//
+//     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType> {
+//         unimplemented!()
+//     }
+//
+//     fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
+//         self.base.for_each_pin(circuit, f)
+//     }
+//
+//     fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, mut f: F) where F: FnMut(Self::PinInstId) -> () {
+//         let hierarchical_inst = &circuit_inst[circuit_inst.len()-1];
+//         self.base.for_each_pin_instance(hierarchical_inst, |p| {
+//             f((circuit_inst.clone(), p))
+//         })
+//     }
+//
+//     fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::NetId) -> () {
+//         unimplemented!()
+//     }
+//
+//     fn num_pins(&self, cell: &Self::CellId) -> usize {
+//         self.base.num_pins(cell)
+//     }
+//
+//     fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> () {
+//         unimplemented!()
+//     }
+//
+//     fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinInstId) -> () {
+//         unimplemented!()
+//     }
+// }
 
 #[test]
 fn test_flat_hierachy_view() {

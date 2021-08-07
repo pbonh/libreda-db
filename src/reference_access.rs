@@ -25,12 +25,13 @@
 //!
 
 use crate::traits::{HierarchyBase, NetlistBase};
+use crate::prelude::TerminalId;
 
 /// Trait that provides object-like read access to a cell hierarchy structure and its elements.
 pub trait HierarchyReferenceAccess: HierarchyBase
 {
     /// Get a cell object by its ID.
-    fn cell(&self, cell_id: &Self::CellId) -> CellRef<'_, Self> {
+    fn cell_ref(&self, cell_id: &Self::CellId) -> CellRef<'_, Self> {
         CellRef {
             base: self,
             id: cell_id.clone(),
@@ -38,7 +39,7 @@ pub trait HierarchyReferenceAccess: HierarchyBase
     }
 
     /// Get a cell instance object by its ID.
-    fn cell_instance(&self, inst_id: &Self::CellInstId) -> CellInstRef<'_, Self> {
+    fn cell_instance_ref(&self, inst_id: &Self::CellInstId) -> CellInstRef<'_, Self> {
         CellInstRef {
             base: self,
             id: inst_id.clone(),
@@ -50,8 +51,8 @@ impl<T: HierarchyBase> HierarchyReferenceAccess for T {}
 
 /// Trait that provides object-like read access to a hierarchical netlist structure and its elements.
 pub trait NetlistReferenceAccess: NetlistBase {
-    /// Get a reference to a pin.
-    fn pin(&self, pin: &Self::PinId) -> PinRef<'_, Self> {
+    /// Get a reference to a pin from a pin ID.
+    fn pin_ref(&self, pin: &Self::PinId) -> PinRef<'_, Self> {
         PinRef {
             base: self,
             id: pin.clone(),
@@ -59,7 +60,7 @@ pub trait NetlistReferenceAccess: NetlistBase {
     }
 
     /// Get a reference to a pin instance.
-    fn pin_instance(&self, id: &Self::PinInstId) -> PinInstRef<'_, Self> {
+    fn pin_instance_ref(&self, id: &Self::PinInstId) -> PinInstRef<'_, Self> {
         PinInstRef {
             base: self,
             id: id.clone(),
@@ -67,10 +68,18 @@ pub trait NetlistReferenceAccess: NetlistBase {
     }
 
     /// Get a reference to a net.
-    fn net(&self, net: &Self::NetId) -> NetRef<'_, Self> {
+    fn net_ref(&self, net: &Self::NetId) -> NetRef<'_, Self> {
         NetRef {
             base: self,
             id: net.clone(),
+        }
+    }
+
+    /// Get a reference to a terminal.
+    fn terminal_ref(&self, t: &TerminalId<Self>) -> TerminalRef<Self> {
+        match t {
+            TerminalId::PinId(p) => TerminalRef::Pin(self.pin_ref(p)),
+            TerminalId::PinInstId(p) => TerminalRef::PinInst(self.pin_instance_ref(p)),
         }
     }
 }
@@ -103,21 +112,21 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
     }
 
     /// Iterate over the IDs of all child instances.
-    pub fn each_cell_instance_id(&self) -> Box<dyn Iterator<Item=H::CellInstId> + '_> {
+    pub fn each_cell_instance_id(&self) -> impl Iterator<Item=H::CellInstId> + '_ {
         self.base.each_cell_instance(&self.id)
     }
 
     /// Iterate over all child instances.
-    pub fn each_cell_instance(&self) -> Box<dyn Iterator<Item=CellInstRef<'a, H>> + '_> {
-        Box::new(self.each_cell_instance_id()
+    pub fn each_cell_instance(&self) -> impl Iterator<Item=CellInstRef<'a, H>> + '_ {
+        self.each_cell_instance_id()
             .map(move |id| CellInstRef {
                 base: self.base,
                 id,
-            }))
+            })
     }
 
     /// Iterate over the IDs of all instances of this cell.
-    pub fn each_reference_id(&self) -> Box<dyn Iterator<Item=H::CellInstId> + '_> {
+    pub fn each_reference_id(&self) -> impl Iterator<Item=H::CellInstId> + '_ {
         self.base.each_cell_reference(&self.id)
     }
 
@@ -152,7 +161,7 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
 
 impl<'a, N: NetlistBase> CellRef<'a, N> {
     /// Iterate over the IDs of all pins of this cell.
-    pub fn each_pin_id(&self) -> Box<dyn Iterator<Item=N::PinId> + '_> {
+    pub fn each_pin_id(&self) -> impl Iterator<Item=N::PinId> + '_ {
         self.base.each_pin(&self.id)
     }
 
@@ -181,7 +190,7 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
         self.base.each_internal_net(&self.id)
             .map(move |id| NetRef {
                 base: self.base,
-                id
+                id,
             })
     }
 }
@@ -236,7 +245,7 @@ impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
 
 impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     /// Iterate over the IDs of all pins of this cell.
-    pub fn each_pin_instance_id(&self) -> Box<dyn Iterator<Item=N::PinInstId> + '_> {
+    pub fn each_pin_instance_id(&self) -> impl Iterator<Item=N::PinInstId> + '_ {
         self.base.each_pin_instance(&self.id)
     }
 
@@ -254,7 +263,7 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
         self.base.each_external_net(&self.id)
             .map(move |id| NetRef {
                 base: self.base,
-                id
+                id,
             })
     }
 }
@@ -328,6 +337,15 @@ pub struct PinRef<'a, N: NetlistBase + ?Sized> {
     id: N::PinId,
 }
 
+impl<'a, N: NetlistBase + ?Sized> Clone for PinRef<'a, N> {
+    fn clone(&self) -> Self {
+        Self {
+            base: self.base,
+            id: self.id.clone(),
+        }
+    }
+}
+
 impl<'a, N: NetlistBase> PinRef<'a, N> {
     /// Get the pin ID.
     pub fn id(&self) -> N::PinId {
@@ -349,8 +367,16 @@ impl<'a, N: NetlistBase> PinRef<'a, N> {
     }
 
     /// Get the cell which contains this pin.
-    pub fn cell(&self) -> N::CellId {
-        self.base.parent_cell_of_pin(&self.id)
+    pub fn cell(&self) -> CellRef<'a, N> {
+        CellRef {
+            base: self.base,
+            id: self.base.parent_cell_of_pin(&self.id),
+        }
+    }
+
+    /// Convert the pin reference into a terminal reference.
+    pub fn into_terminal(self) -> TerminalRef<'a, N> {
+        self.into()
     }
 }
 
@@ -361,6 +387,15 @@ pub struct PinInstRef<'a, N: NetlistBase + ?Sized> {
     base: &'a N,
     /// ID of the pin instance.
     id: N::PinInstId,
+}
+
+impl<'a, N: NetlistBase + ?Sized> Clone for PinInstRef<'a, N> {
+    fn clone(&self) -> Self {
+        Self {
+            base: self.base,
+            id: self.id.clone(),
+        }
+    }
 }
 
 impl<'a, N: NetlistBase> PinInstRef<'a, N> {
@@ -393,6 +428,11 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
                 id,
             })
     }
+
+    /// Convert the pin instance reference into a terminal reference.
+    pub fn into_terminal(self) -> TerminalRef<'a, N> {
+        self.into()
+    }
 }
 
 /// Either a pin or a pin instance.
@@ -401,6 +441,15 @@ pub enum TerminalRef<'a, N: NetlistBase + ?Sized> {
     Pin(PinRef<'a, N>),
     /// An instance of a pin.
     PinInst(PinInstRef<'a, N>),
+}
+
+impl<'a, N: NetlistBase + ?Sized> Clone for TerminalRef<'a, N> {
+    fn clone(&self) -> Self {
+        match self {
+            TerminalRef::Pin(p) => TerminalRef::Pin(p.clone()),
+            TerminalRef::PinInst(p) => TerminalRef::PinInst(p.clone()),
+        }
+    }
 }
 
 impl<'a, N: NetlistBase> From<PinRef<'a, N>> for TerminalRef<'a, N> {
@@ -415,13 +464,53 @@ impl<'a, N: NetlistBase> From<PinInstRef<'a, N>> for TerminalRef<'a, N> {
     }
 }
 
+impl<'a, N: NetlistBase> Into<TerminalId<N>> for TerminalRef<'a, N> {
+    fn into(self) -> TerminalId<N> {
+        match self {
+            TerminalRef::Pin(p) => TerminalId::PinId(p.id),
+            TerminalRef::PinInst(p) => TerminalId::PinInstId(p.id)
+        }
+    }
+}
 
 impl<'a, N: NetlistBase> TerminalRef<'a, N> {
+
+    /// Get the ID of the terminal.
+    pub fn id(&self) -> TerminalId<N> {
+        (*self).clone().into()
+    }
+
     /// Get the attached net.
     pub fn net(&self) -> Option<NetRef<'_, N>> {
         match self {
             TerminalRef::Pin(p) => p.net(),
             TerminalRef::PinInst(p) => p.net()
+        }
+    }
+
+    /// Get the name of the pin.
+    pub fn pin_name(&self) -> N::NameType {
+        match self {
+            TerminalRef::Pin(p) => p.name(),
+            TerminalRef::PinInst(p) => p.pin().name()
+        }
+    }
+
+    /// Create a qualified name.
+    /// For pins: 'cell_name:pin_name'
+    /// For pin instances: 'cell_name:cell_instance:pin_name'
+    /// Where `:` is defined by `separator`.
+    pub fn qname(&self, separator: &str) -> String {
+        match self {
+            TerminalRef::Pin(p) =>
+                format!("{}{}{}", p.cell().name(), separator, p.name()),
+            TerminalRef::PinInst(p) =>
+                format!("{}{}{}{}{}",
+                        p.pin().cell().name(),
+                        separator,
+                        p.cell_instance().name().unwrap_or_else(|| "<unnamed>".to_string().into()),
+                        separator,
+                        p.pin().name())
         }
     }
 }
@@ -438,10 +527,10 @@ fn test_chip_reference_access() {
     chip.create_pin(&sub, "B".into(), Direction::Input);
     let sub_inst1 = chip.create_cell_instance(&top, &sub, Some("inst1".into()));
 
-    let top_ref = chip.cell(&top);
+    let top_ref = chip.cell_ref(&top);
     assert_eq!(&top_ref.id(), &top);
 
-    let sub_inst1_ref = chip.cell_instance(&sub_inst1);
+    let sub_inst1_ref = chip.cell_instance_ref(&sub_inst1);
     assert_eq!(&sub_inst1_ref.id(), &sub_inst1);
     assert_eq!(sub_inst1_ref.parent().id(), top_ref.id());
     assert_eq!(&sub_inst1_ref.template().id(), &sub);

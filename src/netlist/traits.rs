@@ -32,7 +32,7 @@
 //! [`NetlistUtil`]: crate::netlist::util::NetlistUtil
 //! [`NetlistEditUtil`]: crate::netlist::util::NetlistEditUtil
 
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use crate::netlist::direction::Direction;
 use std::collections::{HashSet};
 use std::fmt;
@@ -164,13 +164,24 @@ pub trait NetlistReferenceAccess: NetlistBase
 }
 
 /// A terminal is a generalization of pins and pin instances.
-#[derive(Eq, Hash, Debug)]
+#[derive(Debug)]
 pub enum TerminalId<N: NetlistBase + ?Sized> {
     /// Terminal is a pin.
     PinId(N::PinId),
     /// Terminal is a pin instance.
     PinInstId(N::PinInstId),
 }
+
+impl<N: NetlistBase> Hash for TerminalId<N> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            TerminalId::PinId(p) => p.hash(state),
+            TerminalId::PinInstId(p) => p.hash(state)
+        }
+    }
+}
+
+impl<N: NetlistBase + ?Sized> Eq for TerminalId<N> {}
 
 impl<N: NetlistBase + ?Sized> PartialEq for TerminalId<N> {
     fn eq(&self, other: &Self) -> bool {

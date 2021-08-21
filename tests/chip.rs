@@ -36,12 +36,12 @@ use libreda_db::netlist::traits::TerminalId;
 fn test_create_circuit() {
     let mut chip = Chip::new();
     assert_eq!(chip.num_cells(), 0);
-    let a = chip.create_cell("A".into());
+    let a = chip.create_cell("A".to_string().into());
     assert_eq!(chip.num_cells(), 1);
-    let b = chip.create_cell("B".into());
+    let b = chip.create_cell("B".to_string().into());
     assert_eq!(chip.num_cells(), 2);
-    assert_eq!(chip.cell_name(&a), "A".into());
-    assert_eq!(chip.cell_name(&b), "B".into());
+    assert_eq!(chip.cell_name(&a), "A");
+    assert_eq!(chip.cell_name(&b), "B");
     chip.remove_cell(&a);
     assert_eq!(chip.num_cells(), 1);
 }
@@ -50,8 +50,8 @@ fn test_create_circuit() {
 fn test_get_cell_by_name() {
     // Find cells by name.
     let mut chip = Chip::new();
-    let a = chip.create_cell("A".into());
-    let b = chip.create_cell("B".into());
+    let a = chip.create_cell("A".to_string().into());
+    let b = chip.create_cell("B".to_string().into());
     assert_eq!(chip.cell_by_name("A"), Some(a));
     assert_eq!(chip.cell_by_name("B"), Some(b));
     assert_eq!(chip.cell_by_name("C"), None);

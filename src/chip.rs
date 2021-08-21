@@ -41,7 +41,7 @@ use crate::prelude::{
 };
 
 use crate::netlist::direction::Direction;
-use crate::rc_string::RcString;
+// use crate::rc_string::RcString;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -53,6 +53,8 @@ use fnv::{FnvHashMap, FnvHashSet};
 
 use crate::prelude::{TryBoundingBox};
 use num_traits::One;
+
+type NameT = String;
 
 type IntHashMap<K, V> = FnvHashMap<K, V>;
 type IntHashSet<V> = FnvHashSet<V>;
@@ -123,7 +125,7 @@ pub struct NetId(usize);
 pub type ShapeId = Index<Shape<Coord>, u32>;
 
 /// ID for layers.
-pub type LayerId = Index<LayerInfo<RcString>, u16>;
+pub type LayerId = Index<LayerInfo<NameT>, u16>;
 
 /// A circuit is defined by an interface (pins) and
 /// a content which consists of interconnected circuit instances.
@@ -137,13 +139,13 @@ pub struct Circuit<C = Coord, U = ()>
     /// ID of this circuit.
     id: CellId,
     /// Name of the circuit.
-    name: RcString,
+    name: NameT,
 
     /// Instances inside this circuit.
     instances: IntHashSet<CellInstId>,
     /// Instances inside this circuit indexed by name.
     /// Not every instance needs to have a name.
-    instances_by_name: HashMap<RcString, CellInstId>,
+    instances_by_name: HashMap<NameT, CellInstId>,
     /// Circuit instances that reference to this circuit.
     references: IntHashSet<CellInstId>,
     /// All circuits that have instances of this circuit.
@@ -158,9 +160,9 @@ pub struct Circuit<C = Coord, U = ()>
 
     /// Properties related to the instances in this template.
     /// Instance properties are stored here for lower overhead of cell instances.
-    instance_properties: IntHashMap<CellInstId, PropertyStore<RcString>>,
+    instance_properties: IntHashMap<CellInstId, PropertyStore<NameT>>,
     /// Properties related to this template.
-    properties: PropertyStore<RcString>,
+    properties: PropertyStore<NameT>,
     /// User-defined data.
     user_data: U,
 
@@ -171,7 +173,7 @@ pub struct Circuit<C = Coord, U = ()>
     /// All nets in this circuit.
     nets: IntHashSet<NetId>,
     /// Nets IDs stored by name.
-    nets_by_name: HashMap<RcString, NetId>,
+    nets_by_name: HashMap<NameT, NetId>,
     /// Logic constant LOW net.
     net_low: NetId,
     /// Logic constant HIGH net.
@@ -190,7 +192,7 @@ impl Circuit {
     }
 
     /// Get the name of this circuit.
-    pub fn name(&self) -> &RcString {
+    pub fn name(&self) -> &NameT {
         &self.name
     }
 
@@ -286,13 +288,13 @@ impl Circuit {
 pub struct CircuitInst<C = Coord, U = ()>
     where C: CoordinateType {
     /// Name of the instance.
-    name: Option<RcString>,
+    name: Option<NameT>,
     /// The ID of the template circuit.
     template_circuit_id: CellId,
     /// The ID of the parent circuit where this instance lives in.
     parent_circuit_id: CellId,
     /// Properties related to this instance.
-    properties: PropertyStore<RcString>,
+    properties: PropertyStore<NameT>,
 
     /// User-defined data.
     user_data: U,
@@ -312,7 +314,7 @@ pub struct CircuitInst<C = Coord, U = ()>
 
 impl CircuitInst {
     /// Get the name of this instance.
-    pub fn name(&self) -> &Option<RcString> {
+    pub fn name(&self) -> &Option<NameT> {
         &self.name
     }
 
@@ -363,7 +365,7 @@ pub struct Pin {
     /// The unique ID of the pin.
     id: PinId,
     /// Name of the pin.
-    name: RcString,
+    name: NameT,
     /// Signal type/direction of the pin.
     direction: Direction,
     /// Parent circuit of this pin.
@@ -380,7 +382,7 @@ pub struct Pin {
 
 impl Pin {
     /// Get the name of the pin.
-    pub fn name(&self) -> &RcString {
+    pub fn name(&self) -> &NameT {
         &self.name
     }
 
@@ -517,7 +519,7 @@ impl Deref for PinInstRef<'_> {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Net {
     /// Name of the net.
-    pub name: Option<RcString>,
+    pub name: Option<NameT>,
     /// Parent circuit of the net.
     pub parent_id: CellId,
     /// Pins connected to this net.
@@ -698,14 +700,14 @@ impl<'a> CircuitInstanceRef<'a> {
 #[derive(Debug, Clone)]
 pub struct Chip<C: CoordinateType = Coord> {
     circuits: IntHashMap<CellId, Circuit<C>>,
-    circuits_by_name: HashMap<RcString, CellId>,
+    circuits_by_name: HashMap<NameT, CellId>,
     circuit_instances: IntHashMap<CellInstId, CircuitInst>,
     nets: IntHashMap<NetId, Net>,
     pins: IntHashMap<PinId, Pin>,
     pin_instances: IntHashMap<PinInstId, PinInst>,
 
     /// Top-level properties.
-    properties: PropertyStore<RcString>,
+    properties: PropertyStore<NameT>,
 
     id_counter_circuit: u32,
     id_counter_circuit_inst: usize,
@@ -718,13 +720,13 @@ pub struct Chip<C: CoordinateType = Coord> {
     dbu: C,
 
     /// Counter for generating the next layer index.
-    layer_index_generator: IndexGenerator<LayerInfo<RcString>, u16>,
+    layer_index_generator: IndexGenerator<LayerInfo<NameT>, u16>,
     /// Lookup table for finding layers by name.
-    layers_by_name: HashMap<RcString, LayerId>,
+    layers_by_name: HashMap<NameT, LayerId>,
     /// Lookup table for finding layers by index/datatype numbers.
     layers_by_index_datatype: IntHashMap<(UInt, UInt), LayerId>,
     /// Info structures for all layers.
-    layer_info: IntHashMap<LayerId, LayerInfo<RcString>>,
+    layer_info: IntHashMap<LayerId, LayerInfo<NameT>>,
     /// ID generator for shapes.
     shape_index_generator: IndexGenerator<Shape<C>>,
 
@@ -765,7 +767,7 @@ impl<C: CoordinateType + One> Default for Chip<C> {
 impl Chip<Coord> {
     /// Find a circuit by its name.
     pub fn circuit_by_name<S: ?Sized + Eq + Hash>(&self, name: &S) -> Option<CellId>
-        where RcString: Borrow<S> {
+        where NameT: Borrow<S> {
         self.circuits_by_name.get(name).copied()
     }
 
@@ -773,7 +775,7 @@ impl Chip<Coord> {
     ///
     /// # Panics
     /// Panics if the name already exists.
-    pub fn rename_cell(&mut self, cell: &CellId, name: RcString) {
+    pub fn rename_cell(&mut self, cell: &CellId, name: NameT) {
         assert!(!self.circuits_by_name.contains_key(&name),
                 "Cell with this name already exists: {}", &name);
 
@@ -791,7 +793,7 @@ impl Chip<Coord> {
     ///
     /// # Panics
     /// Panics if the name already exists.
-    pub fn rename_cell_instance(&mut self, inst: &CellInstId, name: Option<RcString>) {
+    pub fn rename_cell_instance(&mut self, inst: &CellInstId, name: Option<NameT>) {
         let parent = self.parent_cell(inst);
         if let Some(name) = &name {
             assert!(!self.circuit(&parent).instances_by_name.contains_key(name),
@@ -811,7 +813,7 @@ impl Chip<Coord> {
     }
 
     /// Create a new circuit template.
-    pub fn create_circuit(&mut self, name: RcString, pins: Vec<(RcString, Direction)>) -> CellId {
+    pub fn create_circuit(&mut self, name: NameT, pins: Vec<(NameT, Direction)>) -> CellId {
         assert!(!self.circuits_by_name.contains_key(&name),
                 "Circuit with this name already exists: {}", &name);
         let id = CellId(Self::next_id_counter_u32(&mut self.id_counter_circuit));
@@ -892,7 +894,7 @@ impl Chip<Coord> {
     /// Create a new instance of `circuit_template` in the `parent` circuit.
     pub fn create_circuit_instance(&mut self, parent: &CellId,
                                    circuit_template: &CellId,
-                                   name: Option<RcString>) -> CellInstId {
+                                   name: Option<NameT>) -> CellInstId {
         let id = CellInstId(Self::next_id_counter_usize(&mut self.id_counter_circuit_inst));
 
         {
@@ -1002,7 +1004,7 @@ impl Chip<Coord> {
 
 
     /// Create a new net in the `parent` circuit.
-    fn create_net(&mut self, parent: &CellId, name: Option<RcString>) -> NetId {
+    fn create_net(&mut self, parent: &CellId, name: Option<NameT>) -> NetId {
         assert!(self.circuits.contains_key(parent));
 
         let id = NetId(Self::next_id_counter_usize(&mut self.id_counter_net));
@@ -1024,7 +1026,7 @@ impl Chip<Coord> {
     }
 
     /// Change the name of the net.
-    fn rename_net(&mut self, net_id: &NetId, new_name: Option<RcString>) -> Option<RcString> {
+    fn rename_net(&mut self, net_id: &NetId, new_name: Option<NameT>) -> Option<NameT> {
         let parent_circuit = self.parent_cell_of_net(net_id);
 
         // Check if a net with this name already exists.
@@ -1241,7 +1243,7 @@ impl Chip<Coord> {
 
     /// Append a new pin to the `parent` circuit.
     /// Update all circuit instances with the new pin.
-    fn create_pin(&mut self, parent: CellId, name: RcString, direction: Direction) -> PinId {
+    fn create_pin(&mut self, parent: CellId, name: NameT, direction: Direction) -> PinId {
         let pin_id = PinId(Self::next_id_counter_u32(&mut self.id_counter_pin));
         let position = self.num_pins(&parent);
         let pin = Pin {
@@ -1714,7 +1716,7 @@ pub struct Shapes<C>
     /// Shape elements.
     shapes: IntHashMap<ShapeId, Shape<C>>,
     /// Property stores for the shapes.
-    shape_properties: IntHashMap<ShapeId, PropertyStore<RcString>>,
+    shape_properties: IntHashMap<ShapeId, PropertyStore<NameT>>,
 }
 
 impl<C: CoordinateType> Shapes<C> {
@@ -1763,7 +1765,7 @@ impl<C: CoordinateType> TryBoundingBox<C> for Shapes<C> {
 }
 
 impl HierarchyBase for Chip<Coord> {
-    type NameType = RcString;
+    type NameType = NameT;
     type CellId = CellId;
     type CellInstId = CellInstId;
 

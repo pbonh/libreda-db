@@ -26,6 +26,7 @@
 
 use crate::traits::{HierarchyBase, NetlistBase};
 use crate::prelude::TerminalId;
+use crate::netlist::direction::Direction;
 
 /// Trait that provides object-like read access to a cell hierarchy structure and its elements.
 pub trait HierarchyReferenceAccess: HierarchyBase
@@ -172,6 +173,16 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
                 base: self.base,
                 id,
             })
+    }
+
+    /// Iterate over all input pins of this cell.
+    pub fn each_input_pin(&self) -> impl Iterator<Item=PinRef<'_, N>> + '_ {
+        self.each_pin().filter(|p| p.direction().is_input())
+    }
+
+    /// Iterate over all output pins of this cell.
+    pub fn each_output_pin(&self) -> impl Iterator<Item=PinRef<'_, N>> + '_ {
+        self.each_pin().filter(|p| p.direction().is_output())
     }
 
     /// Find a pin by it's name.
@@ -326,6 +337,33 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
             .map(|p| p.into());
         pins.chain(pin_insts)
     }
+
+    /// Iterate over all terminals that drive the net. This should usually be one.
+    /// Returns the pins that are marked as `inputs` and pin instances marked as `outputs`.
+    /// Skips `InOut` terminals.
+    pub fn each_driver(&self) -> impl Iterator<Item=TerminalRef<'_, N>> + '_ {
+        self.each_terminal()
+            .filter(|t| match t {
+                TerminalRef::Pin(p) => p.direction().is_input(),
+                TerminalRef::PinInst(p) => p.pin().direction().is_output()
+            })
+    }
+
+    /// Iterate over all terminals that drive the net. This should usually be one.
+    /// Returns the pins that are marked as `inputs` and pin instances marked as `outputs`.
+    /// Skips `InOut` terminals.
+    pub fn each_sink(&self) -> impl Iterator<Item=TerminalRef<'_, N>> + '_ {
+        self.each_terminal()
+            .filter(|t| match t {
+                TerminalRef::Pin(p) => p.direction().is_output(),
+                TerminalRef::PinInst(p) => p.pin().direction().is_input()
+            })
+    }
+
+    /// Get a qualified name for this net.
+    pub fn qname(&self, separator: &str) -> String {
+        format!("{}{}{}", self.parent().name(), separator, self.name().unwrap_or_else(|| "<unnamed>".to_string().into()))
+    }
 }
 
 /// A reference to a pin.
@@ -352,9 +390,19 @@ impl<'a, N: NetlistBase> PinRef<'a, N> {
         self.id.clone()
     }
 
+    /// Get the terminal ID of this pin.
+    pub fn terminal_id(&self) -> TerminalId<N> {
+        TerminalId::PinId(self.id())
+    }
+
     /// Get the name of the pin.
     pub fn name(&self) -> N::NameType {
         self.base.pin_name(&self.id)
+    }
+
+    /// Get the signal direction of the pin.
+    pub fn direction(&self) -> Direction {
+        self.base.pin_direction(&self.id)
     }
 
     /// Get the net which is attached to the pin from inside the cell.
@@ -374,9 +422,23 @@ impl<'a, N: NetlistBase> PinRef<'a, N> {
         }
     }
 
+    /// Find the instance of this pin in the given cell instance.
+    pub fn instance(&self, cell_inst: &N::CellInstId) -> PinInstRef<'a, N> {
+        PinInstRef {
+            base: self.base,
+            id: self.base.pin_instance(cell_inst, &self.id),
+        }
+    }
+
     /// Convert the pin reference into a terminal reference.
     pub fn into_terminal(self) -> TerminalRef<'a, N> {
         self.into()
+    }
+
+    /// Create a qualified name.
+    /// For pins: 'cell_name:pin_name'
+    pub fn qname(&self, separator: &str) -> String {
+        format!("{}{}{}", self.cell().name(), separator, self.name())
     }
 }
 
@@ -402,6 +464,11 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
     /// Get the pin instance ID.
     pub fn id(&self) -> N::PinInstId {
         self.id.clone()
+    }
+
+    /// Get the terminal ID of this pin instance.
+    pub fn terminal_id(&self) -> TerminalId<N> {
+        TerminalId::PinInstId(self.id())
     }
 
     /// Get the template of this pin instance.
@@ -432,6 +499,18 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
     /// Convert the pin instance reference into a terminal reference.
     pub fn into_terminal(self) -> TerminalRef<'a, N> {
         self.into()
+    }
+
+    /// Create a qualified name.
+    /// For pin instances: 'cell_name:cell_instance:pin_name'
+    /// Where `:` is defined by `separator`.
+    pub fn qname(&self, separator: &str) -> String {
+        format!("{}{}{}{}{}",
+                self.pin().cell().name(),
+                separator,
+                self.cell_instance().name().unwrap_or_else(|| "<unnamed>".to_string().into()),
+                separator,
+                self.pin().name())
     }
 }
 
@@ -474,7 +553,6 @@ impl<'a, N: NetlistBase> Into<TerminalId<N>> for TerminalRef<'a, N> {
 }
 
 impl<'a, N: NetlistBase> TerminalRef<'a, N> {
-
     /// Get the ID of the terminal.
     pub fn id(&self) -> TerminalId<N> {
         (*self).clone().into()
@@ -503,14 +581,9 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     pub fn qname(&self, separator: &str) -> String {
         match self {
             TerminalRef::Pin(p) =>
-                format!("{}{}{}", p.cell().name(), separator, p.name()),
+                p.qname(separator),
             TerminalRef::PinInst(p) =>
-                format!("{}{}{}{}{}",
-                        p.pin().cell().name(),
-                        separator,
-                        p.cell_instance().name().unwrap_or_else(|| "<unnamed>".to_string().into()),
-                        separator,
-                        p.pin().name())
+                p.qname(separator)
         }
     }
 }

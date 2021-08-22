@@ -167,7 +167,7 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
     }
 
     /// Iterate over all pins of this cell.
-    pub fn each_pin(&self) -> impl Iterator<Item=PinRef<'_, N>> + '_ {
+    pub fn each_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
         self.base.each_pin(&self.id)
             .map(move |id| PinRef {
                 base: self.base,
@@ -176,17 +176,17 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
     }
 
     /// Iterate over all input pins of this cell.
-    pub fn each_input_pin(&self) -> impl Iterator<Item=PinRef<'_, N>> + '_ {
+    pub fn each_input_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
         self.each_pin().filter(|p| p.direction().is_input())
     }
 
     /// Iterate over all output pins of this cell.
-    pub fn each_output_pin(&self) -> impl Iterator<Item=PinRef<'_, N>> + '_ {
+    pub fn each_output_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
         self.each_pin().filter(|p| p.direction().is_output())
     }
 
     /// Find a pin by it's name.
-    pub fn pin_by_name(&self, name: &str) -> Option<PinRef<'_, N>> {
+    pub fn pin_by_name(&self, name: &str) -> Option<PinRef<'a, N>> {
         self.base.pin_by_name(&self.id, name)
             .map(|id| {
                 PinRef {
@@ -197,7 +197,7 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
     }
 
     /// Iterate over all nets that live directly in this cell.
-    pub fn each_net(&self) -> impl Iterator<Item=NetRef<'_, N>> + '_ {
+    pub fn each_net(&self) -> impl Iterator<Item=NetRef<'a, N>> + '_ {
         self.base.each_internal_net(&self.id)
             .map(move |id| NetRef {
                 base: self.base,
@@ -228,7 +228,7 @@ impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
     }
 
     /// Get the parent cell of this instance.
-    pub fn parent(&self) -> CellRef<'_, H> {
+    pub fn parent(&self) -> CellRef<'a, H> {
         CellRef {
             base: self.base,
             id: self.parent_id(),
@@ -236,7 +236,7 @@ impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
     }
 
     /// Get the template cell of this instance.
-    pub fn template(&self) -> CellRef<'_, H> {
+    pub fn template(&self) -> CellRef<'a, H> {
         CellRef {
             base: self.base,
             id: self.template_id(),
@@ -261,7 +261,7 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     }
 
     /// Iterate over all pins of this cell.
-    pub fn each_pin_instance(&self) -> impl Iterator<Item=PinInstRef<'_, N>> + '_ {
+    pub fn each_pin_instance(&self) -> impl Iterator<Item=PinInstRef<'a, N>> + '_ {
         self.base.each_pin_instance(&self.id)
             .map(move |id| PinInstRef {
                 base: self.base,
@@ -270,7 +270,7 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     }
 
     /// Iterate over all nets are connected to this instance. A net might appear more than once.
-    pub fn each_net(&self) -> impl Iterator<Item=NetRef<'_, N>> + '_ {
+    pub fn each_net(&self) -> impl Iterator<Item=NetRef<'a, N>> + '_ {
         self.base.each_external_net(&self.id)
             .map(move |id| NetRef {
                 base: self.base,
@@ -300,7 +300,7 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     }
 
     /// Get the cell where this net lives in.
-    pub fn parent(&self) -> CellRef<'_, N> {
+    pub fn parent(&self) -> CellRef<'a, N> {
         CellRef {
             base: self.base,
             id: self.base.parent_cell_of_net(&self.id),
@@ -308,7 +308,7 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     }
 
     /// Iterate over each pin attached to this net.
-    pub fn each_pin(&self) -> impl Iterator<Item=PinRef<'_, N>> + '_ {
+    pub fn each_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
         self.base.each_pin_of_net(&self.id)
             .map(move |id| {
                 PinRef {
@@ -319,7 +319,7 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     }
 
     /// Iterate over each pin instance attached to this net.
-    pub fn each_pin_instance(&self) -> impl Iterator<Item=PinInstRef<'_, N>> + '_ {
+    pub fn each_pin_instance(&self) -> impl Iterator<Item=PinInstRef<'a, N>> + '_ {
         self.base.each_pin_instance_of_net(&self.id)
             .map(move |id| {
                 PinInstRef {
@@ -330,7 +330,7 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     }
 
     /// Iterate over terminal attached to this net.
-    pub fn each_terminal(&self) -> impl Iterator<Item=TerminalRef<'_, N>> + '_ {
+    pub fn each_terminal(&self) -> impl Iterator<Item=TerminalRef<'a, N>> + '_ {
         let pins = self.each_pin()
             .map(|p| p.into());
         let pin_insts = self.each_pin_instance()
@@ -341,7 +341,7 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     /// Iterate over all terminals that drive the net. This should usually be one.
     /// Returns the pins that are marked as `inputs` and pin instances marked as `outputs`.
     /// Skips `InOut` terminals.
-    pub fn each_driver(&self) -> impl Iterator<Item=TerminalRef<'_, N>> + '_ {
+    pub fn each_driver(&self) -> impl Iterator<Item=TerminalRef<'a, N>> + '_ {
         self.each_terminal()
             .filter(|t| match t {
                 TerminalRef::Pin(p) => p.direction().is_input(),
@@ -352,7 +352,7 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     /// Iterate over all terminals that drive the net. This should usually be one.
     /// Returns the pins that are marked as `inputs` and pin instances marked as `outputs`.
     /// Skips `InOut` terminals.
-    pub fn each_sink(&self) -> impl Iterator<Item=TerminalRef<'_, N>> + '_ {
+    pub fn each_sink(&self) -> impl Iterator<Item=TerminalRef<'a, N>> + '_ {
         self.each_terminal()
             .filter(|t| match t {
                 TerminalRef::Pin(p) => p.direction().is_output(),
@@ -406,7 +406,7 @@ impl<'a, N: NetlistBase> PinRef<'a, N> {
     }
 
     /// Get the net which is attached to the pin from inside the cell.
-    pub fn net(&self) -> Option<NetRef<'_, N>> {
+    pub fn net(&self) -> Option<NetRef<'a, N>> {
         self.base.net_of_pin(&self.id)
             .map(|id| NetRef {
                 base: self.base,
@@ -472,7 +472,7 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
     }
 
     /// Get the template of this pin instance.
-    pub fn pin(&self) -> PinRef<'_, N> {
+    pub fn pin(&self) -> PinRef<'a, N> {
         PinRef {
             base: self.base,
             id: self.base.template_pin(&self.id),
@@ -488,7 +488,7 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
     }
 
     /// Get the net which is attached to this pin instance.
-    pub fn net(&self) -> Option<NetRef<'_, N>> {
+    pub fn net(&self) -> Option<NetRef<'a, N>> {
         self.base.net_of_pin_instance(&self.id)
             .map(|id| NetRef {
                 base: self.base,
@@ -559,7 +559,7 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     }
 
     /// Get the attached net.
-    pub fn net(&self) -> Option<NetRef<'_, N>> {
+    pub fn net(&self) -> Option<NetRef<'a, N>> {
         match self {
             TerminalRef::Pin(p) => p.net(),
             TerminalRef::PinInst(p) => p.net()
@@ -612,4 +612,5 @@ fn test_chip_reference_access() {
     assert_eq!(top_ref.each_net().count(), 2, "LOW and HIGH nets should be there.");
     assert_eq!(top_ref.each_pin().count(), 1);
     assert_eq!(sub_inst1_ref.each_pin_instance().count(), 1);
+
 }

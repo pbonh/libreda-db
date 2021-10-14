@@ -157,6 +157,11 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
                 id,
             })
     }
+
+    /// Get the number of cell instances inside the `cell`.
+    pub fn num_child_instances(&self) -> usize {
+        self.base.num_child_instances(&self.id)
+    }
 }
 
 
@@ -252,6 +257,7 @@ impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
     pub fn template_id(&self) -> H::CellId {
         self.base.template_cell(&self.id)
     }
+
 }
 
 impl<'a, N: NetlistBase> CellInstRef<'a, N> {

@@ -391,6 +391,11 @@ impl<'a, N: NetlistBase + ?Sized> Clone for PinRef<'a, N> {
 }
 
 impl<'a, N: NetlistBase> PinRef<'a, N> {
+    /// Access the base structure.
+    pub fn base(&self) -> &'_ N {
+        self.base
+    }
+
     /// Get the pin ID.
     pub fn id(&self) -> N::PinId {
         self.id.clone()

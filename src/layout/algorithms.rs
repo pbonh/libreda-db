@@ -20,12 +20,12 @@
 
 //! Collection of useful algorithms for layout processing.
 
-use crate::prelude::{Rect, SimpleRPolygon, CoordinateType};
+use crate::prelude::{Rect, REdge};
 use itertools::Itertools;
-use crate::prelude::TryBoundingBox;
-use num_traits::PrimInt;
+use num_traits::{Bounded, Zero};
 
-/// Decompose a manhattanized polygon into non-overlapping horizontal rectangles.
+/// Decompose a set of manhattanized polygons into non-overlapping horizontal rectangles.
+/// The polygons in form of an iterator over all the edges.
 /// A point is considered inside the polygon when the polygon wraps around it a non-zero number of times.
 ///
 /// # Example
@@ -43,31 +43,20 @@ use num_traits::PrimInt;
 ///     ].iter().map(|t| Point::from(t)).collect()).unwrap();
 ///
 ///     // Decompose the polygon into non-overlapping horizontal rectangles.
-///     let rects = decompose_rectangles(&poly);
+///     let rects = decompose_rectangles(poly.edges());
 ///     assert_eq!(rects, vec![Rect::new((0, 0), (2, 1)), Rect::new((1, 1), (2, 2))]);
 /// ```
-pub fn decompose_rectangles<T: CoordinateType + PrimInt>(rpoly: &SimpleRPolygon<T>) -> Vec<Rect<T>> {
+pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
+    where T: Ord + Bounded + Copy + Zero,
+          I: Iterator<Item=REdge<T>> {
     // Sweep through the vertical edges from left to right. Keep track of 'open' rectangles.
     // A rectangle is opened when a left boundary is encountered and closed when a right boundary is encountered.
     // Construct a rectangle once a right boundary is encountered.
 
-    // Handle trivial cases first.
-    if rpoly.num_points() < 4 {
-        // Cannot be a rectangle.
-        vec![]
-    } else if rpoly.num_points() == 4 {
-        // This is already a rectangle, take a shortcut.
-        if let Some(bbox) = rpoly.try_bounding_box() {
-            vec![bbox]
-        } else {
-            vec![]
-        }
-    } else {
-        // General case:
-
+    {
         // Extract the vertical edges.
-        let vertical_edges: Vec<_> = rpoly.edges()
-            .filter(|e| e.is_vertical() && e.length() > T::zero())
+        let vertical_edges: Vec<_> = redges
+            .filter(|e| e.is_vertical() && e.start != e.end)
             .map(|e| {
                 let is_left = e.start > e.end;
                 if is_left {
@@ -85,7 +74,7 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt>(rpoly: &SimpleRPolygon<
         let mut results = Vec::new();
 
         // Return the position of the new entry.
-        fn split_intervals<T: PrimInt>(intervals: &mut Vec<(T, T, isize, T)>, split_location: T) -> usize {
+        fn split_intervals<T: PartialOrd + Copy>(intervals: &mut Vec<(T, T, isize, T)>, split_location: T) -> usize {
             let (pos, &(a, b, value, x)) = intervals.iter()
                 .enumerate()
                 .find(|(_pos, &(a, b, _val, _x))| a <= split_location && split_location < b)
@@ -100,12 +89,12 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt>(rpoly: &SimpleRPolygon<
                 let i2 = (split_location, b, value, x);
                 intervals[pos] = i2;
                 intervals.insert(pos, i1);
-                pos+1
+                pos + 1
             }
         }
 
         // Merge neighbouring intervals with the same value.
-        fn merge_intervals<T: PrimInt>(intervals: &mut Vec<(T, T, isize, T)>) {
+        fn merge_intervals<T: PartialEq + Copy>(intervals: &mut Vec<(T, T, isize, T)>) {
             debug_assert!(intervals.len() >= 1);
             let mut write_index = 0;
             let mut value = (intervals[0].2, intervals[0].3);
@@ -184,22 +173,24 @@ pub fn decompose_rectangles<T: CoordinateType + PrimInt>(rpoly: &SimpleRPolygon<
 fn test_decompose_rectangles_trivial() {
     // Test trivial cases: Empty polygon and rectangle.
     use crate::prelude::Point;
+    use crate::prelude::SimpleRPolygon;
 
     let empty: SimpleRPolygon<i32> = SimpleRPolygon::empty();
-    let rects = decompose_rectangles(&empty);
+    let rects = decompose_rectangles(empty.edges());
     assert_eq!(rects, vec![]);
 
     // Test with reversed polygon.
     let rect = SimpleRPolygon::try_new(vec![
         (0, 0), (2, 0), (2, 2), (0, 2)
     ].iter().map(|t| Point::from(t)).collect()).unwrap();
-    let rects = decompose_rectangles(&rect.reversed());
+    let rects = decompose_rectangles(rect.reversed().edges());
     assert_eq!(rects, vec![Rect::new((0, 0), (2, 2))]);
 }
 
 #[test]
 fn test_decompose_rectangles() {
     use crate::prelude::Point;
+    use crate::prelude::SimpleRPolygon;
     //    +--+
     //    |  |
     // +--+  |
@@ -208,10 +199,10 @@ fn test_decompose_rectangles() {
     let poly = SimpleRPolygon::try_new(vec![
         (0, 0), (2, 0), (2, 2), (1, 2), (1, 1), (0, 1)
     ].iter().map(|t| Point::from(t)).collect()).unwrap();
-    let rects = decompose_rectangles(&poly);
+    let rects = decompose_rectangles(poly.edges());
     assert_eq!(rects, vec![Rect::new((0, 0), (2, 1)), Rect::new((1, 1), (2, 2))]);
 
     // Test with reversed polygon.
-    let rects = decompose_rectangles(&poly.reversed());
+    let rects = decompose_rectangles(poly.reversed().edges());
     assert_eq!(rects, vec![Rect::new((0, 0), (2, 1)), Rect::new((1, 1), (2, 2))]);
 }

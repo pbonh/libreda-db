@@ -3,6 +3,6 @@ pipeline:
         image: rust
         commands:
             # Get dependencies are expected to be in a local folder.
-            - git -C clone https://codeberg.org/libreda/iron-shapes
+            - git -C ../ clone https://codeberg.org/libreda/iron-shapes
             - cargo check
             - cargo test

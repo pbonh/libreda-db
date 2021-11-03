@@ -5,5 +5,6 @@ pipeline:
             # Get dependencies are expected to be in a local folder.
             - git -C ../ clone https://codeberg.org/libreda/iron-shapes
             - git -C ../ clone https://codeberg.org/libreda/iron-shapes-booleanop
+            - git -C ../ clone https://codeberg.org/libreda/splay
             - cargo check
             - cargo test

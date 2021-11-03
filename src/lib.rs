@@ -91,6 +91,7 @@ extern crate serde;
 
 /// Re-exports: Crate for geometric primitives (points, polygons, ...).
 pub use iron_shapes;
+pub use iron_shapes_booleanop;
 
 // Public modules.
 pub mod prelude;

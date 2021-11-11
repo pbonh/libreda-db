@@ -24,8 +24,8 @@
 //! provide more object like access methods.
 //!
 
-use crate::traits::{HierarchyBase, NetlistBase};
-use crate::prelude::TerminalId;
+use crate::traits::{HierarchyBase, NetlistBase, LayoutBase};
+use crate::prelude::{TerminalId, SimpleTransform};
 use crate::netlist::direction::Direction;
 
 /// Trait that provides object-like read access to a cell hierarchy structure and its elements.
@@ -96,6 +96,15 @@ pub struct CellRef<'a, H: HierarchyBase + ?Sized> {
     id: H::CellId,
 }
 
+impl<'a, H: HierarchyBase> Clone for CellRef<'a, H> {
+    fn clone(&self) -> Self {
+        Self {
+            base: self.base,
+            id: self.id.clone(),
+        }
+    }
+}
+
 impl<'a, H: HierarchyBase> CellRef<'a, H> {
     /// Access the base structure.
     pub fn base(&self) -> &'_ H {
@@ -121,6 +130,15 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
     pub fn each_cell_instance(&self) -> impl Iterator<Item=CellInstRef<'a, H>> + '_ {
         self.each_cell_instance_id()
             .map(move |id| CellInstRef {
+                base: self.base,
+                id,
+            })
+    }
+
+    /// Find a child instance by its name.
+    pub fn cell_instance_by_name(&self, name: &str) -> Option<CellInstRef<'a, H>> {
+        self.base.cell_instance_by_name(&self.id, name)
+            .map(|id| CellInstRef {
                 base: self.base,
                 id,
             })
@@ -209,6 +227,15 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
                 id,
             })
     }
+
+    /// Find a net by its name.
+    pub fn net_by_name(&self, name: &str) -> Option<NetRef<'a, N>> {
+        self.base.net_by_name(&self.id, name)
+            .map(|id| NetRef {
+                base: self.base,
+                id,
+            })
+    }
 }
 
 
@@ -221,7 +248,13 @@ pub struct CellInstRef<'a, H: HierarchyBase + ?Sized> {
     id: H::CellInstId,
 }
 
+
 impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
+    /// Access the base structure.
+    pub fn base(&self) -> &'_ H {
+        self.base
+    }
+
     /// Get the ID of this cell instance.
     pub fn id(&self) -> H::CellInstId {
         self.id.clone()
@@ -257,7 +290,6 @@ impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
     pub fn template_id(&self) -> H::CellId {
         self.base.template_cell(&self.id)
     }
-
 }
 
 impl<'a, N: NetlistBase> CellInstRef<'a, N> {
@@ -282,6 +314,14 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
                 base: self.base,
                 id,
             })
+    }
+}
+
+
+impl<'a, L: LayoutBase> CellInstRef<'a, L> {
+    /// Get the geometric transform that describes the location of a cell instance relative to its parent.
+    pub fn get_transform(&self) -> SimpleTransform<L::Coord> {
+        self.base().get_transform(&self.id)
     }
 }
 
@@ -623,5 +663,4 @@ fn test_chip_reference_access() {
     assert_eq!(top_ref.each_net().count(), 2, "LOW and HIGH nets should be there.");
     assert_eq!(top_ref.each_pin().count(), 1);
     assert_eq!(sub_inst1_ref.each_pin_instance().count(), 1);
-
 }

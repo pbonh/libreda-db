@@ -34,7 +34,6 @@
 
 use std::hash::{Hash, Hasher};
 use crate::netlist::direction::Direction;
-use std::collections::{HashSet};
 pub use crate::traits::{HierarchyBase, HierarchyEdit};
 
 
@@ -307,28 +306,6 @@ pub trait NetlistBase: HierarchyBase {
     fn each_terminal_of_net<'a>(&'a self, net: &Self::NetId)
                                 -> Box<dyn Iterator<Item=TerminalId<Self>> + 'a> {
         Box::new(self.each_terminal_of_net_vec(net).into_iter())
-    }
-
-    /// Visit all circuit instances connected to this net.
-    /// An instance is touched not more than once.
-    fn for_each_circuit_instance_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
-        let mut visited = HashSet::new();
-        self.for_each_pin_instance_of_net(net, |pin_inst| {
-            let inst = self.parent_of_pin_instance(&pin_inst);
-            if !visited.contains(&inst) {
-                f(inst);
-            } else {
-                visited.insert(inst);
-            }
-        })
-    }
-
-    /// Iterate over all circuit instances connected to this net.
-    /// An instance is touched not more than once.
-    fn each_circuit_instance_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::CellInstId> {
-        let mut v = Vec::new();
-        self.for_each_circuit_instance_of_net(net, |c| v.push(c.clone()));
-        v
     }
 }
 

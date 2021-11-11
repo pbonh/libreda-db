@@ -22,7 +22,7 @@
 
 use crate::traits::{NetlistBase, NetlistEdit};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::borrow::Borrow;
 use std::fmt;
 
@@ -42,13 +42,29 @@ pub trait NetlistUtil: NetlistBase {
         Box::new(self.each_pin_instance(inst)
             .flat_map(move |p| self.net_of_pin_instance(&p)))
     }
-}
 
-impl<N: NetlistBase> NetlistUtil for N {}
+    /// Visit all circuit instances connected to this net.
+    /// An instance is touched not more than once.
+    fn for_each_circuit_instance_of_net<F>(&self, net: &Self::NetId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
+        let mut visited = HashSet::new();
+        self.for_each_pin_instance_of_net(net, |pin_inst| {
+            let inst = self.parent_of_pin_instance(&pin_inst);
+            if !visited.contains(&inst) {
+                f(inst);
+            } else {
+                visited.insert(inst);
+            }
+        })
+    }
 
-/// Modifying utility functions for netlists.
-/// Import the this trait to use the utility functions all types that implement the `NetlistBase` trait.
-pub trait NetlistEditUtil: NetlistEdit {
+    /// Iterate over all circuit instances connected to this net.
+    /// An instance is touched not more than once.
+    fn each_circuit_instance_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::CellInstId> {
+        let mut v = Vec::new();
+        self.for_each_circuit_instance_of_net(net, |c| v.push(c.clone()));
+        v
+    }
+
     /// Write the netlist in a human readable form.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let circuits = self.each_cell_vec();
@@ -96,6 +112,13 @@ pub trait NetlistEditUtil: NetlistEdit {
         fmt::Result::Ok(())
     }
 
+}
+
+impl<N: NetlistBase> NetlistUtil for N {}
+
+/// Modifying utility functions for netlists.
+/// Import the this trait to use the utility functions all types that implement the `NetlistBase` trait.
+pub trait NetlistEditUtil: NetlistEdit {
     /// Take all terminals that are connected to `old_net` and connect them to `new_net` instead.
     /// The old net is no longer used and removed.
     ///

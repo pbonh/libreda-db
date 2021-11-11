@@ -236,7 +236,7 @@ pub trait HierarchyBase {
     /// Get the number of cell templates.
     fn num_cells(&self) -> usize;
 
-    /// Get a property of the top-level chip data structure..
+    /// Get a property of the top-level chip data structure.
     fn get_chip_property(&self, key: &Self::NameType) -> Option<PropertyValue> {
         None
     }

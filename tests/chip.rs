@@ -67,8 +67,8 @@ fn test_create_sub_circuit() {
     // Create an instance of a in b.
     let inst_a = chip.create_cell_instance(&b, &a, Some("inst_a".into()));
     assert_eq!(chip.num_child_instances(&b), 1);
-    assert_eq!(chip.num_references(&a), 1);
-    assert_eq!(chip.num_references(&b), 0);
+    assert_eq!(chip.num_cell_references(&a), 1);
+    assert_eq!(chip.num_cell_references(&b), 0);
 
     // Check template and parent relation.
     assert_eq!(chip.template_cell(&inst_a), a);

@@ -383,12 +383,6 @@ pub trait NetlistBase: HierarchyBase {
     /// Get the number of pins of a circuit.
     fn num_pins(&self, circuit: &Self::CellId) -> usize;
 
-    /// Get the number of references that point to this circuit, i.e. the number of
-    /// instances of this circuit.
-    fn num_references(&self, circuit: &Self::CellId) -> usize {
-        self.each_cell_reference(circuit).count()
-    }
-
     /// Call a function for each pin connected to this net.
     fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> ();
 

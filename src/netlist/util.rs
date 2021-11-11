@@ -21,8 +21,12 @@
 //! Utility functions for dealing with netlists.
 
 use crate::traits::{NetlistBase, NetlistEdit};
+
 use std::collections::HashMap;
 use std::borrow::Borrow;
+use std::fmt;
+
+use itertools::Itertools;
 
 /// Non-modifying utility functions for netlists.
 /// Import the this trait to use the utility functions all types that implement the `NetlistBase` trait.
@@ -45,6 +49,53 @@ impl<N: NetlistBase> NetlistUtil for N {}
 /// Modifying utility functions for netlists.
 /// Import the this trait to use the utility functions all types that implement the `NetlistBase` trait.
 pub trait NetlistEditUtil: NetlistEdit {
+    /// Write the netlist in a human readable form.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let circuits = self.each_cell_vec();
+        // circuits.sort_by_key(|c| c.id());
+        for c in &circuits {
+            let circuit_name = self.cell_name(c);
+            let circuit_instances = self.each_cell_instance_vec(c);
+            // circuit_instances.sort_by_key(|c| c.id());
+
+            // Get pin names together with the net they are connected to.
+            let pin_names = self.each_pin(c)
+                .map(|pin| {
+                    let pin_name = self.pin_name(&pin);
+                    let net = self.net_of_pin(&pin);
+                    let net_name: Option<String> = net.
+                        map(|n| self.net_name(&n)
+                            .map(|n| n.into())
+                            .unwrap_or("<unnamed>".into())); // TODO: Create a name.
+                    format!("{}={:?}", pin_name, net_name)
+                }).join(" ");
+
+            writeln!(f, ".subckt {} {}", circuit_name, pin_names)?;
+            for inst in &circuit_instances {
+                // fmt::Debug::fmt(Rc::deref(&c), f)?;
+                let sub_name: String = self.cell_instance_name(inst)
+                    .map(|n| n.into())
+                    .unwrap_or("<unnamed>".into()); // TODO: Create a name.
+                let sub_template = self.template_cell(inst);
+                let template_name = self.cell_name(&sub_template);
+                let nets = self.each_pin_instance(inst)
+                    .map(|p| {
+                        let pin = self.template_pin(&p);
+                        let pin_name = self.pin_name(&pin);
+                        let net = self.net_of_pin_instance(&p);
+                        let net_name: Option<String> = net.
+                            map(|n| self.net_name(&n)
+                                .map(|n| n.into())
+                                .unwrap_or("<unnamed>".into()));
+                        format!("{}={:?}", pin_name, net_name)
+                    }).join(" ");
+                writeln!(f, "    X{} {} {}", sub_name, template_name, nets)?;
+            }
+            writeln!(f, ".ends {}\n", circuit_name)?;
+        }
+        fmt::Result::Ok(())
+    }
+
     /// Take all terminals that are connected to `old_net` and connect them to `new_net` instead.
     /// The old net is no longer used and removed.
     ///

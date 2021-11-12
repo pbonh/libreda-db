@@ -19,6 +19,9 @@
  */
 
 //! Chip data structure holding netlist and layout together.
+//! [`Chip`] implements the [`L2NEdit`] trait and hence qualifies for representing
+//! netlists fused with a layout. [`Chip`] can also be used solely as a netlist structure
+//! or as a layout structure.
 
 // TODO: Remove this when fully implemented.
 #![allow(unused_variables)]
@@ -112,13 +115,6 @@ impl From<PinInstId> for TerminalId {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NetId(usize);
-//
-// /// Cell identifier.
-// pub type CellId<T> = Index<Cell<T>>;
-//
-// /// Cell instance identifier.
-// pub type CellInstId<T> = Index<CellInstance<T>>;
-//
 
 /// Unique (across layout) identifier of a shape.
 pub type ShapeId = Index<Shape<Coord>, u32>;

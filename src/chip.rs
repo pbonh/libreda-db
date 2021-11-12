@@ -407,41 +407,6 @@ impl Pin {
     }
 }
 
-
-// /// Fat reference to a pin. Includes also a reference to the parent circuit.
-// pub struct PinRef<'a> {
-//     parent: CircuitRef<'a>,
-//     pin: &'a Pin,
-// }
-//
-// impl<'a> PinRef<'a> {
-//     fn new(parent: CircuitRef<'a>, pin: &'a Pin) -> Self {
-//         Self {
-//             parent,
-//             pin,
-//         }
-//     }
-//
-//     /// Get the circuit where this pin lives.
-//     pub fn parent_circuit(self) -> CircuitRef<'a> {
-//         self.parent
-//     }
-//
-//     /// Get a reference to the netlist where this pin lives.
-//     pub fn netlist(self) -> &'a Chip {
-//         self.parent_circuit().netlist()
-//     }
-// }
-//
-// impl Deref for PinRef<'_> {
-//     type Target = Pin;
-//
-//     fn deref(&self) -> &Self::Target {
-//         self.pin
-//     }
-// }
-
-
 /// Instance of a pin.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -460,54 +425,6 @@ impl PinInst {
         self.net.clone()
     }
 }
-//
-// /// Fat reference to a pin instance. Includes also a reference to the parent circuit instance.
-// #[derive(Copy, Clone)]
-// pub struct PinInstRef<'a> {
-//     parent: CircuitInstanceRef<'a>,
-//     pin_inst: &'a PinInst,
-// }
-//
-//
-// impl<'a> PinInstRef<'a> {
-//     fn new(parent: CircuitInstanceRef<'a>, pin_inst: &'a PinInst) -> Self {
-//         Self {
-//             parent,
-//             pin_inst,
-//         }
-//     }
-//
-//     /// Get the circuit instance where this pin lives.
-//     pub fn parent_circuit_instance(self) -> CircuitInstanceRef<'a> {
-//         self.parent
-//     }
-//
-//     /// Get a reference to the template of this instance.
-//     pub fn template_pin(self) -> PinRef<'a> {
-//         PinRef::new(self.parent_circuit_instance().template(),
-//                     self.netlist().pin(&self.template_pin_id))
-//     }
-//
-//     /// Get reference to the netlist where this instance lives.
-//     pub fn netlist(self) -> &'a Chip {
-//         self.parent_circuit_instance().netlist()
-//     }
-//
-//     /// Get a reference to the net that is connected to this pin instance.
-//     pub fn net_ref(self) -> Option<NetRef<'a>> {
-//         self.net_id()
-//             .map(|id| self.netlist().net_ref(&id))
-//     }
-// }
-//
-// impl Deref for PinInstRef<'_> {
-//     type Target = PinInst;
-//
-//     fn deref(&self) -> &Self::Target {
-//         self.pin_inst
-//     }
-// }
-
 
 /// A net represents an electric potential or a wire.
 #[derive(Debug, Clone)]
@@ -529,167 +446,6 @@ pub struct Net {
 }
 
 impl Net {}
-//
-// /// Fat reference to a net. Includes also a reference to the parent circuit.
-// #[derive(Copy, Clone, Debug)]
-// pub struct NetRef<'a> {
-//     parent: CircuitRef<'a>,
-//     net: &'a Net,
-// }
-//
-// impl<'a> NetRef<'a> {
-//     fn new(parent: CircuitRef<'a>, net: &'a Net) -> Self {
-//         Self {
-//             parent,
-//             net,
-//         }
-//     }
-//
-//     /// Get the circuit where this net lives.
-//     pub fn parent_circuit(self) -> CircuitRef<'a> {
-//         self.parent
-//     }
-//
-//     /// Get reference to the netlist where this net lives.
-//     pub fn netlist(self) -> &'a Chip {
-//         self.parent_circuit().netlist()
-//     }
-//
-//     /// Iterate over all external pin IDs connected to this net.
-//     pub fn each_pin_id(&self) -> impl Iterator<Item=PinId> + '_ {
-//         self.pins.iter().copied()
-//     }
-//
-//     /// Iterate over all internal pin instance IDs connected to this net.
-//     pub fn each_pin_inst_id(&self) -> impl Iterator<Item=PinInstId> + '_ {
-//         self.pin_instances.iter().copied()
-//     }
-//
-//     /// Iterate over all external pins connected to this net.
-//     pub fn each_pin_ref(&'a self) -> impl Iterator<Item=PinRef<'a>> + 'a {
-//         self.pins.iter()
-//             .map(move |id| {
-//                 PinRef::new(self.parent_circuit(), self.netlist().pin(id))
-//             })
-//     }
-//
-//     /// Iterate over all internal pins instances connected to this net.
-//     pub fn each_pin_inst_ref(&'a self) -> impl Iterator<Item=PinInstRef<'a>> + 'a {
-//         let netlist = self.netlist();
-//         self.pin_instances.iter()
-//             .map(move |id| {
-//                 let pin_inst = netlist.pin_inst(id);
-//                 let parent_inst_id = pin_inst.circuit_inst;
-//                 let parent_inst = netlist.circuit_inst_ref(&parent_inst_id);
-//                 PinInstRef::new(parent_inst, pin_inst)
-//             })
-//     }
-// }
-//
-// impl Deref for NetRef<'_> {
-//     type Target = Net;
-//
-//     fn deref(&self) -> &Self::Target {
-//         self.net
-//     }
-// }
-//
-// /// A reference to a circuit instance.
-// ///
-// /// This struct also keeps a reference to the parent netlist struct of the circuit.
-// #[derive(Copy, Clone, Debug)]
-// pub struct CircuitInstanceRef<'a> {
-//     netlist: &'a Chip,
-//     inst: &'a CircuitInst,
-// }
-//
-// impl<'a> Deref for CircuitInstanceRef<'a> {
-//     type Target = CircuitInst;
-//
-//     fn deref(&self) -> &Self::Target {
-//         self.inst
-//     }
-// }
-//
-// impl<'a> CircuitInstanceRef<'a> {
-//     fn new(netlist: &'a Chip, inst: &'a CircuitInst) -> Self {
-//         Self {
-//             netlist,
-//             inst,
-//         }
-//     }
-//     /// Get reference to the netlist struct where this instance lives in.
-//     pub fn netlist(self) -> &'a Chip {
-//         self.netlist
-//     }
-//
-//     /// Get a reference to the parent of this instance.
-//     pub fn parent(self) -> CircuitRef<'a> {
-//         let parent = &self.netlist.circuits[&self.parent_circuit_id];
-//         CircuitRef {
-//             netlist: self.netlist,
-//             circuit: parent,
-//         }
-//     }
-//
-//     /// Get a reference to the template of this instance.
-//     pub fn template(self) -> CircuitRef<'a> {
-//         let template = &self.netlist.circuits[&self.template_circuit_id];
-//         CircuitRef {
-//             netlist: self.netlist,
-//             circuit: template,
-//         }
-//     }
-//
-//     /// Get a reference to the pin instance at `position`.
-//     pub fn pin_inst_ref_at(self, position: usize) -> PinInstRef<'a> {
-//         let pin_inst_id = self.pins[position];
-//         PinInstRef::new(self, self.netlist().pin_inst(&pin_inst_id))
-//     }
-//
-//     /// Iterate over each pin instance.
-//     pub fn each_pin_inst_ref(self) -> impl Iterator<Item=PinInstRef<'a>> + ExactSizeIterator + 'a {
-//         let num_pins = self.pins.len();
-//         (0..num_pins).map(move |pos| self.pin_inst_ref_at(pos))
-//     }
-//
-//     /// Iterate over all nets that are connected externally to this circuit instance.
-//     /// Nets may appear multiple times.
-//     pub fn each_external_net(&self) -> impl Iterator<Item=NetRef<'a>> + 'a {
-//         self.each_pin_inst_ref()
-//             .filter_map(|p| p.net_ref())
-//     }
-// }
-
-
-// /// Iterator wrapper.
-// /// TODO
-// pub struct PinRefIter<'a> {
-//     circuit: CircuitRef<'a>
-// }
-//
-// impl<'a> PinRefIter<'a> {
-//     fn new(circuit: CircuitRef<'a>) -> Self {
-//         Self { circuit }
-//     }
-// }
-//
-// impl<'a> IntoIterator for PinRefIter<'a> {
-//     type Item = PinId;
-//     type IntoIter = std::iter::Copied<std::slice::Iter<'a, PinId>>;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.circuit.circuit.pins.iter().copied()
-//     }
-// }
-//
-// // impl<'a> Iterator for PinRefIter<'a> {
-// //     type Item = PinId;
-// //
-// //     fn next(&mut self) -> Option<Self::Item> {
-// //         unimplemented!()
-// //     }
-// // }
 
 /// A netlist is the container of circuits.
 #[derive(Debug, Clone)]
@@ -1180,11 +936,6 @@ impl Chip<Coord> {
         self.circuit_instances.get_mut(id).unwrap()
     }
 
-    /// Get a fat circuit instance reference by its ID.
-    // pub fn circuit_inst_ref(&self, id: &CellInstId) -> CircuitInstanceRef {
-    //     CircuitInstanceRef::new(self, &self.circuit_instances[id])
-    // }
-
     /// Get a reference to a net by its ID.
     fn net(&self, id: &NetId) -> &Net {
         &self.nets.get(id).expect("Net ID does not exist in this netlist.")
@@ -1194,13 +945,6 @@ impl Chip<Coord> {
     fn net_mut(&mut self, id: &NetId) -> &mut Net {
         self.nets.get_mut(id).unwrap()
     }
-
-    // /// Get a fat reference to the net by its ID.
-    // fn net_ref(&self, id: &NetId) -> NetRef {
-    //     let net = self.net(id);
-    //     let parent_circuit = self.circuit_ref(&net.parent_id);
-    //     NetRef::new(parent_circuit, net)
-    // }
 
     /// Get a reference to a pin by its ID.
     fn pin(&self, id: &PinId) -> &Pin {
@@ -1327,134 +1071,6 @@ impl Chip<Coord> {
             .expect("Shape not found.")
     }
 }
-
-//
-// /// A 'fat' reference to a circuit.
-// #[derive(Copy, Clone, Debug)]
-// pub struct CircuitRef<'a> {
-//     /// Reference to the parent netlist.
-//     netlist: &'a Chip,
-//     /// Reference to the circuit.
-//     circuit: &'a Circuit,
-// }
-//
-// /// All functions of `Cell` are made available also for `CellRef` by implementation of the `Deref` trait.
-// impl<'a> Deref for CircuitRef<'a> {
-//     type Target = Circuit;
-//
-//     fn deref(&self) -> &Self::Target {
-//         self.circuit
-//     }
-// }
-//
-// impl<'a> CircuitRef<'a> {
-//     /// Iterate over all cell instances in this circuit.
-//     pub fn each_instance_ref(&self) -> impl Iterator<Item=CircuitInstanceRef<'_>> + ExactSizeIterator {
-//         self.instances.iter()
-//             .map(move |inst_id| {
-//                 let inst = &self.netlist.circuit_instances[inst_id];
-//                 CircuitInstanceRef {
-//                     netlist: self.netlist,
-//                     inst,
-//                 }
-//             })
-//     }
-//
-//     /// Find a child cell instance by its name.
-//     /// Returns `None` if no such instance exists.
-//     pub fn instance_ref_by_name(self, name: &str) -> Option<CircuitInstanceRef<'a>> {
-//         let id = self.instance_id_by_name(name);
-//         id.map(|id| {
-//             let inst = &self.netlist.circuit_instances[&id];
-//             CircuitInstanceRef {
-//                 netlist: self.netlist,
-//                 inst,
-//             }
-//         })
-//     }
-//
-//     /// Iterate over the references to all cells that are dependencies of this cell.
-//     pub fn each_dependency_ref(&self) -> impl Iterator<Item=CircuitRef<'_>> + ExactSizeIterator {
-//         self.each_dependency_id()
-//             .map(move |id| CircuitRef {
-//                 netlist: self.netlist,
-//                 circuit: &self.netlist.circuits[&id],
-//             })
-//     }
-//
-//     /// Iterate over the references to all cells that are dependent on this cell.
-//     pub fn each_dependent_cell_ref(&self) -> impl Iterator<Item=CircuitRef<'_>> + ExactSizeIterator {
-//         self.each_dependent_cell_id()
-//             .map(move |id| CircuitRef {
-//                 netlist: self.netlist,
-//                 circuit: &self.netlist.circuits[&id],
-//             })
-//     }
-//
-//     /// Iterate over the IDs of the external circuit pins.
-//     pub fn each_pin_id(&'a self) -> impl Iterator<Item=PinId> + ExactSizeIterator + 'a {
-//         self.pins.iter().copied()
-//     }
-//
-//     /// Iterate over each pin of this circuit.
-//     pub fn each_pin_ref(&self) -> impl Iterator<Item=PinRef<'_>> + ExactSizeIterator {
-//         self.each_pin_id()
-//             .map(move |id| PinRef::new(*self, &self.netlist.pin(&id)))
-//     }
-//
-//     /// Get a reference to the pin at `position`.
-//     pub fn pin_ref_at(self, position: usize) -> PinRef<'a> {
-//         let pin_id = self.pin_id_at(position);
-//         PinRef::new(self, &self.netlist.pin(&pin_id))
-//     }
-//
-//     /// Get a reference to the netlist where this circuit lives.
-//     pub fn netlist(self) -> &'a Chip {
-//         self.netlist
-//     }
-//
-//     /// Iterate over all nets defined in this circuit.
-//     pub fn each_net_ref(&self) -> impl Iterator<Item=NetRef<'_>> {
-//         self.each_net_id()
-//             .map(move |id| NetRef::new(*self, self.netlist.net(&id)))
-//     }
-// }
-//
-// #[test]
-// fn test_netlist_reference_access() {
-//     let mut netlist = Chip::default();
-//
-//     let a = netlist.create_circuit("A".into(), vec![
-//         ("A".into(), Direction::Input),
-//         ("Y".into(), Direction::Output)
-//     ]);
-//     let b = netlist.create_circuit("B".into(), vec![
-//         ("A".into(), Direction::Input),
-//         ("B".into(), Direction::Input),
-//         ("Y".into(), Direction::Output)
-//     ]);
-//
-//     let inst_b1 = netlist.create_circuit_instance(&a, &b, None);
-//     let inst_b2 = netlist.create_circuit_instance(&a, &b, None);
-//
-//     let a_ref = netlist.circuit_ref(&a);
-//     assert_eq!(a_ref.each_dependency_ref().count(), 1);
-//     assert_eq!(a_ref.each_dependent_cell_ref().count(), 0);
-//
-//     let b_ref = netlist.circuit_ref(&b);
-//     assert_eq!(b_ref.each_dependency_ref().count(), 0);
-//     assert_eq!(b_ref.each_dependent_cell_ref().count(), 1);
-//
-//     assert!(std::ptr::eq(&netlist, a_ref.netlist()));
-//     assert!(std::ptr::eq(&netlist, b_ref.netlist()));
-//
-//     for inst in a_ref.each_instance_ref() {
-//         assert!(std::ptr::eq(&netlist, inst.netlist()));
-//         assert_eq!(a_ref.id(), inst.parent().id());
-//
-//         assert_eq!(inst.template().num_pins(), inst.each_pin_inst_ref().count());
-//     }
-// }
 
 
 impl NetlistBase for Chip {
@@ -1850,13 +1466,6 @@ impl HierarchyBase for Chip<Coord> {
         self.circuits.len()
     }
 
-    // fn num_child_instances(&self, circuit: &Self::CellId) -> usize {
-    //     self.circuit(circuit).instances.len()
-    // }
-    //
-    // fn num_circuits(&self) -> usize {
-    //     self.circuits.len()
-    // }
 
     fn get_chip_property(&self, key: &Self::NameType) -> Option<PropertyValue> {
         self.properties.get(key).cloned()

@@ -83,7 +83,7 @@ pub use crate::netlist::traits::{NetlistBase, NetlistEdit};
 /// let top_cell = chip.create_cell("MyTopCell".into());
 /// let sub_cell = chip.create_cell("MySubCell".into());
 /// // Create an instance of `sub_cell` inside `top_cell`.
-/// let inst = chip.create_circuit_instance(&top_cell, &sub_cell, Some("inst1".into()));
+/// let inst = chip.create_cell_instance(&top_cell, &sub_cell, Some("inst1".into()));
 ///
 /// // Get all cells.
 /// assert_eq!(chip.each_cell().count(), 2);

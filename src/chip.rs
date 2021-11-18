@@ -129,6 +129,7 @@ pub type LayerId = Index<LayerInfo<NameT>, u16>;
 ///
 /// * `U`: User defined data.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Circuit<C = Coord, U = ()>
     where C: CoordinateType, U: Default {
     /// ID of this circuit.
@@ -449,6 +450,7 @@ impl Net {}
 
 /// A netlist is the container of circuits.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Chip<C: CoordinateType = Coord> {
     circuits: IntHashMap<CellId, Circuit<C>>,
     circuits_by_name: HashMap<NameT, CellId>,
@@ -1300,9 +1302,10 @@ fn test_create_populated_netlist() {
 
 /// Wrapper around a `Geometry` struct.
 #[derive(Clone, Debug)]
-pub struct Shape<C: CoordinateType, U = ()> {
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Shape<C, U = ()> {
     /// Identifier of this shape.
-    index: Index<Self>,
+    index: Index<Shape<C, U>>,
     /// The geometry of this shape.
     pub geometry: Geometry<C>,
     // /// Reference ID to container.
@@ -1318,6 +1321,7 @@ pub struct Shape<C: CoordinateType, U = ()> {
 /// `Shapes<T>` is a collection of `Shape<T>` structs. Each of
 /// the elements is assigned an index when inserted into the collection.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Shapes<C>
     where C: CoordinateType {
     // /// ID of this shape collection.

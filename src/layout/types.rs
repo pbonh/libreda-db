@@ -30,6 +30,7 @@ pub type Coord = i32;
 
 /// Meta-data of a layer.
 #[derive(Clone, Hash, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct LayerInfo<NameType> {
     /// Identifier of the layer.
     pub index: UInt,

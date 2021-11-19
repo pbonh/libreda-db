@@ -28,6 +28,8 @@ pub use crate::rc_string::RcString;
 pub use crate::property_storage::{WithProperties, PropertyValue};
 pub use crate::flat_view::FlatView;
 pub use crate::reference_access;
+pub use crate::reference_access::*;
+pub use crate::netlist::util::*;
 
 /// Re-export of most traits.
 /// This can be useful if only traits should be used but not the rest.

@@ -625,6 +625,18 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
         }
     }
 
+    /// Get the parent cell of this terminal.
+    /// For a pin, this equals the cell where the pin is defined.
+    /// For a pin instance, this equals the parent of the cell instance which contains the pin instance.
+    pub fn parent(&self) -> CellRef<N> {
+        match self {
+            TerminalRef::Pin(p) =>
+                p.cell(),
+            TerminalRef::PinInst(p) =>
+                p.cell_instance().parent()
+        }
+    }
+
     /// Create a qualified name.
     /// For pins: 'cell_name:pin_name'
     /// For pin instances: 'cell_name:cell_instance:pin_name'

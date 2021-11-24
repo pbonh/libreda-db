@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::borrow::Borrow;
 use std::convert::TryInto;
-use std::rc::Rc;
+use std::sync::Arc;
 use crate::rc_string::RcString;
 
 // trait AnyValue: Any + Clone + std::fmt::Debug {}
@@ -118,14 +118,14 @@ impl From<String> for PropertyValue {
     }
 }
 
-impl From<Rc<String>> for PropertyValue {
-    fn from(v: Rc<String>) -> Self {
+impl From<Arc<String>> for PropertyValue {
+    fn from(v: Arc<String>) -> Self {
         PropertyValue::String(v.into())
     }
 }
 
-impl From<&Rc<String>> for PropertyValue {
-    fn from(v: &Rc<String>) -> Self {
+impl From<&Arc<String>> for PropertyValue {
+    fn from(v: &Arc<String>) -> Self {
         PropertyValue::String(v.into())
     }
 }

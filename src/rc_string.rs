@@ -40,7 +40,7 @@
 //!
 //! ```
 
-use std::rc::Rc;
+use std::sync::Arc;
 use iron_shapes::point::Deref;
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
@@ -50,7 +50,7 @@ use std::hash::{Hash, Hasher};
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RcString {
-    string: Rc<String>
+    string: Arc<String>
 }
 
 impl std::fmt::Display for RcString {
@@ -62,7 +62,7 @@ impl std::fmt::Display for RcString {
 impl RcString {
     /// Create a new resource counted string.
     pub fn new(string: String) -> Self {
-        RcString { string: Rc::new(string) }
+        RcString { string: Arc::new(string) }
     }
 }
 
@@ -98,14 +98,14 @@ impl From<String> for RcString {
     }
 }
 
-impl From<Rc<String>> for RcString {
-    fn from(string: Rc<String>) -> Self {
+impl From<Arc<String>> for RcString {
+    fn from(string: Arc<String>) -> Self {
         Self { string }
     }
 }
 
-impl From<&Rc<String>> for RcString {
-    fn from(string: &Rc<String>) -> Self {
+impl From<&Arc<String>> for RcString {
+    fn from(string: &Arc<String>) -> Self {
         Self { string: string.clone() }
     }
 }

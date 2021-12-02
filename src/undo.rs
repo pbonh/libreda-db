@@ -323,6 +323,12 @@ impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
     }
 }
 
+// impl<'a, T: HierarchyBase, U> HierarchyDelegate<T> for Undo<'a, T, U> {
+//     fn base(&self) -> &T {
+//         &self.chip
+//     }
+// }
+
 impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
     // This is nothing but simple redirection.
     type NameType = T::NameType;

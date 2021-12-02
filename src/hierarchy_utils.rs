@@ -42,6 +42,12 @@ pub trait HierarchyUtil: HierarchyBase {
         Box::new(self.each_cell()
             .filter(move |c| self.is_top_level_cell(c)))
     }
+
+    /// Iterate over all leaf cells, i.e. cells which contain no other cells.
+    fn each_leaf_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        Box::new(self.each_cell()
+            .filter(move |c| self.is_leaf_cell(c)))
+    }
 }
 
 impl<N: HierarchyBase> HierarchyUtil for N {}

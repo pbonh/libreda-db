@@ -222,7 +222,7 @@ pub trait HierarchyBase {
         Box::new(self.each_cell_reference_vec(cell).into_iter())
     }
 
-    /// Count all reference to the cell template `cell`.
+    /// Count all instantiations of `cell`.
     fn num_cell_references(&self, cell: &Self::CellId) -> usize {
         // Inefficient default implementation.
         let mut counter = 0;

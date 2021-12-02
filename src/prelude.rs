@@ -30,11 +30,13 @@ pub use crate::flat_view::FlatView;
 pub use crate::reference_access;
 pub use crate::reference_access::*;
 pub use crate::netlist::util::*;
+pub use crate::technology;
 
 /// Re-export of most traits.
 /// This can be useful if only traits should be used but not the rest.
 pub mod traits {
     pub use crate::traits::*;
+    pub use crate::hierarchy_utils::*;
     pub use crate::layout::traits::*;
     pub use crate::netlist::traits::*;
     pub use crate::netlist::util::*;

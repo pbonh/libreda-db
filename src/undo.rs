@@ -681,9 +681,9 @@ fn test_hierarchy_undoing() {
     let mut undo = Undo::undo_netlist(&mut chip);
 
     let top = undo.create_cell("TOP".into());
-    let top_a = undo.create_pin(&top, "A".into(), Direction::Input);
+    let _top_a = undo.create_pin(&top, "A".into(), Direction::Input);
     let sub = undo.create_cell("SUB".into());
-    let sub_b = undo.create_pin(&sub, "B".into(), Direction::Input);
+    let _sub_b = undo.create_pin(&sub, "B".into(), Direction::Input);
     let inst = undo.create_cell_instance(&top, &sub, Some("inst1".into()));
 
     // Test undo renaming.

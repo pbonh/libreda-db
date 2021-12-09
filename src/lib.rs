@@ -72,8 +72,8 @@
 //! [`HierarchyEdit`]: traits::HierarchyEdit
 //! [`NetlistBase`]: netlist::traits::NetlistBase
 //! [`NetlistEdit`]: netlist::traits::NetlistEdit
-//! [`LayoutBase`]: netlist::traits::LayoutBase
-//! [`LayoutEdit`]: netlist::traits::LayoutEdit
+//! [`LayoutBase`]: layout::traits::LayoutBase
+//! [`LayoutEdit`]: layout::traits::LayoutEdit
 //! [`L2NBase`]: traits::L2NBase
 //! [`L2NEdit`]: traits::L2NEdit
 //! [`Netlist`]: netlist

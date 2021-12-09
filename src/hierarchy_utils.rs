@@ -55,15 +55,21 @@ impl<N: HierarchyBase> HierarchyUtil for N {}
 /// Modifying utility functions for the cell hierarchy..
 /// Import the this trait to use the utility functions all types that implement the `HierarchyEdit` trait.
 pub trait HierarchyEditUtil: HierarchyEdit {
-    /// Create a named cell instance.
-    /// This is just a convenience function for `create_cell_instance()`.
-    fn create_named_cell_instance<S: Into<Self::NameType>>(&mut self, parent: &Self::CellId, template: &Self::CellId, name: S) -> Self::CellInstId {
-        self.create_cell_instance(parent, template, Some(name.into()))
-    }
-    /// Create an anonymous cell instance.
-    /// This is just a convenience function for `create_cell_instance()`.
-    fn create_unnamed_cell_instance(&mut self, parent: &Self::CellId, template: &Self::CellId) -> Self::CellInstId {
-        self.create_cell_instance(parent, template, None)
+
+    /// Remove all unused cells, i.e. cells that are not instantiated.
+    /// Return the number of removed cells.
+    fn prune_cells(&mut self) -> usize {
+        // Get a list of all unused cells.
+        let unused_cells: Vec<_> = self.each_cell()
+            .filter(|cell_id| self.num_cell_references(cell_id) == 0)
+            .collect();
+
+        // Remove them.
+        for unused in &unused_cells {
+            self.remove_cell(&unused)
+        }
+
+        unused_cells.len()
     }
 }
 

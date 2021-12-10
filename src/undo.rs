@@ -193,7 +193,7 @@ impl<'a, T: L2NEdit, U> Undo<'a, T, U> {
 impl<'a, T: L2NEdit> Undo<'a, T, L2NUndoOp<T>> {
     /// Create a wrapper around a fused layout and netlist which
     /// allows to undo operations.
-    pub fn undo_l2n(chip: &'a mut T) -> Self {
+    pub fn new_l2n_undo(chip: &'a mut T) -> Self {
         Self {
             chip,
             transactions: vec![],
@@ -239,7 +239,7 @@ impl<'a, T: LayoutEdit, U> Undo<'a, T, U> {
 impl<'a, T: LayoutEdit> Undo<'a, T, LayoutUndoOp<T>> {
     /// Create a wrapper which allows to undo operations performed
     /// on the `LayoutEdit` trait.
-    pub fn undo_layout(chip: &'a mut T) -> Self {
+    pub fn new_layout_undo(chip: &'a mut T) -> Self {
         Self {
             chip,
             transactions: vec![],
@@ -280,7 +280,7 @@ impl<'a, T: NetlistEdit, U> Undo<'a, T, U> {
 impl<'a, T: NetlistEdit> Undo<'a, T, NetlistUndoOp<T>> {
     /// Create a wrapper which allows to undo operations performed
     /// on the `NetlistEdit` trait.
-    pub fn undo_netlist(chip: &'a mut T) -> Self {
+    pub fn new_netlist_undo(chip: &'a mut T) -> Self {
         Self {
             chip,
             transactions: vec![],
@@ -299,7 +299,7 @@ impl<'a, T: NetlistEdit> Undo<'a, T, NetlistUndoOp<T>> {
 impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
     /// Create a wrapper which allows to undo operations performed
     /// on the `HierarchyEdit` trait.
-    pub fn undo_hierarchy(chip: &'a mut T) -> Self {
+    pub fn new_hierarchy_undo(chip: &'a mut T) -> Self {
         Self {
             chip,
             transactions: vec![],
@@ -678,7 +678,7 @@ impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
 fn test_hierarchy_undoing() {
     use crate::chip::Chip;
     let mut chip = Chip::new();
-    let mut undo = Undo::undo_netlist(&mut chip);
+    let mut undo = Undo::new_netlist_undo(&mut chip);
 
     let top = undo.create_cell("TOP".into());
     let _top_a = undo.create_pin(&top, "A".into(), Direction::Input);

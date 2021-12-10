@@ -18,10 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-//! Wrapper around netlist, layout and L2N structures that allows undoing of operations.
-//!
+//! *Experimental*: Wrapper around netlist, layout and L2N structures that allows undoing of operations.
 //!
 //! This is work in progress.
+//! Missing things are:
+//! * Undoing a operation on the hierarchy does not necessarily restore netlist, layout and l2n information.
+//! * Undoing a netlist operation does not restore l2n information.
+//! * Undoing a layout operation does not restore l2n information.
 //!
 //! # Caveat
 //! Undoing removal of some objects does not preserve the ID of the object.
@@ -82,7 +85,7 @@ pub enum LayoutUndoOp<T: LayoutBase> {
         geometry: Geometry<T::Coord>,
     },
     /// Store the old geometry of the shape.
-    ReplaceShape (T::ShapeId, Geometry<T::Coord>),
+    ReplaceShape(T::ShapeId, Geometry<T::Coord>),
     /// Store the old transform.
     SetTransform(T::CellInstId, SimpleTransform<T::Coord>),
 
@@ -95,10 +98,24 @@ impl<T: LayoutBase> From<HierarchyUndoOp<T>> for LayoutUndoOp<T> {
 }
 
 /// Undo operation for `L2NEdit` operations.
-enum L2NUndoOp<T: L2NBase> {
+#[allow(missing_docs)]
+pub enum L2NUndoOp<T: L2NBase> {
+    /// Undo an operation on the cell hierarchy.
     HierarchyOp(HierarchyUndoOp<T>),
+    /// Undo a netlist operation.
     NetlistOp(NetlistUndoOp<T>),
+    /// Undo a layout operation.
     LayoutOp(LayoutUndoOp<T>),
+    /// Undo setting the net of a shape.
+    SetNetOfShape {
+        shape_id: T::ShapeId,
+        previous_net: Option<T::NetId>,
+    },
+    /// Undo setting the pin of a shape.
+    SetPinOfShape {
+        shape_id: T::ShapeId,
+        previous_pin: Option<T::PinId>,
+    },
 }
 
 impl<T: L2NBase> From<HierarchyUndoOp<T>> for L2NUndoOp<T> {
@@ -126,9 +143,19 @@ pub enum HierarchyUndoOp<T: HierarchyBase> {
     /// Undo creating a cell instance.
     CreateCellInstance(T::CellInstId),
     /// Holds the previous name of the cell.
-    RenameCell(T::CellId, T::NameType),
+    RenameCell {
+        /// The renamed cell.
+        cell: T::CellId,
+        /// The name to be restored when undoing.
+        previous_name: T::NameType,
+    },
     /// Holds the previous name of the cell instance.
-    RenameCellInst(T::CellInstId, Option<T::NameType>),
+    RenameCellInst {
+        /// The renamed instance.
+        inst: T::CellInstId,
+        /// The name to be restored when undoing.
+        previous_name: Option<T::NameType>,
+    },
 }
 
 /// Wrapper around netlist, layout and L2N structures that allows undoing of operations.
@@ -168,14 +195,32 @@ impl<'a, T: HierarchyEdit, U> Undo<'a, T, U> {
                 self.chip.remove_cell(&c),
             HierarchyUndoOp::CreateCellInstance(c) =>
                 self.chip.remove_cell_instance(&c),
-            HierarchyUndoOp::RenameCell(c, n) =>
-                self.chip.rename_cell(&c, n),
-            HierarchyUndoOp::RenameCellInst(c, n) =>
-                self.chip.rename_cell_instance(&c, n)
+            HierarchyUndoOp::RenameCell { cell, previous_name } =>
+                self.chip.rename_cell(&cell, previous_name),
+            HierarchyUndoOp::RenameCellInst { inst, previous_name } =>
+                self.chip.rename_cell_instance(&inst, previous_name)
         }
     }
 }
 
+
+impl<'a, T: L2NBase, U> L2NBase for Undo<'a, T, U> {
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+        self.chip.shapes_of_net(net_id)
+    }
+
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+        self.chip.shapes_of_pin(pin_id)
+    }
+
+    fn get_net_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::NetId> {
+        self.chip.get_net_of_shape(shape_id)
+    }
+
+    fn get_pin_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::PinId> {
+        self.chip.get_pin_of_shape(shape_id)
+    }
+}
 
 impl<'a, T: L2NEdit, U> Undo<'a, T, U> {
     /// Undo an operation on fused netlist and layout.
@@ -186,6 +231,18 @@ impl<'a, T: L2NEdit, U> Undo<'a, T, U> {
             L2NUndoOp::NetlistOp(op) => self.undo_netlist_op(op),
             L2NUndoOp::LayoutOp(op) => self.undo_layout_op(op),
             // L2N specific operations
+            L2NUndoOp::SetNetOfShape {
+                shape_id,
+                previous_net
+            } => {
+                self.chip.set_net_of_shape(&shape_id, previous_net);
+            }
+            L2NUndoOp::SetPinOfShape {
+                shape_id,
+                previous_pin
+            } => {
+                self.chip.set_pin_of_shape(&shape_id, previous_pin);
+            }
         }
     }
 }
@@ -220,13 +277,13 @@ impl<'a, T: LayoutEdit, U> Undo<'a, T, U> {
                 log::error!("Creating a layer cannot be undone.");
             }
             LayoutUndoOp::SetLayerName(id, old_name) =>
-                {self.chip.set_layer_name(&id, old_name);},
+                { self.chip.set_layer_name(&id, old_name); }
             LayoutUndoOp::InsertShape(id) =>
-                {self.chip.remove_shape(&id);},
+                { self.chip.remove_shape(&id); }
             LayoutUndoOp::RemoveShape { parent_cell, layer, geometry } => {
                 self.chip.insert_shape(&parent_cell, &layer, geometry);
             }
-            LayoutUndoOp::ReplaceShape (id, geometry) => {
+            LayoutUndoOp::ReplaceShape(id, geometry) => {
                 self.chip.replace_shape(&id, geometry);
             }
             LayoutUndoOp::SetTransform(inst, old_tf) => {
@@ -414,15 +471,15 @@ impl<'a, T: HierarchyEdit, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'
     }
 
     fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
-        let prev_name = self.cell_instance_name(inst);
+        let previous_name = self.cell_instance_name(inst);
         self.chip.rename_cell_instance(inst, new_name);
-        self.transactions.push(HierarchyUndoOp::RenameCellInst(inst.clone(), prev_name).into());
+        self.transactions.push(HierarchyUndoOp::RenameCellInst { inst: inst.clone(), previous_name }.into());
     }
 
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
-        let prev_name = self.cell_name(cell);
+        let previous_name = self.cell_name(cell);
         self.chip.rename_cell(cell, new_name);
-        self.transactions.push(HierarchyUndoOp::RenameCell(cell.clone(), prev_name).into());
+        self.transactions.push(HierarchyUndoOp::RenameCell { cell: cell.clone(), previous_name }.into());
     }
 }
 
@@ -653,7 +710,7 @@ impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
         geometry
     }
 
-    fn replace_shape(&mut self,  shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord> {
+    fn replace_shape(&mut self, shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord> {
         let old_geometry = self.chip.replace_shape(shape_id, geometry);
 
         self.transactions.push(LayoutUndoOp::ReplaceShape(shape_id.clone(), old_geometry.clone()).into());
@@ -670,6 +727,22 @@ impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
     fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, _value: PropertyValue) {
         let _old_property = self.get_shape_property(shape, &key);
         unimplemented!("set_shape_property() is currently not undoable.")
+    }
+}
+
+impl<'a, T, U> L2NEdit for Undo<'a, T, U>
+    where T: L2NEdit,
+          U: From<L2NUndoOp<T>> + From<LayoutUndoOp<T>> + From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>> {
+    fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
+        let previous_pin = self.get_pin_of_shape(shape_id);
+        self.transactions.push(L2NUndoOp::SetPinOfShape { shape_id: shape_id.clone(), previous_pin }.into());
+        self.chip.set_pin_of_shape(shape_id, pin)
+    }
+
+    fn set_net_of_shape(&mut self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        let previous_net = self.get_net_of_shape(shape_id);
+        self.transactions.push(L2NUndoOp::SetNetOfShape { shape_id: shape_id.clone(), previous_net }.into());
+        self.chip.set_net_of_shape(shape_id, net)
     }
 }
 

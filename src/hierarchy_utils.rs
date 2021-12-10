@@ -55,21 +55,31 @@ impl<N: HierarchyBase> HierarchyUtil for N {}
 /// Modifying utility functions for the cell hierarchy..
 /// Import the this trait to use the utility functions all types that implement the `HierarchyEdit` trait.
 pub trait HierarchyEditUtil: HierarchyEdit {
-
-    /// Remove all unused cells, i.e. cells that are not instantiated.
-    /// Return the number of removed cells.
-    fn prune_cells(&mut self) -> usize {
-        // Get a list of all unused cells.
-        let unused_cells: Vec<_> = self.each_cell()
-            .filter(|cell_id| self.num_cell_references(cell_id) == 0)
-            .collect();
-
-        // Remove them.
-        for unused in &unused_cells {
-            self.remove_cell(&unused)
+    /// Remove all child instances inside the `cell`.
+    fn clear_cell_instances(&mut self, cell: &Self::CellId) {
+        let child_instances = self.each_cell_instance_vec(cell);
+        for child in &child_instances {
+            self.remove_cell_instance(child);
         }
+    }
 
-        unused_cells.len()
+    /// Remove the cell instance and all cells which are then not used anymore.
+    fn prune_cell_instance(&mut self, inst: &Self::CellInstId) {
+        let template = self.template_cell(inst);
+        self.remove_cell_instance(inst);
+        if self.num_cell_references(&template) == 0 {
+            // The cell is now not used anymore.
+            self.remove_cell(&template)
+        }
+    }
+
+    /// Remove the cell and all other cells which are then not used anymore.
+    fn prune_cell(&mut self, cell: &Self::CellId) {
+        let child_instances = self.each_cell_instance_vec(cell);
+        for child in &child_instances {
+            self.prune_cell_instance(child);
+        }
+        self.remove_cell(&cell)
     }
 }
 

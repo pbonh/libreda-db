@@ -304,3 +304,18 @@ fn test_flatten_circuit_instance() {
 
     assert_eq!(chip.num_net_terminals(&net1), 2);
 }
+
+// Does not work yet. Kept as a reminder to eventually support trait objects.
+// #[test]
+// fn test_hierarchy_trait_object() {
+//
+//     // Test that the HierarchyBase trait can be used with trait objects.
+//
+//     let mut chip = Chip::new();
+//
+//     fn function_with_trait_object(h: &dyn HierarchyBase<NameType=String, CellId=CellId, CellInstId=CellInstId>) {
+//         assert!(true)
+//     }
+//
+//     function_with_trait_object(&chip);
+// }

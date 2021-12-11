@@ -24,7 +24,6 @@
 
 use crate::traits::{HierarchyBase};
 use std::collections::{HashMap, HashSet};
-// use crate::netlist::direction::Direction;
 
 /// Wrapper around ID types.
 /// This wrapper makes sure that the flat view uses other ID types than the
@@ -36,7 +35,7 @@ pub struct FlatId<T>(T);
 /// The presented view is flattened until leaf cells.
 /// Internally this works by using component IDs that are actually paths through the hierarchy.
 ///
-/// Names are constructed by creating concatenating the names of the path elements
+/// Names are constructed by concatenating the names of the path elements
 /// with a separator string in between.
 ///
 /// # Example
@@ -118,7 +117,6 @@ impl<'a, N: HierarchyBase> FlatView<'a, N> {
         let is_leaf = self.cell_is_leaf(cell);
         !is_top && !is_leaf
     }
-
 }
 
 
@@ -326,9 +324,12 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
     }
 }
 
+// On-the-fly flattening of nets is not solved yet.
+// The main difficulty is: Many nets might now be fused together into one net. How can this be uniquely and efficiently represented?
 // impl<'a, N: NetlistBase> NetlistBase for FlatView<'a, N> {
 //     type PinId = N::PinId;
-//     type PinInstId = (Self::CellInstId, N::PinInstId); // Pin instances need to be extended with the path through the hierarhcy.
+//     type PinInstId = (Self::CellInstId, N::PinInstId);
+//     // Pin instances need to be extended with the path through the hierarhcy.
 //     type NetId = (Self::CellInstId, N::NetId);
 //
 //     fn template_pin(&self, (_, pin_instance): &Self::PinInstId) -> Self::PinId {
@@ -355,16 +356,29 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
 //         cell_inst.clone()
 //     }
 //
-//     fn parent_cell_of_net(&self, net: &Self::NetId) -> Self::CellId {
-//         unimplemented!()
+//     fn parent_cell_of_net(&self, (path, net): &Self::NetId) -> Self::CellId {
+//         if let Some(instance) = path.iter().nth(0) {
+//             // The parent of the flattened net is equal to the parent of the first
+//             // cell instance in the path.
+//             self.base.parent_cell(instance)
+//         } else {
+//             // The net lives in the top-cell.
+//             self.base.parent_cell_of_net(net)
+//         }
 //     }
 //
 //     fn net_of_pin(&self, pin: &Self::PinId) -> Option<Self::NetId> {
-//         unimplemented!()
+//         let net = self.base.net_of_pin(pin);
+//         net.map(
+//             |n| (vec![], n)
+//         )
 //     }
 //
-//     fn net_of_pin_instance(&self, pin_instance: &Self::PinInstId) -> Option<Self::NetId> {
-//         unimplemented!()
+//     fn net_of_pin_instance(&self, (path, pin_instance): &Self::PinInstId) -> Option<Self::NetId> {
+//         let non_flattened_net = self.base.net_of_pin_instance(pin_instance);
+//         non_flattened_net.map(
+//             |n| (path.clone(), n)
+//         )
 //     }
 //
 //     fn net_zero(&self, parent_circuit: &Self::CellId) -> Self::NetId {
@@ -376,11 +390,47 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
 //     }
 //
 //     fn net_by_name(&self, parent_circuit: &Self::CellId, name: &str) -> Option<Self::NetId> {
-//         unimplemented!()
+//         // Find last path separator after which comes the net name.
+//
+//         if let Some(last_separator_pos) = name.rfind(self.path_separator.as_str()) {
+//             let path_string = &name[0..last_separator_pos];
+//             let net_name = &name[last_separator_pos + 1..name.len()];
+//
+//             // Resolve cell instance.
+//             if let Some(cell_inst) = self.cell_instance_by_name(parent_circuit, path_string) {
+//                 let template = self.base.template_cell(&cell_inst[cell_inst.len() - 1]);
+//                 let net = self.base.net_by_name(&template, net_name);
+//                 net.map(
+//                     |n| (cell_inst, n)
+//                 )
+//             } else {
+//                 // Cell instance not found.
+//                 None
+//             }
+//         } else {
+//             // No separator in net name. Look directly in the top cell.
+//             let net = self.base.net_by_name(parent_circuit, name);
+//             net.map(
+//                 |n| (vec![], n)
+//             )
+//         }
 //     }
 //
-//     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType> {
-//         unimplemented!()
+//     fn net_name(&self, (path, net): &Self::NetId) -> Option<Self::NameType> {
+//         if let Some(net_name) = self.base.net_name(net) {
+//             // Try to find the name of each path element.
+//             let path_names: Option<Vec<_>> = path.iter()
+//                 .map(|inst| self.base.cell_instance_name(inst))
+//                 .collect();
+//             // If a name could be found for each element
+//             // join them with the path separator.
+//             path_names.map(|mut names| {
+//                 names.push(net_name);
+//                 names.join(&self.path_separator).into()
+//             })
+//         } else {
+//             None
+//         }
 //     }
 //
 //     fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
@@ -388,7 +438,7 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
 //     }
 //
 //     fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, mut f: F) where F: FnMut(Self::PinInstId) -> () {
-//         let hierarchical_inst = &circuit_inst[circuit_inst.len()-1];
+//         let hierarchical_inst = &circuit_inst[circuit_inst.len() - 1];
 //         self.base.for_each_pin_instance(hierarchical_inst, |p| {
 //             f((circuit_inst.clone(), p))
 //         })
@@ -409,76 +459,156 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
 //     fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinInstId) -> () {
 //         unimplemented!()
 //     }
+//
+//     fn num_internal_nets(&self, parent: &Self::CellId) -> usize {
+//         unimplemented!()
+//     }
 // }
-
-#[test]
-fn test_flat_hierachy_view() {
-    use crate::prelude::Chip;
-    use crate::prelude::HierarchyEdit;
-
-    let mut chip = Chip::new();
-    let top1 = chip.create_cell("TOP1".into());
-    let top2 = chip.create_cell("TOP2".into());
-    let intermediate = chip.create_cell("INTERMEDIATE".into());
-    let leaf1 = chip.create_cell("LEAF1".into());
-    let leaf2 = chip.create_cell("LEAF2".into());
-
-    chip.create_cell_instance(&intermediate, &leaf1, Some("leaf1_inst1".into()));
-    chip.create_cell_instance(&intermediate, &leaf1, Some("leaf1_inst2".into()));
-    chip.create_cell_instance(&intermediate, &leaf2, Some("leaf2_inst1".into()));
-    chip.create_cell_instance(&intermediate, &leaf2, Some("leaf2_inst2".into()));
-
-    chip.create_cell_instance(&top1, &intermediate, Some("intermediate_inst1".into()));
-    chip.create_cell_instance(&top1, &intermediate, Some("intermediate_inst2".into()));
-
-    chip.create_cell_instance(&top2, &leaf1, Some("leaf1_inst1".into()));
-    chip.create_cell_instance(&top2, &leaf2, Some("leaf2_inst1".into()));
-    chip.create_cell_instance(&top2, &leaf2, Some("leaf2_inst2".into()));
-
-    {
-        let flatview = FlatView::new(&chip);
-        assert_eq!(flatview.num_cells(), 4); // Two top cells, two leaf cells.
-
-        let top1 = flatview.cell_by_name("TOP1").expect("Cell not found.");
-        assert_eq!(flatview.num_child_instances(&top1), 2*4);
-        assert_eq!(flatview.num_dependent_cells(&top1), 0);
-        assert_eq!(flatview.num_cell_dependencies(&top1), 2);
-        assert_eq!(flatview.each_cell_instance(&top1).count(), 8);
-
-        // Find by name.
-        {
-            let names = vec![
-                "intermediate_inst1/leaf1_inst1",
-                "intermediate_inst2/leaf1_inst1",
-                "intermediate_inst2/leaf2_inst1",
-                "intermediate_inst2/leaf2_inst2",
-            ];
-            for name in names {
-                let inst = flatview.cell_instance_by_name(&top1, name)
-                    .expect("instance not found");
-                assert_eq!(flatview.cell_instance_name(&inst), Some(name.into()));
-
-                // Parent
-                assert_eq!(&flatview.parent_cell(&inst), &top1);
-            }
-        }
-
-        // Template
-        assert_eq!(
-            &flatview.template_cell(
-                &flatview.cell_instance_by_name(&top1, "intermediate_inst1/leaf1_inst1"
-                ).unwrap()),
-        &leaf1);
-
-        // References.
-        assert_eq!(flatview.num_cell_references(&leaf1), 2*2 + 1);
-        assert_eq!(flatview.num_cell_references(&leaf2), 2*2 + 2);
-        assert_eq!(flatview.num_cell_references(&top1), 0);
-
-        let top2 = flatview.cell_by_name("TOP2").expect("Cell not found.");
-        assert_eq!(flatview.num_dependent_cells(&top2), 0);
-        assert_eq!(flatview.num_dependent_cells(&top2), 0);
-        assert_eq!(flatview.num_cell_dependencies(&top2), 2);
-        assert_eq!(flatview.each_cell_instance(&top2).count(), 3);
-    }
-}
+//
+// #[cfg(test)]
+// mod tests_with_hierarchy {
+//     use crate::prelude::Chip;
+//     use crate::prelude::*;
+//     use crate::flat_view::FlatView;
+//
+//     fn create_test_chip() -> Chip {
+//         let mut chip = Chip::new();
+//         let top1 = chip.create_cell("TOP1".into());
+//         let top2 = chip.create_cell("TOP2".into());
+//         let intermediate = chip.create_cell("INTERMEDIATE".into());
+//         let leaf1 = chip.create_cell("LEAF1".into());
+//         let leaf2 = chip.create_cell("LEAF2".into());
+//
+//         chip.create_cell_instance(&intermediate, &leaf1, Some("leaf1_inst1".into()));
+//         chip.create_cell_instance(&intermediate, &leaf1, Some("leaf1_inst2".into()));
+//         chip.create_cell_instance(&intermediate, &leaf2, Some("leaf2_inst1".into()));
+//         chip.create_cell_instance(&intermediate, &leaf2, Some("leaf2_inst2".into()));
+//
+//         chip.create_cell_instance(&top1, &intermediate, Some("intermediate_inst1".into()));
+//         chip.create_cell_instance(&top1, &intermediate, Some("intermediate_inst2".into()));
+//
+//         // Create instances inanother cell with same names as in TOP1.
+//         chip.create_cell_instance(&top2, &leaf1, Some("leaf1_inst1".into()));
+//         chip.create_cell_instance(&top2, &leaf2, Some("leaf2_inst1".into()));
+//         chip.create_cell_instance(&top2, &leaf2, Some("leaf2_inst2".into()));
+//         chip
+//     }
+//
+//     #[test]
+//     fn test_num_cells() {
+//         let chip = create_test_chip();
+//         let flatview = FlatView::new(&chip);
+//         assert_eq!(flatview.num_cells(), 4); // Two top cells, two leaf cells.
+//     }
+//
+//     #[test]
+//     fn test_access_top_cell() {
+//         let chip = create_test_chip();
+//
+//         let flatview = FlatView::new(&chip);
+//         let top1 = flatview.cell_by_name("TOP1").expect("Cell not found.");
+//         assert_eq!(flatview.num_child_instances(&top1), 2 * 4);
+//         assert_eq!(flatview.num_dependent_cells(&top1), 0);
+//         assert_eq!(flatview.num_cell_dependencies(&top1), 2);
+//         assert_eq!(flatview.each_cell_instance(&top1).count(), 8);
+//     }
+//
+//     #[test]
+//     fn test_find_template_cell() {
+//         let chip = create_test_chip();
+//         let flatview = FlatView::new(&chip);
+//         let top1 = flatview.cell_by_name("TOP1").expect("Cell not found.");
+//         let leaf1 = flatview.cell_by_name("LEAF1").expect("Cell not found.");
+//
+//         // Template
+//         assert_eq!(
+//             &flatview.template_cell(
+//                 &flatview.cell_instance_by_name(&top1, "intermediate_inst1/leaf1_inst1",
+//                 ).unwrap()),
+//             &leaf1);
+//     }
+//
+//     #[test]
+//     fn test_find_instance_by_name() {
+//         let chip = create_test_chip();
+//         let flatview = FlatView::new(&chip);
+//         let top1 = flatview.cell_by_name("TOP1").expect("Cell not found.");
+//
+//         // Find by name.
+//         {
+//             let names = vec![
+//                 "intermediate_inst1/leaf1_inst1",
+//                 "intermediate_inst2/leaf1_inst1",
+//                 "intermediate_inst2/leaf2_inst1",
+//                 "intermediate_inst2/leaf2_inst2",
+//             ];
+//             for name in names {
+//                 let inst = flatview.cell_instance_by_name(&top1, name)
+//                     .expect("instance not found");
+//                 assert_eq!(flatview.cell_instance_name(&inst), Some(name.into()));
+//
+//                 // Parent
+//                 assert_eq!(&flatview.parent_cell(&inst), &top1);
+//             }
+//         }
+//     }
+//
+//     #[test]
+//     fn test_count_references() {
+//         let chip = create_test_chip();
+//         let flatview = FlatView::new(&chip);
+//         let top1 = flatview.cell_by_name("TOP1").expect("Cell not found.");
+//         let leaf1 = flatview.cell_by_name("LEAF1").expect("Cell not found.");
+//         let leaf2 = flatview.cell_by_name("LEAF2").expect("Cell not found.");
+//
+//         // References.
+//         assert_eq!(flatview.num_cell_references(&leaf1), 2 * 2 + 1);
+//         assert_eq!(flatview.num_cell_references(&leaf2), 2 * 2 + 2);
+//         assert_eq!(flatview.num_cell_references(&top1), 0);
+//     }
+//
+//
+//     #[test]
+//     fn test_another_top_cell() {
+//         // TOP2 contains instances with same name as in TOP1.
+//         let chip = create_test_chip();
+//         let flatview = FlatView::new(&chip);
+//         let top2 = flatview.cell_by_name("TOP2").expect("Cell not found.");
+//
+//         assert_eq!(flatview.num_dependent_cells(&top2), 0);
+//         assert_eq!(flatview.num_cell_dependencies(&top2), 2);
+//         assert_eq!(flatview.each_cell_instance(&top2).count(), 3);
+//     }
+//
+// }
+//
+//
+// #[cfg(test)]
+// mod tests_with_netlist {
+//     use crate::prelude::Chip;
+//     use crate::prelude::*;
+//     use crate::flat_view::FlatView;
+//
+//     fn create_test_netlist() -> Chip {
+//         let mut chip = Chip::new();
+//         let top = chip.create_cell("TOP".into());
+//         let sub = chip.create_cell("SUB".into());
+//         chip.create_net(&sub, Some("A".into()));
+//
+//         let inst_sub1 = chip.create_cell_instance(&top, &sub, Some("sub1".into()));
+//         let inst_sub2 = chip.create_cell_instance(&top, &sub, Some("sub2".into()));
+//
+//         chip
+//     }
+//
+//     #[test]
+//     fn test_net_by_name() {
+//         let chip = create_test_netlist();
+//         let flatview = FlatView::new(&chip);
+//         let top = flatview.cell_by_name("TOP").expect("Cell not found.");
+//         assert!(flatview.net_by_name(&top, "sub1/A").is_some());
+//         assert!(flatview.net_by_name(&top, "sub2/A").is_some());
+//     }
+//
+//
+// }

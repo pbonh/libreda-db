@@ -391,64 +391,6 @@ impl<'a, H: HierarchyBase + 'static, U> DelegateHierarchyBase for Undo<'a, H, U>
     }
 }
 
-// impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
-//     // This is nothing but simple redirection.
-//     type NameType = T::NameType;
-//     type CellId = T::CellId;
-//     type CellInstId = T::CellInstId;
-//
-//     fn cell_by_name(&self, name: &str) -> Option<Self::CellId> {
-//         self.chip.cell_by_name(name)
-//     }
-//
-//     fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId> {
-//         self.chip.cell_instance_by_name(parent_cell, name)
-//     }
-//
-//     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
-//         self.chip.cell_name(cell)
-//     }
-//
-//     fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
-//         self.chip.cell_instance_name(cell_inst)
-//     }
-//
-//     fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-//         self.chip.parent_cell(cell_instance)
-//     }
-//
-//     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-//         self.chip.template_cell(cell_instance)
-//     }
-//
-//     fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
-//         self.chip.for_each_cell(f)
-//     }
-//
-//     fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-//         self.chip.for_each_cell_instance(cell, f)
-//     }
-//
-//     fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-//         self.chip.for_each_cell_dependency(cell, f)
-//     }
-//
-//     fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-//         self.chip.for_each_dependent_cell(cell, f)
-//     }
-//
-//     fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-//         self.chip.for_each_cell_reference(cell, f)
-//     }
-//
-//     fn num_child_instances(&self, cell: &Self::CellId) -> usize {
-//         self.chip.num_child_instances(cell)
-//     }
-//
-//     fn num_cells(&self) -> usize {
-//         self.chip.num_cells()
-//     }
-// }
 
 impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {
     fn new() -> Self {

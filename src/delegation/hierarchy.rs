@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::traits::HierarchyBase;
+use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
 
 // ///
@@ -577,6 +577,7 @@ pub trait DelegateHierarchyBase
     }
 }
 
+
 impl<'a, T, H> HierarchyBase for T
     where
         T: DelegateHierarchyBase<H=H>,
@@ -630,7 +631,7 @@ impl<'a, T, H> HierarchyBase for T
         self.d_each_cell_instance_vec(cell)
     }
 
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>{
+    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
         self.d_each_cell_instance(cell)
     }
 
@@ -700,5 +701,56 @@ impl<'a, T, H> HierarchyBase for T
 
     fn get_cell_instance_property(&self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
         self.d_get_cell_instance_property(inst, key)
+    }
+}
+
+pub trait DelegateHierarchyEdit
+    where Self: Sized
+{
+    type H: HierarchyEdit;
+
+    /// Get a reference to the underlying data structure.
+    fn mut_base(&mut self) -> &mut Self::H;
+
+    fn d_new() -> Self;
+
+    fn d_create_cell(&mut self, name: <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType) -> <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellId {
+        self.mut_base().create_cell(name)
+    }
+
+    fn d_remove_cell(&mut self, cell_id: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellId) {
+        self.mut_base().remove_cell(cell_id)
+    }
+
+    fn d_create_cell_instance(&mut self,
+                            parent_cell: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellId,
+                            template_cell: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellId,
+                            name: Option<<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType>) -> <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellInstId {
+        self.mut_base().create_cell_instance(parent_cell, template_cell, name)
+    }
+
+
+    fn d_remove_cell_instance(&mut self, inst: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellInstId) {
+        self.mut_base().remove_cell_instance(inst)
+    }
+
+    fn d_rename_cell_instance(&mut self, inst: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellInstId, new_name: Option<<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType>) {
+        self.mut_base().rename_cell_instance(inst, new_name)
+    }
+
+    fn d_rename_cell(&mut self, cell: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellId, new_name: <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType) {
+        self.mut_base().rename_cell(cell, new_name)
+    }
+
+    fn d_set_chip_property(&mut self, key: <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType, value: PropertyValue) {
+        self.mut_base().set_chip_property(key, value)
+    }
+
+    fn d_set_cell_property(&mut self, cell: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellId, key: <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType, value: PropertyValue) {
+        self.mut_base().set_cell_property(cell, key, value)
+    }
+
+    fn d_set_cell_instance_property(&mut self, inst: &<<Self as DelegateHierarchyEdit>::H as HierarchyBase>::CellInstId, key: <<Self as DelegateHierarchyEdit>::H as HierarchyBase>::NameType, value: PropertyValue) {
+        self.mut_base().set_cell_instance_property(inst, key, value)
     }
 }

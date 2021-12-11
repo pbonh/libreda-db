@@ -106,7 +106,7 @@ pub mod chip;
 pub mod undo;
 pub mod hierarchy_utils;
 pub mod flat_view;
-mod delegate;
+mod delegation;
 
 pub mod technology;
 

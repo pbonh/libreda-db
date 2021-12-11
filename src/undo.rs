@@ -25,6 +25,7 @@
 //! * Undoing a operation on the hierarchy does not necessarily restore netlist, layout and l2n information.
 //! * Undoing a netlist operation does not restore l2n information.
 //! * Undoing a layout operation does not restore l2n information.
+//! * Undoing does not restore user-defined properties.
 //!
 //! # Caveat
 //! Undoing removal of some objects does not preserve the ID of the object.
@@ -36,6 +37,7 @@ use crate::netlist::direction::Direction;
 use crate::layout::prelude::{Rect, LayerInfo, Geometry, SimpleTransform};
 use std::ops::Deref;
 use crate::prelude::PropertyValue;
+use crate::delegation::hierarchy::DelegateHierarchyBase;
 
 /// Undo operations on the netlist.
 pub enum NetlistUndoOp<T: NetlistBase> {
@@ -204,7 +206,7 @@ impl<'a, T: HierarchyEdit, U> Undo<'a, T, U> {
 }
 
 
-impl<'a, T: L2NBase, U> L2NBase for Undo<'a, T, U> {
+impl<'a, T: L2NBase + 'static, U> L2NBase for Undo<'a, T, U> {
     fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
         self.chip.shapes_of_net(net_id)
     }
@@ -380,72 +382,75 @@ impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
     }
 }
 
-// impl<'a, T: HierarchyBase, U> HierarchyDelegate<T> for Undo<'a, T, U> {
-//     fn base(&self) -> &T {
-//         &self.chip
-//     }
-// }
 
-impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
-    // This is nothing but simple redirection.
-    type NameType = T::NameType;
-    type CellId = T::CellId;
-    type CellInstId = T::CellInstId;
+impl<'a, H: HierarchyBase + 'static, U> DelegateHierarchyBase for Undo<'a, H, U> {
+    type H = H;
 
-    fn cell_by_name(&self, name: &str) -> Option<Self::CellId> {
-        self.chip.cell_by_name(name)
-    }
-
-    fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId> {
-        self.chip.cell_instance_by_name(parent_cell, name)
-    }
-
-    fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
-        self.chip.cell_name(cell)
-    }
-
-    fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
-        self.chip.cell_instance_name(cell_inst)
-    }
-
-    fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-        self.chip.parent_cell(cell_instance)
-    }
-
-    fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-        self.chip.template_cell(cell_instance)
-    }
-
-    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
-        self.chip.for_each_cell(f)
-    }
-
-    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        self.chip.for_each_cell_instance(cell, f)
-    }
-
-    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        self.chip.for_each_cell_dependency(cell, f)
-    }
-
-    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
-        self.chip.for_each_dependent_cell(cell, f)
-    }
-
-    fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
-        self.chip.for_each_cell_reference(cell, f)
-    }
-
-    fn num_child_instances(&self, cell: &Self::CellId) -> usize {
-        self.chip.num_child_instances(cell)
-    }
-
-    fn num_cells(&self) -> usize {
-        self.chip.num_cells()
+    fn base(&self) -> &H {
+        &self.chip
     }
 }
 
-impl<'a, T: HierarchyEdit, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {
+// impl<'a, T: HierarchyBase, U> HierarchyBase for Undo<'a, T, U> {
+//     // This is nothing but simple redirection.
+//     type NameType = T::NameType;
+//     type CellId = T::CellId;
+//     type CellInstId = T::CellInstId;
+//
+//     fn cell_by_name(&self, name: &str) -> Option<Self::CellId> {
+//         self.chip.cell_by_name(name)
+//     }
+//
+//     fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId> {
+//         self.chip.cell_instance_by_name(parent_cell, name)
+//     }
+//
+//     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType {
+//         self.chip.cell_name(cell)
+//     }
+//
+//     fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
+//         self.chip.cell_instance_name(cell_inst)
+//     }
+//
+//     fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+//         self.chip.parent_cell(cell_instance)
+//     }
+//
+//     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
+//         self.chip.template_cell(cell_instance)
+//     }
+//
+//     fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+//         self.chip.for_each_cell(f)
+//     }
+//
+//     fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+//         self.chip.for_each_cell_instance(cell, f)
+//     }
+//
+//     fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+//         self.chip.for_each_cell_dependency(cell, f)
+//     }
+//
+//     fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+//         self.chip.for_each_dependent_cell(cell, f)
+//     }
+//
+//     fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+//         self.chip.for_each_cell_reference(cell, f)
+//     }
+//
+//     fn num_child_instances(&self, cell: &Self::CellId) -> usize {
+//         self.chip.num_child_instances(cell)
+//     }
+//
+//     fn num_cells(&self) -> usize {
+//         self.chip.num_cells()
+//     }
+// }
+
+impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {
     fn new() -> Self {
         unimplemented!()
     }
@@ -471,19 +476,19 @@ impl<'a, T: HierarchyEdit, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'
     }
 
     fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
-        let previous_name = self.cell_instance_name(inst);
+        let previous_name = self.d_cell_instance_name(inst);
         self.chip.rename_cell_instance(inst, new_name);
         self.transactions.push(HierarchyUndoOp::RenameCellInst { inst: inst.clone(), previous_name }.into());
     }
 
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
-        let previous_name = self.cell_name(cell);
+        let previous_name = self.d_cell_name(cell);
         self.chip.rename_cell(cell, new_name);
         self.transactions.push(HierarchyUndoOp::RenameCell { cell: cell.clone(), previous_name }.into());
     }
 }
 
-impl<'a, T: NetlistBase, U> NetlistBase for Undo<'a, T, U> {
+impl<'a, T: NetlistBase + 'static, U> NetlistBase for Undo<'a, T, U> {
     type PinId = T::PinId;
     type PinInstId = T::PinInstId;
     type NetId = T::NetId;
@@ -566,7 +571,7 @@ impl<'a, T: NetlistBase, U> NetlistBase for Undo<'a, T, U> {
 }
 
 impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
-    where T: NetlistEdit,
+    where T: NetlistEdit + 'static,
           U: From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>> {
     fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
         let id = self.chip.create_pin(circuit, name, direction);
@@ -618,7 +623,7 @@ impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
 }
 
 
-impl<'a, T: LayoutBase, U> LayoutBase for Undo<'a, T, U> {
+impl<'a, T: LayoutBase + 'static, U> LayoutBase for Undo<'a, T, U> {
 
     // Pass-through all functions of the LayoutBase trait.
 
@@ -672,7 +677,7 @@ impl<'a, T: LayoutBase, U> LayoutBase for Undo<'a, T, U> {
 }
 
 impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
-    where T: LayoutEdit,
+    where T: LayoutEdit + 'static,
           U: From<LayoutUndoOp<T>> + From<HierarchyUndoOp<T>> {
     fn set_dbu(&mut self, dbu: Self::Coord) {
         self.transactions.push(LayoutUndoOp::SetDbu(self.dbu()).into());
@@ -731,7 +736,7 @@ impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
 }
 
 impl<'a, T, U> L2NEdit for Undo<'a, T, U>
-    where T: L2NEdit,
+    where T: L2NEdit + 'static,
           U: From<L2NUndoOp<T>> + From<LayoutUndoOp<T>> + From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>> {
     fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
         let previous_pin = self.get_pin_of_shape(shape_id);

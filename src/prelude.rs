@@ -38,6 +38,7 @@ pub mod traits {
     pub use crate::traits::*;
     pub use crate::hierarchy_utils::*;
     pub use crate::layout::traits::*;
+    pub use crate::layout::util::*;
     pub use crate::netlist::traits::*;
     pub use crate::netlist::util::*;
     pub use crate::reference_access::*;

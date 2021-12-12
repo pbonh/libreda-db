@@ -133,12 +133,6 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     /// Set the distance unit used in this layout in 'pixels per micron'.
     fn set_dbu(&mut self, dbu: Self::Coord) {} // TODO: Remove default implementation.
 
-    /// Create a layer or return an existing one.
-    fn find_or_create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId {
-        self.find_layer(index, datatype)
-            .unwrap_or_else(|| self.create_layer(index, datatype))
-    }
-
     /// Create a new layer.
     /// Use `set_layer_name()` to define a name.
     fn create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;

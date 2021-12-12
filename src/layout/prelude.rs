@@ -25,3 +25,4 @@ pub use super::traits::*;
 pub use super::io::*;
 pub use super::types::*;
 pub use super::util;
+pub use super::util::LayoutEditUtil;

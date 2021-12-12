@@ -97,3 +97,16 @@ pub fn copy_layer<LS, LT>(
 
     layer_id
 }
+
+/// Helper functions for layouts.
+///
+/// This trait is automatically implemented for all types which implement [`LayoutEdit`].
+pub trait LayoutEditUtil: LayoutEdit {
+    /// Create a layer or return an existing one.
+    fn find_or_create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
+        self.find_layer(index, datatype)
+            .unwrap_or_else(|| self.create_layer(index, datatype))
+    }
+}
+
+impl<L: LayoutEdit> LayoutEditUtil for L {}

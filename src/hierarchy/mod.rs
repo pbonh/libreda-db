@@ -18,9 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-//! Re-export all traits defined in this crate.
+//! Concept of 'hierarchy' which is used in layouts and netlists.
 
-pub use crate::hierarchy::traits::*;
-pub use crate::layout::traits::*;
-pub use crate::netlist::traits::*;
-pub use crate::l2n::*;
+pub mod util;
+pub mod traits;
+pub mod prelude;

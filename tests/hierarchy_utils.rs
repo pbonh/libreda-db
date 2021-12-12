@@ -24,7 +24,7 @@
 
 use libreda_db::chip::Chip;
 use libreda_db::prelude::{HierarchyEdit, HierarchyBase};
-use libreda_db::hierarchy_utils::*;
+use libreda_db::hierarchy::prelude::*;
 
 /// Create a chip with three cells A, B, C and D.
 ///

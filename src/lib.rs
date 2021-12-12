@@ -95,16 +95,17 @@ pub use iron_shapes_booleanop;
 
 // Public modules.
 pub mod prelude;
+pub mod traits;
+pub mod hierarchy;
 pub mod netlist;
 pub mod layout;
+pub mod l2n;
 pub mod index;
 pub mod rc_string;
 pub mod property_storage;
-pub mod traits;
 pub mod reference_access;
 pub mod chip;
 pub mod undo;
-pub mod hierarchy_utils;
 pub mod flat_view;
 mod delegation;
 

@@ -67,6 +67,12 @@
 //! # Geometric primitives
 //! Two dimensional geometrical primitives (polygons, rectangles, etc.) are re-exported from the [`iron_shapes`] crate.
 //!
+//! # Technology-related data
+//! There is no complete standard way to deal with technology related data. A proposal on how to
+//! also create an abstraction layer for technology data such as rules is here:
+//!
+//! * [`technology`] - interfaces for accessing technology related information such commonly used DRC rules
+//!
 //! [`iron_shapes`]: iron_shapes
 //! [`HierarchyBase`]: traits::HierarchyBase
 //! [`HierarchyEdit`]: traits::HierarchyEdit

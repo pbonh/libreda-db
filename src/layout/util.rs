@@ -57,7 +57,7 @@ pub fn copy_shapes_all_layers<LS, LT, C>(
     }
 }
 
-/// Copy all layers from a source layout into a destination layout.
+/// Copy all layers (without their contents) from a source layout into a destination layout.
 /// # Panics
 /// Panics if a layer number or layer name already exists.
 pub fn copy_all_layers<LS, LT>(
@@ -72,7 +72,7 @@ pub fn copy_all_layers<LS, LT>(
     }
 }
 
-/// Copy a layer from a source layout into a destination layout.
+/// Copy a layer (without its content) from a source layout into a destination layout.
 ///
 /// # Panics
 /// Panics if the layer number or layer name already exists.

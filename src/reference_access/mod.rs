@@ -26,6 +26,26 @@
 //!
 //! ```
 //! use libreda_db::prelude::*;
+//!
+//! // Create some netlist/layout.
+//! let mut chip = Chip::new();
+//! let top_id = chip.create_cell("TOP".into());
+//! let sub_id = chip.create_cell("SUB".into());
+//! let sub_inst1_id = chip.create_cell_instance(&top_id, &sub_id, Some("inst1".into()));
+//!
+//! // Create read-only object-like access.
+//! let top = chip.cell_ref(&top_id);
+//! // `top` can now be used like an object to navigate the cell hierarchy, layout and netlist.
+//! for subcell in top.each_cell_instance() {
+//!     println!("{} contains {:?} which is a {}", top.name(), subcell.name(), subcell.template().name());
+//! }
+//!
+//! // Also the netlist can be traversed in a similar way.
+//! for pin in top.each_pin() {
+//!     println!("Pin {} of {} is connected to net {:?}.",
+//!         pin.name(), top.name(), pin.net().and_then(|net| net.name())
+//!     );
+//! }
 //! ```
 
 mod hierarchy_reference_access;

@@ -25,8 +25,9 @@
 //!
 
 use crate::traits::{HierarchyBase, NetlistBase, LayoutBase};
-use crate::prelude::{TerminalId, SimpleTransform};
+use crate::prelude::{TerminalId, SimpleTransform, LayerInfo, Geometry, Rect};
 use crate::netlist::direction::Direction;
+use crate::l2n::L2NBase;
 
 /// Trait that provides object-like read access to a cell hierarchy structure and its elements.
 pub trait HierarchyReferenceAccess: HierarchyBase
@@ -317,13 +318,6 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     }
 }
 
-
-impl<'a, L: LayoutBase> CellInstRef<'a, L> {
-    /// Get the geometric transform that describes the location of a cell instance relative to its parent.
-    pub fn get_transform(&self) -> SimpleTransform<L::Coord> {
-        self.base().get_transform(&self.id)
-    }
-}
 
 /// A reference to a net.
 /// This is just a wrapper around a netlist and a net ID.
@@ -675,4 +669,190 @@ fn test_chip_reference_access() {
     assert_eq!(top_ref.each_net().count(), 2, "LOW and HIGH nets should be there.");
     assert_eq!(top_ref.each_pin().count(), 1);
     assert_eq!(sub_inst1_ref.each_pin_instance().count(), 1);
+}
+
+
+/// Trait that provides object-like read access to a layout structure and its elements.
+pub trait LayoutReferenceAccess: LayoutBase
+{
+    /// Get a cell object by its ID.
+    fn shape_ref(&self, shape_id: &Self::ShapeId) -> ShapeRef<'_, Self> {
+        ShapeRef {
+            base: self,
+            id: shape_id.clone(),
+        }
+    }
+
+    /// Get a layer object by its ID.
+    fn layer_ref(&self, layer_id: &Self::LayerId) -> LayerRef<'_, Self> {
+        LayerRef {
+            base: self,
+            id: layer_id.clone(),
+        }
+    }
+
+    /// Iterate over all layers defined in this layout.
+    fn each_layer_ref(&self) -> Box<dyn Iterator<Item=LayerRef<'_, Self>> + '_> {
+        Box::new(
+            self.each_layer()
+                .map(move |id| LayerRef {
+                    id,
+                    base: self,
+                })
+        )
+    }
+
+    /// Get a layer object by the layer name.
+    fn layer_ref_by_name(&self, name: &str) -> Option<LayerRef<'_, Self>> {
+        self.layer_by_name(name)
+            .map(|id| self.layer_ref(&id))
+    }
+}
+
+impl<T: LayoutBase> LayoutReferenceAccess for T {}
+
+
+impl<'a, L: LayoutBase> CellInstRef<'a, L> {
+    /// Get the geometric transform that describes the location of a cell instance relative to its parent.
+    pub fn get_transform(&self) -> SimpleTransform<L::Coord> {
+        self.base().get_transform(&self.id)
+    }
+}
+
+impl<'a, L: LayoutBase> CellRef<'a, L> {
+    /// Iterate over all shapes on a layer.
+    pub fn each_shape_per_layer(&self, layer_id: &L::LayerId) -> impl Iterator<Item=ShapeRef<L>> + '_ {
+        self.base.each_shape_id(&self.id, layer_id)
+            .map(move |id| ShapeRef {
+                id,
+                base: self.base,
+            })
+    }
+
+    /// Iterate over all shapes defined in this cell.
+    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> + '_ {
+        self.base.each_layer()
+            .flat_map(move |id| self.each_shape_per_layer(&id))
+    }
+
+    /// Get the bounding box of the shapes on a specific layer.
+    pub fn bounding_box_per_layer(&self, layer_id: &L::LayerId) -> Option<Rect<L::Coord>> {
+        self.base.bounding_box_per_layer(&self.id, layer_id)
+    }
+
+    /// Get the bounding box of the shapes on all layers.
+    pub fn bounding_box(&self) -> Option<Rect<L::Coord>> {
+        self.base.bounding_box(&self.id)
+    }
+}
+
+/// Reference to a layer.
+pub struct LayerRef<'a, L: LayoutBase + ?Sized> {
+    /// Reference to the parent data structure.
+    base: &'a L,
+    /// ID of the layer.
+    id: L::LayerId,
+}
+
+impl<'a, L: LayoutBase> LayerRef<'a, L> {
+    /// Get the layer ID.
+    pub fn id(&self) -> L::LayerId {
+        self.id.clone()
+    }
+
+    /// Get the name of the layer.
+    pub fn name(&self) -> Option<L::NameType> {
+        self.layer_info().name.clone()
+    }
+
+    /// Get a reference to the layer-info structure.
+    pub fn layer_info(&self) -> &'a LayerInfo<L::NameType> {
+        self.base.layer_info(&self.id)
+    }
+}
+
+/// Reference to a shape.
+pub struct ShapeRef<'a, L: LayoutBase + ?Sized> {
+    /// Reference to the parent data structure.
+    base: &'a L,
+    /// ID of the shape.
+    id: L::ShapeId,
+}
+
+impl<'a, L: LayoutBase> ShapeRef<'a, L> {
+    /// Get the shape ID.
+    pub fn id(&self) -> L::ShapeId {
+        self.id.clone()
+    }
+
+    /// Get the cell where this shape lives.
+    pub fn cell(&self) -> CellRef<L> {
+        let id = self.base.parent_of_shape(&self.id).0;
+        CellRef {
+            id,
+            base: self.base,
+        }
+    }
+
+    /// Get the layer of the shape.
+    pub fn layer(&self) -> LayerRef<L> {
+        let id = self.base.parent_of_shape(&self.id).1;
+        LayerRef {
+            id,
+            base: self.base,
+        }
+    }
+
+    /// Get the cloned geometry struct representing this shape.
+    pub fn geometry_cloned(&self) -> Geometry<L::Coord> {
+        self.base.with_shape(&self.id,
+                             |_layer, geo| {
+                                 geo.clone()
+                             })
+    }
+}
+
+
+impl<'a, L: L2NBase> ShapeRef<'a, L> {
+
+    /// Get the net which is connected to this shape, if any.
+    pub fn net(&self) -> Option<NetRef<L>> {
+        self.base.get_net_of_shape(&self.id)
+            .map(|id| NetRef {
+                id,
+                base: self.base
+            })
+    }
+
+    /// Get the pin which is connected to this shape, if any.
+    pub fn pin(&self) -> Option<PinRef<L>> {
+        self.base.get_pin_of_shape(&self.id)
+            .map(|id| PinRef {
+                id,
+                base: self.base
+            })
+    }
+}
+
+
+impl<'a, L: L2NBase> NetRef<'a, L> {
+    /// Iterate over all shapes attached to this net.
+    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> {
+        self.base.shapes_of_net(&self.id)
+            .map(move |id| ShapeRef {
+                id,
+                base: self.base
+            })
+    }
+}
+
+impl<'a, L: L2NBase> PinRef<'a, L> {
+    /// Iterate over all shapes attached to this pin.
+    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> {
+        self.base.shapes_of_pin(&self.id)
+            .map(move |id| ShapeRef {
+                id,
+                base: self.base
+            })
+    }
 }

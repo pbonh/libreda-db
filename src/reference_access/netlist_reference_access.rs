@@ -18,38 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-//! # Experimental
-//! Wrappers around the `HierarchyBase` and `NetlistBase` traits which
-//! provide more object like access methods.
-//!
-
-use crate::traits::{HierarchyBase, NetlistBase, LayoutBase};
-use crate::prelude::{TerminalId, SimpleTransform, LayerInfo, Geometry, Rect};
+use crate::traits::NetlistBase;
 use crate::netlist::direction::Direction;
-use crate::l2n::L2NBase;
+use crate::prelude::TerminalId;
 
-/// Trait that provides object-like read access to a cell hierarchy structure and its elements.
-pub trait HierarchyReferenceAccess: HierarchyBase
-{
-    /// Get a cell object by its ID.
-    fn cell_ref(&self, cell_id: &Self::CellId) -> CellRef<'_, Self> {
-        CellRef {
-            base: self,
-            id: cell_id.clone(),
-        }
-    }
-
-    /// Get a cell instance object by its ID.
-    fn cell_instance_ref(&self, inst_id: &Self::CellInstId) -> CellInstRef<'_, Self> {
-        CellInstRef {
-            base: self,
-            id: inst_id.clone(),
-        }
-    }
-}
-
-impl<T: HierarchyBase> HierarchyReferenceAccess for T {}
+use super::hierarchy_reference_access::*;
 
 /// Trait that provides object-like read access to a hierarchical netlist structure and its elements.
 pub trait NetlistReferenceAccess: NetlistBase {
@@ -87,101 +60,6 @@ pub trait NetlistReferenceAccess: NetlistBase {
 }
 
 impl<T: NetlistBase> NetlistReferenceAccess for T {}
-
-/// A reference to a cell.
-/// This is just a wrapper around a netlist and a cell ID.
-pub struct CellRef<'a, H: HierarchyBase + ?Sized> {
-    /// Reference to the parent data structure.
-    base: &'a H,
-    /// ID of the corresponding cell.
-    id: H::CellId,
-}
-
-impl<'a, H: HierarchyBase> Clone for CellRef<'a, H> {
-    fn clone(&self) -> Self {
-        Self {
-            base: self.base,
-            id: self.id.clone(),
-        }
-    }
-}
-
-impl<'a, H: HierarchyBase> CellRef<'a, H> {
-    /// Access the base structure.
-    pub fn base(&self) -> &'_ H {
-        self.base
-    }
-
-    /// Get the ID of this cell.
-    pub fn id(&self) -> H::CellId {
-        self.id.clone()
-    }
-
-    /// Get the name of the cell.
-    pub fn name(&self) -> H::NameType {
-        self.base.cell_name(&self.id)
-    }
-
-    /// Iterate over the IDs of all child instances.
-    pub fn each_cell_instance_id(&self) -> impl Iterator<Item=H::CellInstId> + '_ {
-        self.base.each_cell_instance(&self.id)
-    }
-
-    /// Iterate over all child instances.
-    pub fn each_cell_instance(&self) -> impl Iterator<Item=CellInstRef<'a, H>> + '_ {
-        self.each_cell_instance_id()
-            .map(move |id| CellInstRef {
-                base: self.base,
-                id,
-            })
-    }
-
-    /// Find a child instance by its name.
-    pub fn cell_instance_by_name(&self, name: &str) -> Option<CellInstRef<'a, H>> {
-        self.base.cell_instance_by_name(&self.id, name)
-            .map(|id| CellInstRef {
-                base: self.base,
-                id,
-            })
-    }
-
-    /// Iterate over the IDs of all instances of this cell.
-    pub fn each_reference_id(&self) -> impl Iterator<Item=H::CellInstId> + '_ {
-        self.base.each_cell_reference(&self.id)
-    }
-
-    /// Iterate over the of all instances of this cell.
-    pub fn each_reference(&self) -> impl Iterator<Item=CellInstRef<'a, H>> + '_ {
-        self.each_reference_id()
-            .map(move |id| CellInstRef {
-                base: self.base,
-                id,
-            })
-    }
-
-    /// Iterate over all dependencies of this cell.
-    pub fn each_cell_dependency(&self) -> impl Iterator<Item=CellRef<'a, H>> + '_ {
-        self.base.each_cell_dependency(&self.id)
-            .map(move |id| CellRef {
-                base: self.base,
-                id,
-            })
-    }
-
-    /// Iterate over all cells that directly depend on this cell.
-    pub fn each_dependent_cell(&self) -> impl Iterator<Item=CellRef<'a, H>> + '_ {
-        self.base.each_dependent_cell(&self.id)
-            .map(move |id| CellRef {
-                base: self.base,
-                id,
-            })
-    }
-
-    /// Get the number of cell instances inside the `cell`.
-    pub fn num_child_instances(&self) -> usize {
-        self.base.num_child_instances(&self.id)
-    }
-}
 
 
 impl<'a, N: NetlistBase> CellRef<'a, N> {
@@ -240,58 +118,6 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
 }
 
 
-/// Default implementation for `CellInstRef`.
-/// This is just a wrapper around a netlist and a cell ID.
-pub struct CellInstRef<'a, H: HierarchyBase + ?Sized> {
-    /// Reference to the parent netlist.
-    base: &'a H,
-    /// ID of the corresponding cell instance.
-    id: H::CellInstId,
-}
-
-
-impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
-    /// Access the base structure.
-    pub fn base(&self) -> &'_ H {
-        self.base
-    }
-
-    /// Get the ID of this cell instance.
-    pub fn id(&self) -> H::CellInstId {
-        self.id.clone()
-    }
-
-    /// Get the name of the cell instance.
-    pub fn name(&self) -> Option<H::NameType> {
-        self.base.cell_instance_name(&self.id)
-    }
-
-    /// Get the parent cell of this instance.
-    pub fn parent(&self) -> CellRef<'a, H> {
-        CellRef {
-            base: self.base,
-            id: self.parent_id(),
-        }
-    }
-
-    /// Get the template cell of this instance.
-    pub fn template(&self) -> CellRef<'a, H> {
-        CellRef {
-            base: self.base,
-            id: self.template_id(),
-        }
-    }
-
-    /// Get the ID of the parent cell of this instance.
-    pub fn parent_id(&self) -> H::CellId {
-        self.base.parent_cell(&self.id)
-    }
-
-    /// Get the ID of the template cell of this instance.
-    pub fn template_id(&self) -> H::CellId {
-        self.base.template_cell(&self.id)
-    }
-}
 
 impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     /// Iterate over the IDs of all pins of this cell.
@@ -323,9 +149,9 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
 /// This is just a wrapper around a netlist and a net ID.
 pub struct NetRef<'a, N: NetlistBase + ?Sized> {
     /// Reference to the parent data structure.
-    base: &'a N,
+    pub(super) base: &'a N,
     /// ID of the net.
-    id: N::NetId,
+    pub(super) id: N::NetId,
 }
 
 impl<'a, N: NetlistBase> NetRef<'a, N> {
@@ -410,9 +236,9 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
 /// This is just a wrapper around a netlist and a pin ID.
 pub struct PinRef<'a, N: NetlistBase + ?Sized> {
     /// Reference to the parent data structure.
-    base: &'a N,
+    pub(super) base: &'a N,
     /// ID of the pin.
-    id: N::PinId,
+    pub(super) id: N::PinId,
 }
 
 impl<'a, N: NetlistBase + ?Sized> Clone for PinRef<'a, N> {
@@ -491,9 +317,9 @@ impl<'a, N: NetlistBase> PinRef<'a, N> {
 /// This is just a wrapper around a netlist and a pin instance ID.
 pub struct PinInstRef<'a, N: NetlistBase + ?Sized> {
     /// Reference to the parent data structure.
-    base: &'a N,
+    pub(super) base: &'a N,
     /// ID of the pin instance.
-    id: N::PinInstId,
+    pub(super) id: N::PinInstId,
 }
 
 impl<'a, N: NetlistBase + ?Sized> Clone for PinInstRef<'a, N> {
@@ -642,217 +468,5 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
             TerminalRef::PinInst(p) =>
                 p.qname(separator)
         }
-    }
-}
-
-#[test]
-fn test_chip_reference_access() {
-    use crate::prelude::*;
-    use crate::chip::Chip;
-
-    let mut chip = Chip::new();
-    let top = chip.create_cell("TOP".into());
-    chip.create_pin(&top, "A".into(), Direction::Input);
-    let sub = chip.create_cell("SUB".into());
-    chip.create_pin(&sub, "B".into(), Direction::Input);
-    let sub_inst1 = chip.create_cell_instance(&top, &sub, Some("inst1".into()));
-
-    let top_ref = chip.cell_ref(&top);
-    assert_eq!(&top_ref.id(), &top);
-
-    let sub_inst1_ref = chip.cell_instance_ref(&sub_inst1);
-    assert_eq!(&sub_inst1_ref.id(), &sub_inst1);
-    assert_eq!(sub_inst1_ref.parent().id(), top_ref.id());
-    assert_eq!(&sub_inst1_ref.template().id(), &sub);
-
-    // Access nets and pins.
-    assert_eq!(top_ref.each_net().count(), 2, "LOW and HIGH nets should be there.");
-    assert_eq!(top_ref.each_pin().count(), 1);
-    assert_eq!(sub_inst1_ref.each_pin_instance().count(), 1);
-}
-
-
-/// Trait that provides object-like read access to a layout structure and its elements.
-pub trait LayoutReferenceAccess: LayoutBase
-{
-    /// Get a cell object by its ID.
-    fn shape_ref(&self, shape_id: &Self::ShapeId) -> ShapeRef<'_, Self> {
-        ShapeRef {
-            base: self,
-            id: shape_id.clone(),
-        }
-    }
-
-    /// Get a layer object by its ID.
-    fn layer_ref(&self, layer_id: &Self::LayerId) -> LayerRef<'_, Self> {
-        LayerRef {
-            base: self,
-            id: layer_id.clone(),
-        }
-    }
-
-    /// Iterate over all layers defined in this layout.
-    fn each_layer_ref(&self) -> Box<dyn Iterator<Item=LayerRef<'_, Self>> + '_> {
-        Box::new(
-            self.each_layer()
-                .map(move |id| LayerRef {
-                    id,
-                    base: self,
-                })
-        )
-    }
-
-    /// Get a layer object by the layer name.
-    fn layer_ref_by_name(&self, name: &str) -> Option<LayerRef<'_, Self>> {
-        self.layer_by_name(name)
-            .map(|id| self.layer_ref(&id))
-    }
-}
-
-impl<T: LayoutBase> LayoutReferenceAccess for T {}
-
-
-impl<'a, L: LayoutBase> CellInstRef<'a, L> {
-    /// Get the geometric transform that describes the location of a cell instance relative to its parent.
-    pub fn get_transform(&self) -> SimpleTransform<L::Coord> {
-        self.base().get_transform(&self.id)
-    }
-}
-
-impl<'a, L: LayoutBase> CellRef<'a, L> {
-    /// Iterate over all shapes on a layer.
-    pub fn each_shape_per_layer(&self, layer_id: &L::LayerId) -> impl Iterator<Item=ShapeRef<L>> + '_ {
-        self.base.each_shape_id(&self.id, layer_id)
-            .map(move |id| ShapeRef {
-                id,
-                base: self.base,
-            })
-    }
-
-    /// Iterate over all shapes defined in this cell.
-    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> + '_ {
-        self.base.each_layer()
-            .flat_map(move |id| self.each_shape_per_layer(&id))
-    }
-
-    /// Get the bounding box of the shapes on a specific layer.
-    pub fn bounding_box_per_layer(&self, layer_id: &L::LayerId) -> Option<Rect<L::Coord>> {
-        self.base.bounding_box_per_layer(&self.id, layer_id)
-    }
-
-    /// Get the bounding box of the shapes on all layers.
-    pub fn bounding_box(&self) -> Option<Rect<L::Coord>> {
-        self.base.bounding_box(&self.id)
-    }
-}
-
-/// Reference to a layer.
-pub struct LayerRef<'a, L: LayoutBase + ?Sized> {
-    /// Reference to the parent data structure.
-    base: &'a L,
-    /// ID of the layer.
-    id: L::LayerId,
-}
-
-impl<'a, L: LayoutBase> LayerRef<'a, L> {
-    /// Get the layer ID.
-    pub fn id(&self) -> L::LayerId {
-        self.id.clone()
-    }
-
-    /// Get the name of the layer.
-    pub fn name(&self) -> Option<L::NameType> {
-        self.layer_info().name.clone()
-    }
-
-    /// Get a reference to the layer-info structure.
-    pub fn layer_info(&self) -> &'a LayerInfo<L::NameType> {
-        self.base.layer_info(&self.id)
-    }
-}
-
-/// Reference to a shape.
-pub struct ShapeRef<'a, L: LayoutBase + ?Sized> {
-    /// Reference to the parent data structure.
-    base: &'a L,
-    /// ID of the shape.
-    id: L::ShapeId,
-}
-
-impl<'a, L: LayoutBase> ShapeRef<'a, L> {
-    /// Get the shape ID.
-    pub fn id(&self) -> L::ShapeId {
-        self.id.clone()
-    }
-
-    /// Get the cell where this shape lives.
-    pub fn cell(&self) -> CellRef<L> {
-        let id = self.base.parent_of_shape(&self.id).0;
-        CellRef {
-            id,
-            base: self.base,
-        }
-    }
-
-    /// Get the layer of the shape.
-    pub fn layer(&self) -> LayerRef<L> {
-        let id = self.base.parent_of_shape(&self.id).1;
-        LayerRef {
-            id,
-            base: self.base,
-        }
-    }
-
-    /// Get the cloned geometry struct representing this shape.
-    pub fn geometry_cloned(&self) -> Geometry<L::Coord> {
-        self.base.with_shape(&self.id,
-                             |_layer, geo| {
-                                 geo.clone()
-                             })
-    }
-}
-
-
-impl<'a, L: L2NBase> ShapeRef<'a, L> {
-
-    /// Get the net which is connected to this shape, if any.
-    pub fn net(&self) -> Option<NetRef<L>> {
-        self.base.get_net_of_shape(&self.id)
-            .map(|id| NetRef {
-                id,
-                base: self.base
-            })
-    }
-
-    /// Get the pin which is connected to this shape, if any.
-    pub fn pin(&self) -> Option<PinRef<L>> {
-        self.base.get_pin_of_shape(&self.id)
-            .map(|id| PinRef {
-                id,
-                base: self.base
-            })
-    }
-}
-
-
-impl<'a, L: L2NBase> NetRef<'a, L> {
-    /// Iterate over all shapes attached to this net.
-    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> {
-        self.base.shapes_of_net(&self.id)
-            .map(move |id| ShapeRef {
-                id,
-                base: self.base
-            })
-    }
-}
-
-impl<'a, L: L2NBase> PinRef<'a, L> {
-    /// Iterate over all shapes attached to this pin.
-    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> {
-        self.base.shapes_of_pin(&self.id)
-            .map(move |id| ShapeRef {
-                id,
-                base: self.base
-            })
     }
 }

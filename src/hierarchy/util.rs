@@ -20,7 +20,7 @@
 
 //! Utility functions for dealing with the hierarchy of netlists or layouts.
 
-use crate::traits::{HierarchyBase, HierarchyEdit};
+use super::traits::{HierarchyBase, HierarchyEdit};
 
 /// Non-modifying utility functions for the cell hierarchy..
 /// Import the this trait to use the utility functions all types that implement the `HierarchyBase` trait.

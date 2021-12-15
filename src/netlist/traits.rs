@@ -329,9 +329,9 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     // /// Internally creates a pin for every bit of the port.
     // fn create_bus(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction, width: usize) -> Vec<Self::PinId>;
 
-    /// Create a new pin in this circuit.
-    /// Also adds the pin to all instances of the circuit.
-    fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId;
+    /// Create a new pin in this cell.
+    /// Also adds the pin to all instances of the cell.
+    fn create_pin(&mut self, cell: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId;
 
     /// Remove the pin from this circuit and from all instances of this circuit.
     fn remove_pin(&mut self, id: &Self::PinId);

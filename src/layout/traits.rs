@@ -112,7 +112,7 @@ pub trait LayoutBase: HierarchyBase {
             });
 
             // Process shapes of this cell.
-            self.for_each_shape(&cell, layer,|id, g| f(tf.clone(), id, g));
+            self.for_each_shape(&cell, layer, |id, g| f(tf.clone(), id, g));
         }
     }
 
@@ -123,13 +123,32 @@ pub trait LayoutBase: HierarchyBase {
     fn get_shape_property(&mut self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
         None
     }
+}
 
+/// Access shapes and instances in a layout based on their locations.
+pub trait RegionSearch: LayoutBase {
+
+    /// Iterate over the IDs of all shapes (on all layers) whose bounding-box overlaps with the `search_region`.
+    fn each_shape_in_region(&self, cell: &Self::CellId, layer_id: &Self::LayerId, search_region: &Rect<Self::Coord>) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+        let cell = cell.clone(); // Get an owned ID.
+        let search_region = search_region.clone(); // Get an owned rectangle.
+        Box::new(self.each_layer()
+            .flat_map(move |layer_id|
+                self.each_shape_in_region_per_layer(&cell, &layer_id, &search_region)
+            ))
+    }
+
+    /// Iterate over the IDs of all shapes (on a specific layer) whose bounding-box overlaps with the `search_region`.
+    fn each_shape_in_region_per_layer(&self, cell: &Self::CellId, layer_id: &Self::LayerId, search_region: &Rect<Self::Coord>) -> Box<dyn Iterator<Item=Self::ShapeId> + '_>;
+
+
+    /// Iterate over the IDs of all instances within the `cell` whose bounding-box overlaps with the `search_region`.
+    fn each_cell_instance_in_region(&self, cell: &Self::CellId, search_region: &Rect<Self::Coord>) -> Box<dyn Iterator<Item=Self::CellInstId> + '_>;
 }
 
 
 /// Trait for layouts that support editing.
 pub trait LayoutEdit: LayoutBase + HierarchyEdit {
-
     /// Set the distance unit used in this layout in 'pixels per micron'.
     fn set_dbu(&mut self, dbu: Self::Coord) {} // TODO: Remove default implementation.
 
@@ -156,5 +175,4 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
 
     /// Set a property of a shape.
     fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {}
-
 }

@@ -122,6 +122,24 @@ pub type ShapeId = Index<Shape<Coord>, u32>;
 /// ID for layers.
 pub type LayerId = Index<LayerInfo<NameT>, u16>;
 
+/// Allow creating IDs from integers.
+macro_rules! impl_from_for_id {
+    ($t:tt, $i:ty) => {
+        impl From<$i> for $t {
+            fn from(id: $i) -> Self {
+                $t(id)
+            }
+        }
+    }
+}
+
+impl_from_for_id!(CellId, u32);
+impl_from_for_id!(CellInstId, usize);
+impl_from_for_id!(PinId, u32);
+impl_from_for_id!(PinInstId, usize);
+impl_from_for_id!(NetId, usize);
+
+
 /// A circuit is defined by an interface (pins) and
 /// a content which consists of interconnected circuit instances.
 ///
@@ -517,8 +535,8 @@ impl Chip<Coord> {
 
     /// Create a new instance of `circuit_template` in the `parent` circuit.
     fn create_circuit_instance(&mut self, parent: &CellId,
-                                   circuit_template: &CellId,
-                                   name: Option<NameT>) -> CellInstId {
+                               circuit_template: &CellId,
+                               name: Option<NameT>) -> CellInstId {
         let id = CellInstId(Self::next_id_counter_usize(&mut self.id_counter_circuit_inst));
 
         {

@@ -162,8 +162,6 @@ pub struct Circuit<C = Coord, U = ()>
     instances_by_name: HashMap<NameT, CellInstId>,
     /// Circuit instances that reference to this circuit.
     references: IntHashSet<CellInstId>,
-    /// All circuits that have instances of this circuit.
-    parents: IntHashSet<CellId>,
 
     /// Set of circuits that are direct dependencies of this circuit.
     /// Stored together with a counter of how many instances of the dependency are present.
@@ -467,7 +465,6 @@ impl Chip<Coord> {
             instances: Default::default(),
             instances_by_name: Default::default(),
             references: Default::default(),
-            parents: Default::default(),
             nets: Default::default(),
             nets_by_name: Default::default(),
             // Create LOW and HIGH nets.

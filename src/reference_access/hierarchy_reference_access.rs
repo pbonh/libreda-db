@@ -18,11 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::traits::{HierarchyBase};
+use crate::traits::HierarchyBase;
 
 /// Trait that provides object-like read access to a cell hierarchy structure and its elements.
 pub trait HierarchyReferenceAccess: HierarchyBase
 {
+    /// Iterate over all cell objects.
+    fn each_cell_ref(&self) -> Box<dyn Iterator<Item=CellRef<Self>> + '_> {
+        Box::new(self.each_cell()
+            .map(move |id| self.cell_ref(&id))
+        )
+    }
+
     /// Get a cell object by its ID.
     fn cell_ref(&self, cell_id: &Self::CellId) -> CellRef<'_, Self> {
         CellRef {
@@ -113,6 +120,11 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
             })
     }
 
+    /// Get the total number of usages of this cell.
+    pub fn num_references(&self) -> usize {
+        self.base.num_cell_references(&self.id)
+    }
+
     /// Iterate over all dependencies of this cell.
     pub fn each_cell_dependency(&self) -> impl Iterator<Item=CellRef<'a, H>> + '_ {
         self.base.each_cell_dependency(&self.id)
@@ -120,6 +132,11 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
                 base: self.base,
                 id,
             })
+    }
+
+    /// Get the total number of direct dependencies of this cell.
+    pub fn num_cell_dependencies(&self) -> usize {
+        self.base.num_cell_dependencies(&self.id)
     }
 
     /// Iterate over all cells that directly depend on this cell.
@@ -131,12 +148,16 @@ impl<'a, H: HierarchyBase> CellRef<'a, H> {
             })
     }
 
+    /// Get the total number of cells which depend on this cell (i.e. use it).
+    pub fn num_dependent_cells(&self) -> usize {
+        self.base.num_dependent_cells(&self.id)
+    }
+
     /// Get the number of cell instances inside the `cell`.
     pub fn num_child_instances(&self) -> usize {
         self.base.num_child_instances(&self.id)
     }
 }
-
 
 
 /// Default implementation for `CellInstRef`.

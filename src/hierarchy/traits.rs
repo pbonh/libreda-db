@@ -32,7 +32,7 @@ use crate::prelude::PropertyValue;
 /// ## Component relations
 ///
 /// A netlist consists of cells which are templates for cell instances.
-/// Each cell may contain such instances of other cell.
+/// Each cell may contain such instances of other cells.
 ///
 /// The following diagram illustrates how this composition graph can be traversed using the functions
 /// defined by `HierarchyBase`.

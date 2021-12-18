@@ -19,7 +19,7 @@
  */
 
 //! # Experimental
-//! Wrappers around the `HierarchyBase` and `NetlistBase` traits which
+//! Wrappers around the [`HierarchyBase`], [`NetlistBase`], [`LayoutBase`] and [`L2NBase`] traits which
 //! provide more object like access methods.
 //!
 //! # Examples

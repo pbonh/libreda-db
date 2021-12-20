@@ -30,7 +30,7 @@
 //! use libreda_db::rw_reference_access::*;
 //!
 //! // Create some netlist/layout.
-//! let mut chip = Base::new(Chip::new());
+//! let mut chip = RwRefAccess::new(Chip::new());
 //! let top = chip.create_cell("TOP".into());
 //! let sub = chip.create_cell("SUB".into());
 //! let sub_inst1 = top.create_instance(&sub, Some("inst1".into()));

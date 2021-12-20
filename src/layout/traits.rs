@@ -49,7 +49,7 @@ pub trait LayoutBase: HierarchyBase {
     fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_>;
 
     /// Get the `LayerInfo` data structure for this layer.
-    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo<Self::NameType>;
+    fn layer_info(&self, layer: &Self::LayerId) -> LayerInfo<Self::NameType>;
 
     /// Find layer index by the (index, data type) tuple.
     fn find_layer(&self, index: UInt, datatype: UInt) -> Option<Self::LayerId>;

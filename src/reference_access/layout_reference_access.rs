@@ -115,7 +115,7 @@ impl<'a, L: LayoutBase> LayerRef<'a, L> {
     }
 
     /// Get a reference to the layer-info structure.
-    pub fn layer_info(&self) -> &'a LayerInfo<L::NameType> {
+    pub fn layer_info(&self) -> LayerInfo<L::NameType> {
         self.base.layer_info(&self.id)
     }
 }

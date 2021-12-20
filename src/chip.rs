@@ -1376,8 +1376,8 @@ impl LayoutBase for Chip<Coord> {
         Box::new(self.layer_info.keys().copied())
     }
 
-    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo<Self::NameType> {
-        &self.layer_info[layer]
+    fn layer_info(&self, layer: &Self::LayerId) -> LayerInfo<Self::NameType> {
+        self.layer_info[layer].clone()
     }
 
     fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {

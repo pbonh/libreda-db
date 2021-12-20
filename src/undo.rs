@@ -581,7 +581,7 @@ impl<'a, T: LayoutBase + 'static, U> LayoutBase for Undo<'a, T, U> {
         self.chip.each_layer()
     }
 
-    fn layer_info(&self, layer: &Self::LayerId) -> &LayerInfo<Self::NameType> {
+    fn layer_info(&self, layer: &Self::LayerId) -> LayerInfo<Self::NameType> {
         self.chip.layer_info(layer)
     }
 

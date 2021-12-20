@@ -53,6 +53,9 @@ mod netlist_reference_access;
 mod layout_reference_access;
 mod l2n_reference_access;
 
+use crate::traits::*; // For documentation links.
+
+// Public exports.
 pub use hierarchy_reference_access::*;
 pub use netlist_reference_access::*;
 pub use layout_reference_access::*;

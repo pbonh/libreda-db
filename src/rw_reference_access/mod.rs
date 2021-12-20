@@ -42,6 +42,9 @@
 //!
 //! ```
 
+
+use crate::traits::*; // For documentation links.
+
 pub mod hierarchy_reference_access;
 
 pub use hierarchy_reference_access::*;

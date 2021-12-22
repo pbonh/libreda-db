@@ -222,7 +222,7 @@ impl Circuit {
     fn get_or_create_shapes_mut(&mut self, layer_id: &LayerId) -> &mut Shapes<Coord> {
         let self_id = self.id();
         self.shapes_map.entry(*layer_id)
-            .or_insert_with(|| Shapes::new(self_id))
+            .or_insert_with(|| Shapes::new())
             .borrow_mut()
     }
 }
@@ -284,8 +284,6 @@ impl CircuitInst {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Pin {
-    /// The unique ID of the pin.
-    id: PinId,
     /// Name of the pin.
     name: NameT,
     /// Signal type/direction of the pin.
@@ -294,8 +292,6 @@ pub struct Pin {
     circuit: CellId,
     /// Net that is connected to this pin.
     net: Option<NetId>,
-    /// Position in the list of pins of the parent circuit.
-    position: usize,
 
     // == Layout == //
     /// List of shapes in the layout that represent the physical pin.
@@ -872,14 +868,11 @@ impl Chip<Coord> {
     /// Update all circuit instances with the new pin.
     fn create_pin(&mut self, parent: CellId, name: NameT, direction: Direction) -> PinId {
         let pin_id = PinId(Self::next_id_counter_u32(&mut self.id_counter_pin));
-        let position = self.num_pins(&parent);
         let pin = Pin {
             name,
             direction,
             circuit: parent,
             net: Default::default(),
-            id: pin_id,
-            position,
             pin_shapes: Default::default(),
         };
         self.pins.insert(pin_id, pin);
@@ -1203,10 +1196,6 @@ pub struct Shape<C, U = ()> {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Shapes<C>
     where C: CoordinateType {
-    // /// ID of this shape collection.
-    // id: Index<Self>,
-    /// Reference to the cell where this shape collection lives. Can be none.
-    parent_cell: CellId,
     /// Shape elements.
     shapes: IntHashMap<ShapeId, Shape<C>>,
     /// Property stores for the shapes.
@@ -1215,10 +1204,8 @@ pub struct Shapes<C>
 
 impl<C: CoordinateType> Shapes<C> {
     /// Create a new empty shapes container.
-    fn new(parent_id: CellId) -> Self {
+    fn new() -> Self {
         Self {
-            // id,
-            parent_cell: parent_id,
             shapes: Default::default(),
             shape_properties: Default::default(),
         }

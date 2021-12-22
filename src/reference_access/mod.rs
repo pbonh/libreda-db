@@ -19,7 +19,7 @@
  */
 
 //! # Experimental
-//! Wrappers around the [`HierarchyBase`], [`NetlistBase`], [`LayoutBase`] and [`L2NBase`] traits which
+//! Wrappers around the [`crate::traits::HierarchyBase`], [`crate::traits::NetlistBase`], [`crate::traits::LayoutBase`] and [`crate::traits::L2NBase`] traits which
 //! provide more object like access methods.
 //!
 //! # Examples
@@ -52,8 +52,6 @@ mod hierarchy_reference_access;
 mod netlist_reference_access;
 mod layout_reference_access;
 mod l2n_reference_access;
-
-use crate::traits::*; // For documentation links.
 
 // Public exports.
 pub use hierarchy_reference_access::*;

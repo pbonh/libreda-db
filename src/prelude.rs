@@ -27,7 +27,7 @@ pub use crate::l2n::*;
 pub use crate::chip::Chip;
 pub use crate::traits::*;
 pub use crate::rc_string::RcString;
-pub use crate::property_storage::{WithProperties, PropertyValue};
+pub use crate::property_storage::PropertyValue;
 pub use crate::flat_view::FlatView;
 pub use crate::reference_access;
 pub use crate::reference_access::*;

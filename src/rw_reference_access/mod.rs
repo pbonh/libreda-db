@@ -19,7 +19,7 @@
  */
 
 //! # Experimental
-//! Wrapper around the [`HierarchyBase`], [`NetlistBase`], [`LayoutBase`] and [`L2NBase`] traits which
+//! Wrapper around the [`crate::traits::HierarchyBase`], [`crate::traits::NetlistBase`], [`crate::traits::LayoutBase`] and [`crate::traits::L2NBase`] traits which
 //! provide object like access methods.
 //! In contrast to [`crate::reference_access`] this wrapper takes ownership of the underlying data structure
 //! and hence also allows write access.
@@ -41,9 +41,6 @@
 //! }
 //!
 //! ```
-
-
-use crate::traits::*; // For documentation links.
 
 pub mod hierarchy_reference_access;
 

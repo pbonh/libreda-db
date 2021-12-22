@@ -335,8 +335,15 @@ mod tests {
         let mut chip = Chip::new();
         let top = chip.create_cell("TOP".into());
         let sub = chip.create_cell("SUB".into());
-        let inst1 = chip.create_cell_instance(&top, &sub, Some("inst1".into()));
+        let _inst1 = chip.create_cell_instance(&top, &sub, Some("inst1".into()));
         RwRefAccess::new(chip)
+    }
+
+    #[test]
+    fn create_rw_refaccess_from_mutable_reference() {
+        let mut chip = Chip::new();
+        let _rw_chip = RwRefAccess::new(&mut chip);
+        // rw_chip.each_cell();
     }
 
     fn hash<T: Hash>(t: &T) -> u64 {
@@ -348,15 +355,15 @@ mod tests {
     #[test]
     fn test_find_cell_by_name() {
         let chip = create_test_chip();
-        let top = chip.cell_by_name("TOP").unwrap();
-        let sub = chip.cell_by_name("SUB").unwrap();
+        let _top = chip.cell_by_name("TOP").unwrap();
+        let _sub = chip.cell_by_name("SUB").unwrap();
     }
 
     #[test]
     fn test_find_cell_instance_by_name() {
         let chip = create_test_chip();
         let top = chip.cell_by_name("TOP").unwrap();
-        let inst1 = top.cell_instance_by_name("inst1").unwrap();
+        let _inst1 = top.cell_instance_by_name("inst1").unwrap();
     }
 
     #[test]

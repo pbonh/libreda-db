@@ -58,6 +58,21 @@ pub struct CellRef<'a, H: HierarchyBase + ?Sized> {
     pub(super) id: H::CellId,
 }
 
+// impl<'a, H: HierarchyBase> AsRef<H> for CellRef<'a, H> {
+//     fn as_ref(&self) -> &H {
+//         self.base
+//     }
+// }
+//
+//
+// impl<'a, H: HierarchyBase> Deref for CellRef<'a, H> {
+//     type Target = H;
+//
+//     fn deref(&self) -> &Self::Target {
+//         self.base
+//     }
+// }
+
 impl<'a, H: HierarchyBase> Clone for CellRef<'a, H> {
     fn clone(&self) -> Self {
         Self {

@@ -117,7 +117,7 @@ pub mod flat_view;
 
 pub mod technology;
 
-mod delegation;
+mod decorator;
 
 
 

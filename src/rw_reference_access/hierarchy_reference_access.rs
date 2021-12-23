@@ -80,9 +80,7 @@ impl<T> Hash for RwRefAccess<T> {
     }
 }
 
-
 impl<H: HierarchyBase> RwRefAccess<H> {
-
     /// Get a cell 'object' by its ID.
     fn cell(&self, id: H::CellId) -> CellRef<H> {
         CellRef {

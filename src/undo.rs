@@ -37,7 +37,7 @@ use crate::netlist::direction::Direction;
 use crate::layout::prelude::{Rect, LayerInfo, Geometry, SimpleTransform};
 use std::ops::Deref;
 use crate::prelude::PropertyValue;
-use crate::delegation::hierarchy::DelegateHierarchyBase;
+use crate::decorator::hierarchy::HierarchyBaseDecorator;
 
 /// Undo operations on the netlist.
 pub enum NetlistUndoOp<T: NetlistBase> {
@@ -383,7 +383,7 @@ impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
 }
 
 
-impl<'a, H: HierarchyBase + 'static, U> DelegateHierarchyBase for Undo<'a, H, U> {
+impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U> {
     type H = H;
 
     fn base(&self) -> &H {

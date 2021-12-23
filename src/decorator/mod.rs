@@ -20,7 +20,7 @@
 
 //! Simplify the extension of netlists and layouts with the help of
 //! wrappers and decorators.
-//! 'Extending' classes and overriding methods as ususal for OOP is not as easy in Rust.
+//! 'Extending' classes and overriding methods as usual for OOP is not as easy in Rust.
 //! This module contains helper traits which make such extension easier.
 //!
 

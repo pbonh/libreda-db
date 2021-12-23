@@ -93,3 +93,107 @@ pub trait LayoutBaseDecorator
         self.base().get_shape_property(shape, key)
     }
 }
+
+impl<T, L> LayoutBase for T
+    where
+        T: HierarchyBase<NameType=L::NameType, CellId=L::CellId, CellInstId=L::CellInstId>
+        + LayoutBaseDecorator<L=L>,
+        L: LayoutBase + 'static
+{
+    type Coord = L::Coord;
+    type LayerId = L::LayerId;
+    type ShapeId = L::ShapeId;
+
+    fn dbu(&self) -> Self::Coord {
+        self.base().dbu()
+    }
+
+    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
+        self.base().each_layer()
+    }
+
+    fn layer_info(&self, layer: &Self::LayerId) -> LayerInfo<Self::NameType> {
+        self.base().layer_info(layer)
+    }
+
+    fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
+        self.base().find_layer(index, datatype)
+    }
+
+    fn layer_by_name(&self, name: &str) -> Option<Self::LayerId> {
+        self.base().layer_by_name(name)
+    }
+
+    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
+        self.base().bounding_box_per_layer(cell, layer)
+    }
+
+    fn bounding_box(&self, cell: &Self::CellId) -> Option<Rect<Self::Coord>> {
+        self.base().bounding_box(cell)
+    }
+
+    fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+        self.base().each_shape_id(cell, layer)
+    }
+
+    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
+        where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> () {
+        self.base().for_each_shape(cell, layer, f)
+    }
+
+    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R
+        where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R {
+        self.base().with_shape(shape_id, f)
+    }
+
+    fn parent_of_shape(&self, shape_id: &Self::ShapeId) -> (Self::CellId, Self::LayerId) {
+        self.base().parent_of_shape(shape_id)
+    }
+
+    fn for_each_shape_recursive<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
+        where F: FnMut(SimpleTransform<Self::Coord>, &Self::ShapeId, &Geometry<Self::Coord>) -> () {
+        self.base().for_each_shape_recursive(cell, layer, f)
+    }
+
+    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
+        self.base().get_transform(cell_inst)
+    }
+
+    fn get_shape_property(&self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
+        self.base().get_shape_property(shape, key)
+    }
+}
+
+
+#[test]
+fn test_layout_decorator() {
+    use crate::chip::Chip;
+    use super::hierarchy::HierarchyBaseDecorator;
+    use crate::prelude::*;
+
+    let mut chip = Chip::new();
+    chip.create_layer(0, 0);
+
+    // Decorator which increments the cell count by one.
+    struct DummyDecorator<T>(T);
+
+    impl<H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<H> {
+        type H = H;
+
+        fn base(&self) -> &Self::H {
+            &self.0
+        }
+    }
+
+    impl<H: LayoutBase> LayoutBaseDecorator for DummyDecorator<H> {
+        type L = H;
+
+        fn base(&self) -> &Self::L {
+            &self.0
+        }
+    }
+
+    assert_eq!(chip.each_layer().count(), 1);
+    let decorated_chip = DummyDecorator(chip);
+    assert_eq!(decorated_chip.each_layer().count(), 1);
+}

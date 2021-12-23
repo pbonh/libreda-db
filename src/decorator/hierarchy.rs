@@ -578,10 +578,10 @@ pub trait HierarchyBaseDecorator
 }
 
 
-impl<'a, T, H> HierarchyBase for T
+impl<T, H> HierarchyBase for T
     where
         T: HierarchyBaseDecorator<H=H>,
-        H: HierarchyBase + 'a,
+        H: HierarchyBase,
 {
     type NameType = H::NameType;
     type CellId = H::CellId;
@@ -755,11 +755,11 @@ pub trait HierarchyEditDecorator
     }
 }
 
-impl<'a, T, H> HierarchyEdit for T
+impl<T, H> HierarchyEdit for T
     where
         T: HierarchyBase<NameType=H::NameType, CellId=H::CellId, CellInstId=H::CellInstId>
         + HierarchyEditDecorator<H=H>,
-        H: HierarchyEdit + 'a {
+        H: HierarchyEdit {
     fn new() -> Self {
         Self::d_new()
     }
@@ -806,17 +806,22 @@ fn test_hierarchy_decorator() {
     use crate::chip::Chip;
     let chip = Chip::new();
 
-    struct DummyDecorator<T>(T);
+    // Decorator which increments the cell count by one.
+    struct AddVirtualCell<T>(T);
 
-    impl<H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<H> {
+    impl<H: HierarchyBase> HierarchyBaseDecorator for AddVirtualCell<H> {
         type H = H;
 
         fn base(&self) -> &Self::H {
             &self.0
         }
+
+        fn d_num_cells(&self) -> usize {
+            self.base().num_cells() + 1
+        }
     }
 
-    impl<H: HierarchyEdit> HierarchyEditDecorator for DummyDecorator<H> {
+    impl<H: HierarchyEdit> HierarchyEditDecorator for AddVirtualCell<H> {
         type H = H;
 
         fn mut_base(&mut self) -> &mut Self::H {
@@ -828,9 +833,11 @@ fn test_hierarchy_decorator() {
         }
     }
 
-    let mut decorated_chip = DummyDecorator(chip);
+    assert_eq!(chip.num_cells(), 0);
+
+    let mut decorated_chip = AddVirtualCell(AddVirtualCell(chip)); // Deep nesting should work.
     // Read access should work.
-    decorated_chip.num_cells();
+    assert_eq!(decorated_chip.num_cells(), 2);
     // Editing should work.
     decorated_chip.create_cell("A".into());
 }

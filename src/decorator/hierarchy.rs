@@ -20,194 +20,194 @@
 
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
-
+//
 // ///
 // #[macro_export] macro_rules! inherit {
 //     ( $($i:ident),* ) => { $( inherit_fn!($i); )* }
 // }
-// 
+//
 // ///
 // #[macro_export] macro_rules! inherit_fn {
-// 
+//
 //     (cell_by_name) => {
 //         fn cell_by_name(&self, name: &str) -> Option<H::CellId> {
 //             self.base().cell_by_name(name)
 //         }
 //     };
-// 
+//
 //     (cell_instance_by_name) => {
 //         fn cell_instance_by_name(&self, parent_cell: &H::CellId, name: &str) -> Option<H::CellInstId> {
 //             self.base().cell_instance_by_name(parent_cell, name)
 //         }
 //     };
-// 
+//
 //     (cell_name) => {
 //         fn cell_name(&self, cell: &H::CellId) -> H::NameType {
 //             self.base().cell_name(cell)
 //         }
 //     };
-// 
+//
 //     (cell_instance_name) => {
 //         fn cell_instance_name(&self, cell_inst: &H::CellInstId) -> Option<H::NameType> {
 //             self.base().cell_instance_name(cell_inst)
 //         }
 //     };
-// 
+//
 //     (parent_cell) => {
 //     fn parent_cell(&self, cell_instance: &H::CellInstId) -> H::CellId {
 //         self.base().parent_cell(cell_instance)
 //     }
 //     };
-// 
+//
 //     (template_cell) => {
 //     fn template_cell(&self, cell_instance: &H::CellInstId) -> H::CellId {
 //         self.base().template_cell(cell_instance)
 //     }
 //     };
-// 
+//
 //     (for_each_cell) => {
 //     fn for_each_cell<F>(&self, f: F) where F: FnMut(H::CellId) -> () {
 //         self.base().for_each_cell(f)
 //     }
 //     };
-// 
+//
 //     (each_cell_vec) => {
 //     fn each_cell_vec(&self) -> Vec<H::CellId> {
 //         self.base().each_cell_vec()
 //     }
 //     };
-// 
+//
 //     (each_cell) => {
 //     fn each_cell<'a>(&'a self) -> Box<dyn Iterator<Item=H::CellId> + 'a>
 //         where H: 'a {
 //         self.base().each_cell()
 //     }
 //     };
-// 
+//
 //     (for_each_cell_instance) => {
 //     fn for_each_cell_instance<F>(&self, cell: &H::CellId, f: F) where F: FnMut(H::CellInstId) -> () {
 //         self.base().for_each_cell_instance(cell, f)
 //     }
 //     };
-// 
+//
 //     (each_cell_instance_vec) => {
 //     fn each_cell_instance_vec(&self, cell: &H::CellId) -> Vec<H::CellInstId> {
 //         self.base().each_cell_instance_vec(cell)
 //     }
 //     };
-// 
+//
 //     (each_cell_instance) => {
 //     fn each_cell_instance<'a>(&'a self, cell: &H::CellId) -> Box<dyn Iterator<Item=H::CellInstId> + 'a>
 //         where H: 'a {
 //         self.base().each_cell_instance(cell)
 //     }
 //     };
-// 
+//
 //     (for_each_cell_dependency) => {
 //     fn for_each_cell_dependency<F>(&self, cell: &H::CellId, f: F) where F: FnMut(H::CellId) -> () {
 //         self.base().for_each_cell_dependency(cell, f)
 //     }
 //     };
-// 
+//
 //     (each_cell_dependency_vec) => {
 //     fn each_cell_dependency_vec(&self, cell: &H::CellId) -> Vec<H::CellId> {
 //         self.base().each_cell_dependency_vec(cell)
 //     }
 //     };
-// 
+//
 //     (each_cell_dependency) => {
 //     fn each_cell_dependency<'a>(&'a self, cell: &H::CellId) -> Box<dyn Iterator<Item=H::CellId> + 'a>
 //         where H: 'a {
 //         self.base().each_cell_dependency(cell)
 //     }
 //     };
-// 
+//
 //     (num_cell_dependencies) => {
 //     fn num_cell_dependencies(&self, cell: &H::CellId) -> usize {
 //         self.base().num_cell_dependencies(cell)
 //     }
 //     };
-// 
+//
 //     (for_each_dependent_cell) => {
 //     fn for_each_dependent_cell<F>(&self, cell: &H::CellId, f: F) where F: FnMut(H::CellId) -> () {
 //         self.base().for_each_dependent_cell(cell, f)
 //     }
 //     };
-// 
+//
 //     (each_dependent_cell_vec) => {
 //     fn each_dependent_cell_vec(&self, cell: &H::CellId) -> Vec<H::CellId> {
 //         self.base().each_dependent_cell_vec(cell)
 //     }
 //     };
-// 
+//
 //     (each_dependent_cell) => {
 //     fn each_dependent_cell<'a>(&'a self, cell: &H::CellId) -> Box<dyn Iterator<Item=H::CellId> + 'a>
 //         where H: 'a {
 //         self.base().each_dependent_cell(cell)
 //     }
 //     };
-// 
+//
 //     (num_dependent_cells) => {
 //     fn num_dependent_cells(&self, cell: &H::CellId) -> usize {
 //         self.base().num_dependent_cells(cell)
 //     }
 //     };
-// 
+//
 //     (for_each_cell_reference) => {
 //     fn for_each_cell_reference<F>(&self, cell: &H::CellId, f: F) where F: FnMut(H::CellInstId) -> () {
 //         self.base().for_each_cell_reference(cell, f)
 //     }
 //     };
-// 
+//
 //     (each_cell_reference_vec) => {
 //     fn each_cell_reference_vec(&self, cell: &H::CellId) -> Vec<H::CellInstId> {
 //         self.base().each_cell_reference_vec(cell)
 //     }
 //     };
-// 
+//
 //     (each_cell_reference) => {
 //     fn each_cell_reference<'a>(&'a self, cell: &H::CellId) -> Box<dyn Iterator<Item=H::CellInstId> + 'a>
 //         where H: 'a {
 //         self.base().each_cell_reference(cell)
 //     }
 //     };
-// 
+//
 //     (num_cell_references) => {
 //     fn num_cell_references(&self, cell: &H::CellId) -> usize {
 //         self.base().num_cell_references(cell)
 //     }
 //     };
-// 
+//
 //     (num_child_instances) => {
 //     fn num_child_instances(&self, cell: &H::CellId) -> usize {
 //         self.base().num_child_instances(cell)
 //     }
 //     };
-// 
+//
 //     (num_cells) => {
 //     fn num_cells(&self) -> usize {
 //         self.base().num_cells()
 //     }
 //     };
-// 
+//
 //     (get_chip_property) => {
 //     fn get_chip_property(&self, key: &H::NameType) -> Option<PropertyValue> {
 //         self.base().get_chip_property(key)
 //     }
 //     };
-// 
+//
 //     (get_cell_property) => {
 //     fn get_cell_property(&self, cell: &H::CellId, key: &H::NameType) -> Option<PropertyValue> {
 //         self.base().get_cell_property(cell, key)
 //     }
 //     };
-// 
+//
 //     (get_cell_instance_property) => {
 //     fn get_cell_instance_property(&self, inst: &H::CellInstId, key: &H::NameType) -> Option<PropertyValue> {
 //         self.base().get_cell_instance_property(inst, key)
 //     }
 //     };
-// 
+//
 // }
 
 
@@ -447,7 +447,7 @@ use crate::prelude::PropertyValue;
 //
 // }
 
-/// Define the same functions as [`HierarchyBase`] but just append a `d_` to
+/// Define the same functions as [`HierarchyBase`] but just prepend a `d_` to
 /// avoid naming conflicts.
 /// The default implementation just forwards the call to the `base()`.
 /// This allows to selectively re-implement some functions or fully delegate

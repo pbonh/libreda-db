@@ -1435,7 +1435,7 @@ impl LayoutBase for Chip<Coord> {
         self.circuit_inst(cell_inst).get_transform().clone()
     }
 
-    fn get_shape_property(&mut self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_shape_property(&self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
         let (cell, layer) = self.shape_parents[shape].clone();
         self.circuit(&cell)
             .shapes_map[&layer]

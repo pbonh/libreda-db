@@ -120,7 +120,7 @@ pub trait LayoutBase: HierarchyBase {
     fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord>;
 
     /// Get a property of a shape.
-    fn get_shape_property(&mut self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_shape_property(&self, shape: &Self::ShapeId, key: &Self::NameType) -> Option<PropertyValue> {
         None
     }
 }

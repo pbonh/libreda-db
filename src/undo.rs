@@ -38,6 +38,7 @@ use crate::layout::prelude::{Rect, LayerInfo, Geometry, SimpleTransform};
 use std::ops::Deref;
 use crate::prelude::PropertyValue;
 use crate::decorator::hierarchy::HierarchyBaseDecorator;
+use crate::decorator::{Decorator, MutDecorator};
 
 /// Undo operations on the netlist.
 pub enum NetlistUndoOp<T: NetlistBase> {
@@ -161,11 +162,15 @@ pub enum HierarchyUndoOp<T: HierarchyBase> {
 }
 
 /// Wrapper around netlist, layout and L2N structures that allows undoing of operations.
+///
+/// # Types
+/// * `T`: Underlying data structure.
+/// * `U`: Undo-operation.
 pub struct Undo<'a, T, U> {
     /// Underlying data structure.
     chip: &'a mut T,
     /// A list of performed transactions.
-    /// To undo operations, the list has to be worked through from the end.
+    /// To undo operations, this list has to be worked through from the end.
     transactions: Vec<U>,
 }
 
@@ -383,13 +388,21 @@ impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
 }
 
 
-impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U> {
-    type H = H;
+impl<'a, H, U> Decorator for Undo<'a, H, U> {
+    type D = H;
 
-    fn base(&self) -> &H {
+    fn base(&self) -> &Self::D {
         &self.chip
     }
 }
+
+impl<'a, H, U> MutDecorator for Undo<'a, H, U> {
+    fn mut_base(&mut self) -> &mut Self::D {
+        &mut self.chip
+    }
+}
+
+impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U> {}
 
 
 impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {

@@ -26,3 +26,15 @@
 
 pub mod hierarchy;
 pub mod layout;
+
+pub trait Decorator {
+    /// The decorated type.
+    type D;
+    /// Get a reference to the underlying data structure.
+    fn base(&self) -> &Self::D;
+}
+
+pub trait MutDecorator: Decorator {
+    /// Get a mutable reference to the underlying data structure.
+    fn mut_base(&mut self) -> &mut Self::D;
+}

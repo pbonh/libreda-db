@@ -19,6 +19,7 @@
  */
 
 use crate::traits::{HierarchyBase, HierarchyEdit};
+use super::{Decorator, MutDecorator};
 use crate::prelude::PropertyValue;
 //
 // ///
@@ -452,111 +453,107 @@ use crate::prelude::PropertyValue;
 /// The default implementation just forwards the call to the `base()`.
 /// This allows to selectively re-implement some functions or fully delegate
 /// the trait to an attribute of a struct.
-pub trait HierarchyBaseDecorator
-    where Self: Sized
+pub trait HierarchyBaseDecorator: Decorator
+    where Self: Sized,
+          Self::D: HierarchyBase
 {
-    type H: HierarchyBase;
-
-    /// Get a reference to the underlying data structure.
-    fn base(&self) -> &Self::H;
-
-    fn d_cell_by_name(&self, name: &str) -> Option<<Self::H as HierarchyBase>::CellId> {
+    fn d_cell_by_name(&self, name: &str) -> Option<<Self::D as HierarchyBase>::CellId> {
         self.base().cell_by_name(name)
     }
 
-    fn d_cell_instance_by_name(&self, parent_cell: &<Self::H as HierarchyBase>::CellId, name: &str) -> Option<<Self::H as HierarchyBase>::CellInstId> {
+    fn d_cell_instance_by_name(&self, parent_cell: &<Self::D as HierarchyBase>::CellId, name: &str) -> Option<<Self::D as HierarchyBase>::CellInstId> {
         self.base().cell_instance_by_name(parent_cell, name)
     }
 
-    fn d_cell_name(&self, cell: &<Self::H as HierarchyBase>::CellId) -> <Self::H as HierarchyBase>::NameType {
+    fn d_cell_name(&self, cell: &<Self::D as HierarchyBase>::CellId) -> <Self::D as HierarchyBase>::NameType {
         self.base().cell_name(cell)
     }
 
-    fn d_cell_instance_name(&self, cell_inst: &<Self::H as HierarchyBase>::CellInstId) -> Option<<Self::H as HierarchyBase>::NameType> {
+    fn d_cell_instance_name(&self, cell_inst: &<Self::D as HierarchyBase>::CellInstId) -> Option<<Self::D as HierarchyBase>::NameType> {
         self.base().cell_instance_name(cell_inst)
     }
 
-    fn d_parent_cell(&self, cell_instance: &<Self::H as HierarchyBase>::CellInstId) -> <Self::H as HierarchyBase>::CellId {
+    fn d_parent_cell(&self, cell_instance: &<Self::D as HierarchyBase>::CellInstId) -> <Self::D as HierarchyBase>::CellId {
         self.base().parent_cell(cell_instance)
     }
 
-    fn d_template_cell(&self, cell_instance: &<Self::H as HierarchyBase>::CellInstId) -> <Self::H as HierarchyBase>::CellId {
+    fn d_template_cell(&self, cell_instance: &<Self::D as HierarchyBase>::CellInstId) -> <Self::D as HierarchyBase>::CellId {
         self.base().template_cell(cell_instance)
     }
 
-    fn d_for_each_cell<F>(&self, f: F) where F: FnMut(<Self::H as HierarchyBase>::CellId) -> () {
+    fn d_for_each_cell<F>(&self, f: F) where F: FnMut(<Self::D as HierarchyBase>::CellId) -> () {
         self.base().for_each_cell(f)
     }
 
-    fn d_each_cell_vec(&self) -> Vec<<Self::H as HierarchyBase>::CellId> {
+    fn d_each_cell_vec(&self) -> Vec<<Self::D as HierarchyBase>::CellId> {
         self.base().each_cell_vec()
     }
 
-    fn d_each_cell(&self) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellId> + '_> {
+    fn d_each_cell(&self) -> Box<dyn Iterator<Item=<Self::D as HierarchyBase>::CellId> + '_> {
         self.base().each_cell()
     }
 
-    fn d_for_each_cell_instance<F>(&self, cell: &<Self::H as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::H as HierarchyBase>::CellInstId) -> () {
+    fn d_for_each_cell_instance<F>(&self, cell: &<Self::D as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::D as HierarchyBase>::CellInstId) -> () {
         self.base().for_each_cell_instance(cell, f)
     }
 
-    fn d_each_cell_instance_vec(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Vec<<Self::H as HierarchyBase>::CellInstId> {
+    fn d_each_cell_instance_vec(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Vec<<Self::D as HierarchyBase>::CellInstId> {
         self.base().each_cell_instance_vec(cell)
     }
 
-    fn d_each_cell_instance(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellInstId> + '_> {
+    fn d_each_cell_instance(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::D as HierarchyBase>::CellInstId> + '_> {
         self.base().each_cell_instance(cell)
     }
 
-    fn d_for_each_cell_dependency<F>(&self, cell: &<Self::H as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::H as HierarchyBase>::CellId) -> () {
+    fn d_for_each_cell_dependency<F>(&self, cell: &<Self::D as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::D as HierarchyBase>::CellId) -> () {
         self.base().for_each_cell_dependency(cell, f)
     }
 
-    fn d_each_cell_dependency_vec(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Vec<<Self::H as HierarchyBase>::CellId> {
+    fn d_each_cell_dependency_vec(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Vec<<Self::D as HierarchyBase>::CellId> {
         self.base().each_cell_dependency_vec(cell)
     }
 
-    fn d_each_cell_dependency(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellId> + '_> {
+    fn d_each_cell_dependency(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::D as HierarchyBase>::CellId> + '_> {
         self.base().each_cell_dependency(cell)
     }
 
-    fn d_num_cell_dependencies(&self, cell: &<Self::H as HierarchyBase>::CellId) -> usize {
+    fn d_num_cell_dependencies(&self, cell: &<Self::D as HierarchyBase>::CellId) -> usize {
         self.base().num_cell_dependencies(cell)
     }
 
-    fn d_for_each_dependent_cell<F>(&self, cell: &<Self::H as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::H as HierarchyBase>::CellId) -> () {
+    fn d_for_each_dependent_cell<F>(&self, cell: &<Self::D as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::D as HierarchyBase>::CellId) -> () {
         self.base().for_each_dependent_cell(cell, f)
     }
 
-    fn d_each_dependent_cell_vec(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Vec<<Self::H as HierarchyBase>::CellId> {
+    fn d_each_dependent_cell_vec(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Vec<<Self::D as HierarchyBase>::CellId> {
         self.base().each_dependent_cell_vec(cell)
     }
 
-    fn d_each_dependent_cell(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellId> + '_> {
+    fn d_each_dependent_cell(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::D as HierarchyBase>::CellId> + '_> {
         self.base().each_dependent_cell(cell)
     }
 
-    fn d_num_dependent_cells(&self, cell: &<Self::H as HierarchyBase>::CellId) -> usize {
+    fn d_num_dependent_cells(&self, cell: &<Self::D as HierarchyBase>::CellId) -> usize {
         self.base().num_dependent_cells(cell)
     }
 
-    fn d_for_each_cell_reference<F>(&self, cell: &<Self::H as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::H as HierarchyBase>::CellInstId) -> () {
+    fn d_for_each_cell_reference<F>(&self, cell: &<Self::D as HierarchyBase>::CellId, f: F) where F: FnMut(<Self::D as HierarchyBase>::CellInstId) -> () {
         self.base().for_each_cell_reference(cell, f)
     }
 
-    fn d_each_cell_reference_vec(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Vec<<Self::H as HierarchyBase>::CellInstId> {
+    fn d_each_cell_reference_vec(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Vec<<Self::D as HierarchyBase>::CellInstId> {
         self.base().each_cell_reference_vec(cell)
     }
 
-    fn d_each_cell_reference(&self, cell: &<Self::H as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::H as HierarchyBase>::CellInstId> + '_> {
+    fn d_each_cell_reference(&self, cell: &<Self::D as HierarchyBase>::CellId) -> Box<dyn Iterator<Item=<Self::D as HierarchyBase>::CellInstId> + '_> {
         self.base().each_cell_reference(cell)
     }
 
-    fn d_num_cell_references(&self, cell: &<Self::H as HierarchyBase>::CellId) -> usize {
+    fn d_num_cell_references(&self, cell: &<Self::D as HierarchyBase>::CellId) -> usize {
         self.base().num_cell_references(cell)
     }
 
-    fn d_num_child_instances(&self, cell: &<Self::H as HierarchyBase>::CellId) -> usize {
+    fn d_num_child_instances(&self, cell: &<Self::D as HierarchyBase>::CellId) -> usize {
         self.base().num_child_instances(cell)
     }
 
@@ -564,15 +561,15 @@ pub trait HierarchyBaseDecorator
         self.base().num_cells()
     }
 
-    fn d_get_chip_property(&self, key: &<Self::H as HierarchyBase>::NameType) -> Option<PropertyValue> {
+    fn d_get_chip_property(&self, key: &<Self::D as HierarchyBase>::NameType) -> Option<PropertyValue> {
         self.base().get_chip_property(key)
     }
 
-    fn d_get_cell_property(&self, cell: &<Self::H as HierarchyBase>::CellId, key: &<Self::H as HierarchyBase>::NameType) -> Option<PropertyValue> {
+    fn d_get_cell_property(&self, cell: &<Self::D as HierarchyBase>::CellId, key: &<Self::D as HierarchyBase>::NameType) -> Option<PropertyValue> {
         self.base().get_cell_property(cell, key)
     }
 
-    fn d_get_cell_instance_property(&self, inst: &<Self::H as HierarchyBase>::CellInstId, key: &<Self::H as HierarchyBase>::NameType) -> Option<PropertyValue> {
+    fn d_get_cell_instance_property(&self, inst: &<Self::D as HierarchyBase>::CellInstId, key: &<Self::D as HierarchyBase>::NameType) -> Option<PropertyValue> {
         self.base().get_cell_instance_property(inst, key)
     }
 }
@@ -580,7 +577,7 @@ pub trait HierarchyBaseDecorator
 
 impl<T, H> HierarchyBase for T
     where
-        T: HierarchyBaseDecorator<H=H>,
+        T: HierarchyBaseDecorator<D=H>,
         H: HierarchyBase,
 {
     type NameType = H::NameType;
@@ -704,53 +701,49 @@ impl<T, H> HierarchyBase for T
     }
 }
 
-pub trait HierarchyEditDecorator
-    where Self: Sized
+pub trait HierarchyEditDecorator: MutDecorator
+    where Self: Sized,
+          Self::D: HierarchyEdit
 {
-    type H: HierarchyEdit;
-
-    /// Get a mutable reference to the underlying data structure.
-    fn mut_base(&mut self) -> &mut Self::H;
-
     fn d_new() -> Self;
 
-    fn d_create_cell(&mut self, name: <Self::H as HierarchyBase>::NameType) -> <Self::H as HierarchyBase>::CellId {
+    fn d_create_cell(&mut self, name: <Self::D as HierarchyBase>::NameType) -> <Self::D as HierarchyBase>::CellId {
         self.mut_base().create_cell(name)
     }
 
-    fn d_remove_cell(&mut self, cell_id: &<Self::H as HierarchyBase>::CellId) {
+    fn d_remove_cell(&mut self, cell_id: &<Self::D as HierarchyBase>::CellId) {
         self.mut_base().remove_cell(cell_id)
     }
 
     fn d_create_cell_instance(&mut self,
-                              parent_cell: &<Self::H as HierarchyBase>::CellId,
-                              template_cell: &<Self::H as HierarchyBase>::CellId,
-                              name: Option<<Self::H as HierarchyBase>::NameType>) -> <Self::H as HierarchyBase>::CellInstId {
+                              parent_cell: &<Self::D as HierarchyBase>::CellId,
+                              template_cell: &<Self::D as HierarchyBase>::CellId,
+                              name: Option<<Self::D as HierarchyBase>::NameType>) -> <Self::D as HierarchyBase>::CellInstId {
         self.mut_base().create_cell_instance(parent_cell, template_cell, name)
     }
 
 
-    fn d_remove_cell_instance(&mut self, inst: &<Self::H as HierarchyBase>::CellInstId) {
+    fn d_remove_cell_instance(&mut self, inst: &<Self::D as HierarchyBase>::CellInstId) {
         self.mut_base().remove_cell_instance(inst)
     }
 
-    fn d_rename_cell_instance(&mut self, inst: &<Self::H as HierarchyBase>::CellInstId, new_name: Option<<Self::H as HierarchyBase>::NameType>) {
+    fn d_rename_cell_instance(&mut self, inst: &<Self::D as HierarchyBase>::CellInstId, new_name: Option<<Self::D as HierarchyBase>::NameType>) {
         self.mut_base().rename_cell_instance(inst, new_name)
     }
 
-    fn d_rename_cell(&mut self, cell: &<Self::H as HierarchyBase>::CellId, new_name: <Self::H as HierarchyBase>::NameType) {
+    fn d_rename_cell(&mut self, cell: &<Self::D as HierarchyBase>::CellId, new_name: <Self::D as HierarchyBase>::NameType) {
         self.mut_base().rename_cell(cell, new_name)
     }
 
-    fn d_set_chip_property(&mut self, key: <Self::H as HierarchyBase>::NameType, value: PropertyValue) {
+    fn d_set_chip_property(&mut self, key: <Self::D as HierarchyBase>::NameType, value: PropertyValue) {
         self.mut_base().set_chip_property(key, value)
     }
 
-    fn d_set_cell_property(&mut self, cell: &<Self::H as HierarchyBase>::CellId, key: <Self::H as HierarchyBase>::NameType, value: PropertyValue) {
+    fn d_set_cell_property(&mut self, cell: &<Self::D as HierarchyBase>::CellId, key: <Self::D as HierarchyBase>::NameType, value: PropertyValue) {
         self.mut_base().set_cell_property(cell, key, value)
     }
 
-    fn d_set_cell_instance_property(&mut self, inst: &<Self::H as HierarchyBase>::CellInstId, key: <Self::H as HierarchyBase>::NameType, value: PropertyValue) {
+    fn d_set_cell_instance_property(&mut self, inst: &<Self::D as HierarchyBase>::CellInstId, key: <Self::D as HierarchyBase>::NameType, value: PropertyValue) {
         self.mut_base().set_cell_instance_property(inst, key, value)
     }
 }
@@ -758,7 +751,7 @@ pub trait HierarchyEditDecorator
 impl<T, H> HierarchyEdit for T
     where
         T: HierarchyBase<NameType=H::NameType, CellId=H::CellId, CellInstId=H::CellInstId>
-        + HierarchyEditDecorator<H=H>,
+        + HierarchyEditDecorator<D=H>,
         H: HierarchyEdit {
     fn new() -> Self {
         Self::d_new()
@@ -809,25 +802,27 @@ fn test_hierarchy_decorator() {
     // Decorator which increments the cell count by one.
     struct AddVirtualCell<T>(T);
 
-    impl<H: HierarchyBase> HierarchyBaseDecorator for AddVirtualCell<H> {
-        type H = H;
+    impl<H> Decorator for AddVirtualCell<H> {
+        type D = H;
 
-        fn base(&self) -> &Self::H {
+        fn base(&self) -> &Self::D {
             &self.0
         }
+    }
 
+    impl<H> MutDecorator for AddVirtualCell<H> {
+        fn mut_base(&mut self) -> &mut Self::D {
+            &mut self.0
+        }
+    }
+
+    impl<H: HierarchyBase> HierarchyBaseDecorator for AddVirtualCell<H> {
         fn d_num_cells(&self) -> usize {
             self.base().num_cells() + 1
         }
     }
 
     impl<H: HierarchyEdit> HierarchyEditDecorator for AddVirtualCell<H> {
-        type H = H;
-
-        fn mut_base(&mut self) -> &mut Self::H {
-            &mut self.0
-        }
-
         fn d_new() -> Self {
             Self(H::new())
         }

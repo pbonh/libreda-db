@@ -16,4 +16,7 @@ But this is still WORK IN PROGRESS and not stable yet.
 
 ## Known shortcomings & ideas for future work
 
-* Power domains: There's not a good way yet to represent power domains.
+* [ ] Provide a way to check if an ID is valid. For example with non-panicking `.try_*() -> Option<*>` functions.
+* [ ] Power domains: There's not a good way yet to represent power domains.
+* [ ] Region search: Implement region search as a decorator for LayoutEdit/LayoutBase traits.
+* [ ] Modification observer: Implement a decorator which allows to observe modifications on database structures using callback functions.

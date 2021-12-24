@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::traits::{HierarchyBase, LayoutBase};
-use crate::prelude::{LayerInfo, Rect, SimpleTransform, Geometry, PropertyValue};
+use crate::traits::{HierarchyBase, LayoutBase, LayoutEdit, HierarchyEdit};
+use crate::prelude::{LayerInfo, Rect, SimpleTransform, Geometry, PropertyValue, UInt};
 
 /// Define the same functions as [`LayoutBase`] but just prepend a `d_` to
 /// avoid naming conflicts.
@@ -104,7 +104,7 @@ impl<T, L> LayoutBase for T
     type LayerId = L::LayerId;
     type ShapeId = L::ShapeId;
 
-    fn dbu(&self) -> Self::Coord {
+    fn dbu(&self) -> <Self as LayoutBase>::Coord {
         self.base().dbu()
     }
 
@@ -124,11 +124,11 @@ impl<T, L> LayoutBase for T
         self.base().layer_by_name(name)
     }
 
-    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
+    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<<Self as LayoutBase>::Coord>> {
         self.base().bounding_box_per_layer(cell, layer)
     }
 
-    fn bounding_box(&self, cell: &Self::CellId) -> Option<Rect<Self::Coord>> {
+    fn bounding_box(&self, cell: &Self::CellId) -> Option<Rect<<Self as LayoutBase>::Coord>> {
         self.base().bounding_box(cell)
     }
 
@@ -137,12 +137,12 @@ impl<T, L> LayoutBase for T
     }
 
     fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
-        where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> () {
+        where F: FnMut(&Self::ShapeId, &Geometry<<Self as LayoutBase>::Coord>) -> () {
         self.base().for_each_shape(cell, layer, f)
     }
 
     fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R
-        where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R {
+        where F: FnMut(&Self::LayerId, &Geometry<<Self as LayoutBase>::Coord>) -> R {
         self.base().with_shape(shape_id, f)
     }
 
@@ -151,11 +151,11 @@ impl<T, L> LayoutBase for T
     }
 
     fn for_each_shape_recursive<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F)
-        where F: FnMut(SimpleTransform<Self::Coord>, &Self::ShapeId, &Geometry<Self::Coord>) -> () {
+        where F: FnMut(SimpleTransform<<Self as LayoutBase>::Coord>, &Self::ShapeId, &Geometry<<Self as LayoutBase>::Coord>) -> () {
         self.base().for_each_shape_recursive(cell, layer, f)
     }
 
-    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
+    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<<Self as LayoutBase>::Coord> {
         self.base().get_transform(cell_inst)
     }
 
@@ -174,26 +174,163 @@ fn test_layout_decorator() {
     let mut chip = Chip::new();
     chip.create_layer(0, 0);
 
-    // Decorator which increments the cell count by one.
     struct DummyDecorator<T>(T);
 
-    impl<H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<H> {
+    impl<'a, H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<&'a H> {
         type H = H;
 
         fn base(&self) -> &Self::H {
-            &self.0
+            self.0
         }
     }
 
-    impl<H: LayoutBase> LayoutBaseDecorator for DummyDecorator<H> {
+    impl<'a, H: LayoutBase> LayoutBaseDecorator for DummyDecorator<&'a H> {
         type L = H;
 
         fn base(&self) -> &Self::L {
-            &self.0
+            self.0
         }
     }
 
     assert_eq!(chip.each_layer().count(), 1);
-    let decorated_chip = DummyDecorator(chip);
+    let decorated_chip = DummyDecorator(&chip);
     assert_eq!(decorated_chip.each_layer().count(), 1);
+}
+
+/// Define the same functions as [`LayoutEdit`] but just prepend a `d_` to
+/// avoid naming conflicts.
+/// The default implementation just forwards the call to the `base()`.
+/// This allows to selectively re-implement some functions or fully delegate
+/// the trait to an attribute of a struct.
+pub trait LayoutEditDecorator
+    where Self: Sized
+{
+    type L: LayoutEdit;
+
+    /// Get a mutable reference to the underlying data structure.
+    fn mut_base(&mut self) -> &mut Self::L;
+
+    fn d_set_dbu(&mut self, dbu: <Self::L as LayoutBase>::Coord) {
+        self.mut_base().set_dbu(dbu)
+    }
+
+    fn d_create_layer(&mut self, index: UInt, datatype: UInt) -> <Self::L as LayoutBase>::LayerId {
+        self.mut_base().create_layer(index, datatype)
+    }
+
+    fn d_set_layer_name(&mut self, layer: &<Self::L as LayoutBase>::LayerId, name: Option<<Self::L as HierarchyBase>::NameType>) -> Option<<Self::L as HierarchyBase>::NameType> {
+        self.mut_base().set_layer_name(layer, name)
+    }
+
+    fn d_insert_shape(&mut self, parent_cell: &<Self::L as HierarchyBase>::CellId, layer: &<Self::L as LayoutBase>::LayerId, geometry: Geometry<<Self::L as LayoutBase>::Coord>) -> <Self::L as LayoutBase>::ShapeId {
+        self.mut_base().insert_shape(parent_cell, layer, geometry)
+    }
+
+    fn d_remove_shape(&mut self, shape_id: &<Self::L as LayoutBase>::ShapeId) -> Option<Geometry<<Self::L as LayoutBase>::Coord>> {
+        self.mut_base().remove_shape(shape_id)
+    }
+
+    fn d_replace_shape(&mut self, shape_id: &<Self::L as LayoutBase>::ShapeId, geometry: Geometry<<Self::L as LayoutBase>::Coord>) -> Geometry<<Self::L as LayoutBase>::Coord> {
+        self.mut_base().replace_shape(shape_id, geometry)
+    }
+
+    fn d_set_transform(&mut self, cell_inst: &<Self::L as HierarchyBase>::CellInstId, tf: SimpleTransform<<Self::L as LayoutBase>::Coord>) {
+        self.mut_base().set_transform(cell_inst, tf)
+    }
+
+    fn d_set_shape_property(&mut self, shape: &<Self::L as LayoutBase>::ShapeId, key: <Self::L as HierarchyBase>::NameType, value: PropertyValue) {
+        self.mut_base().set_shape_property(shape, key, value)
+    }
+}
+
+impl<T, L> LayoutEdit for T
+    where
+        T: LayoutBase<Coord=L::Coord, ShapeId=L::ShapeId, LayerId=L::LayerId>
+        + HierarchyEdit<NameType=L::NameType, CellId=L::CellId, CellInstId=L::CellInstId>
+        + LayoutEditDecorator<L=L>,
+        L: LayoutEdit + 'static
+{
+    fn set_dbu(&mut self, dbu: Self::Coord) {
+        self.d_set_dbu(dbu)
+    }
+
+    fn create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId {
+        self.d_create_layer(index, datatype)
+    }
+
+    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+        self.d_set_layer_name(layer, name)
+    }
+
+    fn insert_shape(&mut self, parent_cell: &Self::CellId, layer: &Self::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
+        self.d_insert_shape(parent_cell, layer, geometry)
+    }
+
+    fn remove_shape(&mut self, shape_id: &Self::ShapeId) -> Option<Geometry<Self::Coord>> {
+        self.d_remove_shape(shape_id)
+    }
+
+    fn replace_shape(&mut self, shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord> {
+        self.d_replace_shape(shape_id, geometry)
+    }
+
+    fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
+        self.d_set_transform(cell_inst, tf)
+    }
+
+    fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, value: PropertyValue) {
+        self.d_set_shape_property(shape, key, value)
+    }
+}
+
+
+#[test]
+fn test_layout_edit_decorator() {
+    use crate::chip::Chip;
+    use super::hierarchy::{HierarchyBaseDecorator, HierarchyEditDecorator};
+    use crate::prelude::*;
+
+    let mut chip = Chip::new();
+    chip.create_layer(0, 0);
+
+    struct DummyDecorator<T>(T);
+
+    impl<'a, H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<&'a mut H> {
+        type H = H;
+
+        fn base(&self) -> &Self::H {
+            self.0
+        }
+    }
+
+    impl<'a, H: HierarchyEdit> HierarchyEditDecorator for DummyDecorator<&'a mut H> {
+        type H = H;
+
+        fn mut_base(&mut self) -> &mut Self::H {
+            self.0
+        }
+
+        fn d_new() -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl<'a, H: LayoutBase> LayoutBaseDecorator for DummyDecorator<&'a mut H> {
+        type L = H;
+
+        fn base(&self) -> &Self::L {
+            self.0
+        }
+    }
+
+    impl<'a, L: LayoutEdit> LayoutEditDecorator for DummyDecorator<&'a mut L> {
+        type L = L;
+
+        fn mut_base(&mut self) -> &mut Self::L {
+            self.0
+        }
+    }
+
+    let mut decorated_chip = DummyDecorator(&mut chip);
+    decorated_chip.create_layer(0, 0);
 }

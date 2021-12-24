@@ -709,7 +709,7 @@ pub trait HierarchyEditDecorator
 {
     type H: HierarchyEdit;
 
-    /// Get a reference to the underlying data structure.
+    /// Get a mutable reference to the underlying data structure.
     fn mut_base(&mut self) -> &mut Self::H;
 
     fn d_new() -> Self;

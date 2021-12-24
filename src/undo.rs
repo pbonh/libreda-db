@@ -34,11 +34,12 @@
 
 use crate::traits::*;
 use crate::netlist::direction::Direction;
-use crate::layout::prelude::{Rect, LayerInfo, Geometry, SimpleTransform};
+use crate::layout::prelude::{Geometry, SimpleTransform};
 use std::ops::Deref;
 use crate::prelude::PropertyValue;
 use crate::decorator::hierarchy::HierarchyBaseDecorator;
 use crate::decorator::{Decorator, MutDecorator};
+use crate::decorator::layout::LayoutBaseDecorator;
 
 /// Undo operations on the netlist.
 pub enum NetlistUndoOp<T: NetlistBase> {
@@ -402,7 +403,11 @@ impl<'a, H, U> MutDecorator for Undo<'a, H, U> {
     }
 }
 
+// Inherit everything from HierarchyBase.
 impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U> {}
+
+// Inherit everything from LayoutBase.
+impl<'a, L: LayoutBase + 'static, U> LayoutBaseDecorator for Undo<'a, L, U> {}
 
 
 impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {
@@ -574,60 +579,6 @@ impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
         let prev_net = self.chip.connect_pin_instance(pin, net);
         self.transactions.push(NetlistUndoOp::ConnectPinInstance(pin.clone(), prev_net.clone()).into());
         prev_net
-    }
-}
-
-
-impl<'a, T: LayoutBase + 'static, U> LayoutBase for Undo<'a, T, U> {
-
-    // Pass-through all functions of the LayoutBase trait.
-
-    type Coord = T::Coord;
-    type LayerId = T::LayerId;
-    type ShapeId = T::ShapeId;
-
-    fn dbu(&self) -> Self::Coord {
-        self.chip.dbu()
-    }
-
-    fn each_layer(&self) -> Box<dyn Iterator<Item=Self::LayerId> + '_> {
-        self.chip.each_layer()
-    }
-
-    fn layer_info(&self, layer: &Self::LayerId) -> LayerInfo<Self::NameType> {
-        self.chip.layer_info(layer)
-    }
-
-    fn find_layer(&self, index: u32, datatype: u32) -> Option<Self::LayerId> {
-        self.chip.find_layer(index, datatype)
-    }
-
-    fn layer_by_name(&self, name: &str) -> Option<Self::LayerId> {
-        self.chip.layer_by_name(name)
-    }
-
-    fn bounding_box_per_layer(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Option<Rect<Self::Coord>> {
-        self.chip.bounding_box_per_layer(cell, layer)
-    }
-
-    fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
-        self.chip.each_shape_id(cell, layer)
-    }
-
-    fn for_each_shape<F>(&self, cell: &Self::CellId, layer: &Self::LayerId, f: F) where F: FnMut(&Self::ShapeId, &Geometry<Self::Coord>) -> () {
-        self.chip.for_each_shape(cell, layer, f)
-    }
-
-    fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R {
-        self.chip.with_shape(shape_id, f)
-    }
-
-    fn parent_of_shape(&self, shape_id: &Self::ShapeId) -> (Self::CellId, Self::LayerId) {
-        self.chip.parent_of_shape(shape_id)
-    }
-
-    fn get_transform(&self, cell_inst: &Self::CellInstId) -> SimpleTransform<Self::Coord> {
-        self.chip.get_transform(cell_inst)
     }
 }
 

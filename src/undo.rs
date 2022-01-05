@@ -404,7 +404,11 @@ impl<'a, H, U> MutDecorator for Undo<'a, H, U> {
 }
 
 // Inherit everything from HierarchyBase.
-impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U> {}
+impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U> {
+    type NameType = H::NameType;
+    type CellId = H::CellId;
+    type CellInstId = H::CellInstId;
+}
 
 // Inherit everything from LayoutBase.
 impl<'a, L: LayoutBase + 'static, U> LayoutBaseDecorator for Undo<'a, L, U> {}

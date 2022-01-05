@@ -26,6 +26,7 @@
 
 pub mod hierarchy;
 pub mod layout;
+pub mod netlist;
 
 pub trait Decorator {
     /// The decorated type.

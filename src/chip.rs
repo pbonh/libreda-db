@@ -68,6 +68,8 @@ pub type SInt = i32;
 
 /// Integer coordinate type.
 pub type Coord = i32;
+/// Integer area type.
+pub type Area = i64;
 
 /// Circuit identifier.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -1352,6 +1354,7 @@ impl HierarchyBase for Chip<Coord> {
 
 impl LayoutBase for Chip<Coord> {
     type Coord = Coord;
+    type Area = Area;
     type LayerId = LayerId;
     type ShapeId = ShapeId;
 

@@ -29,13 +29,20 @@ use iron_shapes::CoordinateType;
 use crate::prelude::{Geometry, Rect};
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
+use num_traits::Num;
 
 /// Most basic trait of a layout.
 ///
 /// This traits specifies methods for accessing the components of a layout.
 pub trait LayoutBase: HierarchyBase {
-    /// Number type used for coordinates.
+    /// Number type used for coordinates and distances.
     type Coord: CoordinateType;
+    /// Number type for areas.
+    /// This is possibly another type then `Coord` for the following reasons:
+    /// * Distances and areas are semantically different.
+    /// * In practice `i32` is a good choice for coordinates. However, computing areas in `i32` might
+    /// easily lead to overflows. Hence a 64-bit integer type might be a better choice.
+    type Area: Num + Copy + PartialOrd + From<Self::Coord>;
     /// Layer identifier type.
     type LayerId: Eq + Hash + Clone + std::fmt::Debug;
     /// Shape identifier type.

@@ -28,8 +28,7 @@ use crate::decorator::{Decorator, MutDecorator};
 /// This allows to selectively re-implement some functions or fully delegate
 /// the trait to an attribute of a struct.
 pub trait LayoutBaseDecorator: Decorator
-    where Self: Sized,
-          Self::D: LayoutBase
+    where Self::D: LayoutBase
 {
     fn d_dbu(&self) -> <Self::D as LayoutBase>::Coord {
         self.base().dbu()
@@ -98,6 +97,7 @@ impl<T, L> LayoutBase for T
         L: LayoutBase + 'static
 {
     type Coord = L::Coord;
+    type Area = L::Area;
     type LayerId = L::LayerId;
     type ShapeId = L::ShapeId;
 
@@ -182,7 +182,11 @@ fn test_layout_decorator() {
         }
     }
 
-    impl<'a, H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<&'a H> {}
+    impl<'a, H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<&'a H> {
+        type NameType = H::NameType;
+        type CellId = H::CellId;
+        type CellInstId = H::CellInstId;
+    }
 
     impl<'a, H: LayoutBase> LayoutBaseDecorator for DummyDecorator<&'a H> {}
 
@@ -197,8 +201,7 @@ fn test_layout_decorator() {
 /// This allows to selectively re-implement some functions or fully delegate
 /// the trait to an attribute of a struct.
 pub trait LayoutEditDecorator: MutDecorator
-    where Self: Sized,
-          Self::D: LayoutEdit
+    where Self::D: LayoutEdit
 {
     fn d_set_dbu(&mut self, dbu: <Self::D as LayoutBase>::Coord) {
         self.mut_base().set_dbu(dbu)
@@ -300,7 +303,11 @@ fn test_layout_edit_decorator() {
         }
     }
 
-    impl<'a, H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<&'a mut H> {}
+    impl<'a, H: HierarchyBase> HierarchyBaseDecorator for DummyDecorator<&'a mut H> {
+        type NameType = H::NameType;
+        type CellId = H::CellId;
+        type CellInstId = H::CellInstId;
+    }
 
     impl<'a, H: HierarchyEdit> HierarchyEditDecorator for DummyDecorator<&'a mut H> {
         fn d_new() -> Self {

@@ -21,8 +21,6 @@
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use super::{Decorator, MutDecorator};
 use crate::prelude::PropertyValue;
-use std::hash::Hash;
-use std::borrow::Borrow;
 //
 // ///
 // #[macro_export] macro_rules! inherit {

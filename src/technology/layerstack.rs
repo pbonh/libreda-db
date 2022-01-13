@@ -31,7 +31,7 @@ pub enum RoutingLayerType<LayerId> {
 /// Define standardized access for routing and via layers.
 pub trait RoutingLayerStack {
     /// Identifier type for layers.
-    type LayerId: Clone;
+    type LayerId: Clone + Eq;
 
     /// Get the stack of routing and via layers in process order.
     fn layer_stack(&self) -> Vec<RoutingLayerType<Self::LayerId>>;

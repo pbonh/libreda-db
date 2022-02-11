@@ -124,14 +124,16 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
 
             {
                 let pos = split_intervals(&mut open_rects, current_edge.start);
-
-                let (_, _, value, _) = open_rects[pos];
-                if value == 0 {
-                    // This opens a new rectangle. Store the x-coordinate of the left edge.
-                    open_rects[pos].3 = current_edge.offset;
-                }
-
                 split_intervals(&mut open_rects, current_edge.end);
+
+                // Find all newly opened rectangles and store the x position of their left edge.
+                open_rects.iter_mut()
+                    .skip(pos)// Skip intervals which come before the current interval.
+                    .take_while(|(_a, b, _value, _x)| b <= &current_edge.end)// Find intervals which overlap with the current interval.
+                    .filter(|(a, _b, value, _x)| a >= &current_edge.start && *value == 0)
+                    .for_each(|(_a, _b, _value, x)| {
+                        *x = current_edge.offset;
+                    });
             }
 
             let increment = if is_left {
@@ -156,7 +158,7 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
                         let y_start = a.max(current_edge.start);
                         let y_end = b.min(current_edge.end);
                         let x_end = current_edge.offset;
-                        
+                        debug_assert!(x_start != T::min_value());
                         Rect::new((x_start, y_start), (x_end, y_end))
                     });
 
@@ -225,8 +227,6 @@ fn test_decompose_rectangles() {
 
 #[test]
 fn test_decompose_rectangles_overlapping() {
-    use crate::prelude::Point;
-    use crate::prelude::SimpleRPolygon;
     use crate::prelude::IntoEdges;
 
     let rects = vec![

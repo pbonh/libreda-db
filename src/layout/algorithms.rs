@@ -75,16 +75,17 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
 
         // Return the position of the new entry.
         fn split_intervals<T: PartialOrd + Copy>(intervals: &mut Vec<(T, T, isize, T)>, split_location: T) -> usize {
+            // Find the interval which contains the split location.
             let (pos, &(a, b, value, x)) = intervals.iter()
                 .enumerate()
                 .find(|(_pos, &(a, b, _val, _x))| a <= split_location && split_location < b)
                 .expect("Intervals must span the whole value range without gap.");
 
             if split_location == a || split_location == b {
-                // Nothing to do.
+                // Split location is equal to an end-point of the interval. No need to split there.
                 pos
             } else {
-                // Split the interval.
+                // Split location is inside the interval. Split the interval.
                 let i1 = (a, split_location, value, x);
                 let i2 = (split_location, b, value, x);
                 intervals[pos] = i2;
@@ -108,6 +109,8 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
                     write_index += 1;
                     intervals[write_index] = intervals[i];
                     value = current_value;
+                } else {
+                    // Merge the intervals.
                 }
             }
 
@@ -115,51 +118,64 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
             intervals.truncate(write_index + 1);
         }
 
-        for (e, is_left) in vertical_edges {
-            debug_assert!(e.start < e.end);
+        // Process all vertical edges.
+        for (current_edge, is_left) in vertical_edges {
+            debug_assert!(current_edge.start < current_edge.end);
 
-            let pos = split_intervals(&mut open_rects, e.start);
-            split_intervals(&mut open_rects, e.end);
-            let (_, _, value, _) = open_rects[pos];
+            {
+                let pos = split_intervals(&mut open_rects, current_edge.start);
 
-            if value == 0 {
-                // This is a new rectangle. Store the x-coordinate of the left edge.
-                open_rects[pos].3 = e.offset;
+                let (_, _, value, _) = open_rects[pos];
+                if value == 0 {
+                    // This opens a new rectangle. Store the x-coordinate of the left edge.
+                    open_rects[pos].3 = current_edge.offset;
+                }
+
+                split_intervals(&mut open_rects, current_edge.end);
             }
 
             let increment = if is_left {
+                // Enter rectangle.
                 1
             } else {
+                // Exit rectangle.
                 -1
             };
 
-            let increment_inv = -increment;
-            // Find rectangles that are closed by this boundary.
-            // Find this by computing the intersection of the y-interval of the right boundary
-            // with all open intervals that are about to be closed (which have value = -increment).
-            let closed_rects = open_rects.iter()
-                .take_while(|(_a, b, _value, _x)| b <= &e.end)
-                .filter(|(a, _b, value, _x)| a >= &e.start && value == &increment_inv)
-                .map(|&(a, b, _value, x_start)| {
-                    // Compute the intersection of the intervals [a, b] and [e.start, e.end].
-                    let y_start = a.max(e.start);
-                    let y_end = b.min(e.end);
-                    let x_end = e.offset;
-                    Rect::new((x_start, y_start), (x_end, y_end))
-                });
-            results.extend(closed_rects);
+            {
+                // Find rectangles that are closed by this boundary.
+                // Find this by computing the intersection of the y-interval of the right boundary
+                // with all open intervals that are about to be closed (which have value = -increment).
+
+                let increment_inv = -increment;
+                let closed_rects = open_rects.iter()
+                    .take_while(|(_a, b, _value, _x)| b <= &current_edge.end)
+                    .filter(|(a, _b, value, _x)| a >= &current_edge.start && value == &increment_inv)
+                    .map(|&(a, b, _value, x_start)| {
+                        // Compute the intersection of the intervals [a, b] and [e.start, e.end].
+                        let y_start = a.max(current_edge.start);
+                        let y_end = b.min(current_edge.end);
+                        let x_end = current_edge.offset;
+                        
+                        Rect::new((x_start, y_start), (x_end, y_end))
+                    });
+
+                results.extend(closed_rects);
+            }
 
             // Update the inside-count for open rectangles that interact with the current edge.
             open_rects.iter_mut()
-                .take_while(|(_a, b, _value, _x)| b <= &e.end)
-                .filter(|(a, _b, _value, _x)| a >= &e.start)
+                .take_while(|(_a, b, _value, _x)| b <= &current_edge.end)
+                .filter(|(a, _b, _value, _x)| a >= &current_edge.start)
                 .for_each(|(_, _, count, x)| {
                     *count += increment;
+
                     if *count == 0 {
                         // Reset the x-coordinate of the left boundary (there's none now).
                         *x = T::min_value();
                     }
                 });
+
 
             // Simplify the intervals.
             merge_intervals(&mut open_rects);
@@ -205,4 +221,19 @@ fn test_decompose_rectangles() {
     // Test with reversed polygon.
     let rects = decompose_rectangles(poly.reversed().edges());
     assert_eq!(rects, vec![Rect::new((0, 0), (2, 1)), Rect::new((1, 1), (2, 2))]);
+}
+
+#[test]
+fn test_decompose_rectangles_overlapping() {
+    use crate::prelude::Point;
+    use crate::prelude::SimpleRPolygon;
+    use crate::prelude::IntoEdges;
+
+    let rects = vec![
+        Rect::new((0i32, 0), (10, 10)),
+        Rect::new((0, 0), (5, 5)),
+    ];
+
+    let decomposed = decompose_rectangles(rects.iter().flat_map(|r| r.into_edges()));
+    assert_eq!(decomposed, vec![Rect::new((0, 0), (10, 10))]);
 }

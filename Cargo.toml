@@ -2,7 +2,7 @@
 name = "libreda-db"
 version = "0.0.9"
 authors = ["Thomas Kramer <code@tkramer.ch>"]
-edition = "2018"
+edition = "2021"
 license = "AGPL-3.0-or-later"
 description = "Layout and netlist datastructures for chip design."
 keywords = ["vlsi"]

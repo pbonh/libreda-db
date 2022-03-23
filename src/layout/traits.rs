@@ -36,7 +36,7 @@ use num_traits::Num;
 /// This traits specifies methods for accessing the components of a layout.
 pub trait LayoutBase: HierarchyBase {
     /// Number type used for coordinates and distances.
-    type Coord: CoordinateType;
+    type Coord: CoordinateType + std::fmt::Display;
     /// Number type for areas.
     /// This is possibly another type then `Coord` for the following reasons:
     /// * Distances and areas are semantically different.

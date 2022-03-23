@@ -174,10 +174,12 @@ pub struct Circuit<C = Coord, U = ()>
 
     /// Properties related to the instances in this template.
     /// Instance properties are stored here for lower overhead of cell instances.
+    #[allow(unused)]
     instance_properties: IntHashMap<CellInstId, PropertyStore<NameT>>,
     /// Properties related to this template.
     properties: PropertyStore<NameT>,
     /// User-defined data.
+    #[allow(unused)]
     user_data: U,
 
     // == Netlist == //
@@ -253,6 +255,7 @@ pub struct CircuitInst<C = Coord, U = ()>
     properties: PropertyStore<NameT>,
 
     /// User-defined data.
+    #[allow(unused)]
     user_data: U,
 
     // == Netlist == //
@@ -1189,6 +1192,7 @@ pub struct Shape<C, U = ()> {
     /// Pin that belongs to this shape.
     pin: Option<PinId>,
     /// User-defined data.
+    #[allow(unused)]
     user_data: U,
 }
 

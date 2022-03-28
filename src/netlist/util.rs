@@ -358,6 +358,34 @@ pub trait NetlistEditUtil: NetlistEdit {
             .map(|c| self.purge_nets_in_circuit(c))
             .sum()
     }
+
+    /// Create names for all unnamed nets in the specified circuit.
+    /// The names will consist of the `prefix` and an appended number.
+    /// After calling this method, no net inside this circuit will be unnamed.
+    fn create_net_names_in_circuit(&mut self, circuit_id: &Self::CellId, prefix: &str) {
+        let all_nets = self.each_internal_net_vec(circuit_id);
+        let unnamed_nets: Vec<_> = all_nets.iter()
+            .filter(|net| self.net_name(net).is_none())
+            .collect();
+
+        if !unnamed_nets.is_empty() {
+
+            let mut id_counter = 0;
+            for unnamed_net in unnamed_nets {
+                // Generate a new name.
+                let net_name = loop {
+                    let net_name = format!("{}{}", prefix, id_counter);
+                    id_counter += 1;
+                    if self.net_by_name(circuit_id, &net_name).is_none() {
+                        break net_name;
+                    }
+                };
+
+                let old_name = self.rename_net(unnamed_net, Some(net_name.into()));
+                debug_assert!(old_name.is_none());
+            }
+        }
+    }
 }
 
 impl<N: NetlistEdit + ?Sized> NetlistEditUtil for N {}

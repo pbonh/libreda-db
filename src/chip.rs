@@ -1406,8 +1406,11 @@ impl LayoutBase for Chip<Coord> {
     }
 
     fn each_shape_id(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
-        Box::new(self.circuit(cell).shapes(layer).expect("Layer not found.")
-            .each_shape().map(|s| s.index))
+        if let Some(shapes) = self.circuit(cell).shapes(layer) {
+            Box::new(shapes.each_shape().map(|s| s.index))
+        } else {
+            Box::new(None.into_iter()) // Empty iterator.
+        }
     }
 
     // fn each_shape(&self, cell: &Self::CellId, layer: &Self::LayerId) -> Box<dyn Iterator<Item=&Geometry<Self::Coord>> + '_> {

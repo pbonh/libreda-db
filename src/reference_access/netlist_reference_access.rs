@@ -107,6 +107,11 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
             })
     }
 
+    /// Get the number of nets inside this cell.
+    pub fn num_internal_nets(&self) -> usize {
+        self.base.num_internal_nets(&self.id)
+    }
+
     /// Find a net by its name.
     pub fn net_by_name(&self, name: &str) -> Option<NetRef<'a, N>> {
         self.base.net_by_name(&self.id, name)

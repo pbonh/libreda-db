@@ -90,12 +90,12 @@ impl<N: NetlistBase + ?Sized> Clone for TerminalId<N>
 ///
 pub trait NetlistBase: HierarchyBase {
     /// Pin identifier type. Uniquely identifies a pin in the whole netlist.
-    type PinId: Eq + Hash + Clone + std::fmt::Debug;
+    type PinId: Eq + Hash + Clone + std::fmt::Debug + 'static;
     /// Pin instance identifier type. Uniquely identifies a pin instance in the whole netlist.
     /// A pin instance is a pin of a circuit instance.
-    type PinInstId: Eq + Hash + Clone + std::fmt::Debug;
+    type PinInstId: Eq + Hash + Clone + std::fmt::Debug + 'static;
     /// Net identifier type. Uniquely identifies a net in the whole netlist.
-    type NetId: Eq + Hash + Clone + std::fmt::Debug;
+    type NetId: Eq + Hash + Clone + std::fmt::Debug + 'static;
 
     /// Get the ID of the template pin of this pin instance.
     fn template_pin(&self, pin_instance: &Self::PinInstId) -> Self::PinId;

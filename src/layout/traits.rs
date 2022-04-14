@@ -36,7 +36,7 @@ use num_traits::Num;
 /// This traits specifies methods for accessing the components of a layout.
 pub trait LayoutBase: HierarchyBase {
     /// Number type used for coordinates and distances.
-    type Coord: CoordinateType + std::fmt::Display;
+    type Coord: CoordinateType + std::fmt::Display + Hash + 'static;
     /// Number type for areas.
     /// This is possibly another type then `Coord` for the following reasons:
     /// * Distances and areas are semantically different.
@@ -44,9 +44,9 @@ pub trait LayoutBase: HierarchyBase {
     /// easily lead to overflows. Hence a 64-bit integer type might be a better choice.
     type Area: Num + Copy + PartialOrd + From<Self::Coord>;
     /// Layer identifier type.
-    type LayerId: Eq + Hash + Clone + std::fmt::Debug;
+    type LayerId: Eq + Hash + Clone + std::fmt::Debug + 'static;
     /// Shape identifier type.
-    type ShapeId: Eq + Hash + Clone + std::fmt::Debug;
+    type ShapeId: Eq + Hash + Clone + std::fmt::Debug + 'static;
 
 
     /// Get the distance unit used in this layout in 'pixels per micron'.

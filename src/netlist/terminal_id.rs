@@ -32,7 +32,7 @@ pub enum TerminalId<N: NetlistBase + ?Sized> {
     PinInstId(N::PinInstId),
 }
 
-impl<N: NetlistBase> Hash for TerminalId<N> {
+impl<N: NetlistBase + ?Sized> Hash for TerminalId<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             TerminalId::PinId(p) => p.hash(state),

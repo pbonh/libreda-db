@@ -43,3 +43,4 @@ pub mod direction;
 pub mod traits;
 pub mod util;
 pub mod terminal_id;
+pub mod arc_id;

@@ -23,14 +23,8 @@
 #![cfg(test)]
 
 use libreda_db::chip::Chip;
-use libreda_db::prelude::{HierarchyEdit, HierarchyBase,
-                          // LayoutBase, LayoutEdit,
-                          NetlistBase, NetlistEdit,
-                          // L2NBase, L2NEdit,
-                          Direction};
-use libreda_db::netlist::util::*;
-use itertools::{Itertools};
-use libreda_db::netlist::traits::TerminalId;
+use libreda_db::prelude::*;
+use itertools::Itertools;
 
 #[test]
 fn test_create_circuit() {

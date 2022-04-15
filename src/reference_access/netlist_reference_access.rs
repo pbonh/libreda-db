@@ -19,8 +19,7 @@
  */
 
 use crate::traits::NetlistBase;
-use crate::netlist::direction::Direction;
-use crate::prelude::TerminalId;
+use crate::netlist::prelude::*;
 
 use super::hierarchy_reference_access::*;
 

@@ -32,50 +32,11 @@
 //! [`NetlistUtil`]: crate::netlist::util::NetlistUtil
 //! [`NetlistEditUtil`]: crate::netlist::util::NetlistEditUtil
 
-use std::hash::{Hash, Hasher};
-use crate::netlist::direction::Direction;
+use std::hash::Hash;
+use super::prelude::*;
 pub use crate::traits::{HierarchyBase, HierarchyEdit};
 
 
-/// A terminal is a generalization of pins and pin instances.
-#[derive(Debug)]
-pub enum TerminalId<N: NetlistBase + ?Sized> {
-    /// Terminal is a pin.
-    PinId(N::PinId),
-    /// Terminal is a pin instance.
-    PinInstId(N::PinInstId),
-}
-
-impl<N: NetlistBase> Hash for TerminalId<N> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            TerminalId::PinId(p) => p.hash(state),
-            TerminalId::PinInstId(p) => p.hash(state)
-        }
-    }
-}
-
-impl<N: NetlistBase + ?Sized> Eq for TerminalId<N> {}
-
-impl<N: NetlistBase + ?Sized> PartialEq for TerminalId<N> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::PinId(p1), Self::PinId(p2)) => p1 == p2,
-            (Self::PinInstId(p1), Self::PinInstId(p2)) => p1 == p2,
-            (_, _) => false
-        }
-    }
-}
-
-impl<N: NetlistBase + ?Sized> Clone for TerminalId<N>
-    where N::PinId: Clone, N::PinInstId: Clone {
-    fn clone(&self) -> Self {
-        match self {
-            TerminalId::PinId(p) => Self::PinId(p.clone()),
-            TerminalId::PinInstId(p) => Self::PinInstId(p.clone()),
-        }
-    }
-}
 
 /// Most basic trait for traversing a netlist.
 /// A netlist extends the `HierarchyBase` and hence is hierarchical.

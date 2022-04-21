@@ -234,6 +234,21 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     pub fn qname(&self, separator: &str) -> String {
         format!("{}{}{}", self.parent().name(), separator, self.name().unwrap_or_else(|| "<unnamed>".to_string().into()))
     }
+
+    /// Get the number of external pins attached to this net (pins towards the outside of the circuit).
+    pub fn num_pins(&self) -> usize {
+        self.base.num_net_pins(&self.id)
+    }
+
+    /// Get the number of pin instances attached to this net. Excludes the pins towards the outside of the circuit.
+    pub fn num_pin_instances(&self) -> usize {
+        self.base.num_net_pin_instances(&self.id)
+    }
+
+    /// Get the total number of pins and pin instances connected to this net.
+    pub fn num_terminals(&self) -> usize {
+        self.base.num_net_terminals(&self.id)
+    }
 }
 
 /// A reference to a pin.

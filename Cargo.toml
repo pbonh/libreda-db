@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 Thomas Kramer
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 [package]
 name = "libreda-db"
 version = "0.0.9"
@@ -5,7 +9,7 @@ authors = ["Thomas Kramer <code@tkramer.ch>"]
 edition = "2021"
 license = "AGPL-3.0-or-later"
 description = "Layout and netlist datastructures for chip design."
-keywords = ["vlsi"]
+keywords = ["vlsi", "eda", "cad"]
 readme = "README.md"
 homepage = "https://libreda.org"
 repository = "https://codeberg.org/libreda/libreda-db"
@@ -16,6 +20,6 @@ log = "0.4"
 itertools = "0.10.0"
 num-traits = "0.2"
 iron-shapes = { version = "0.0.7", path = "../iron-shapes", features = ["serde"] }
-iron-shapes-booleanop = { version = "0.0.2", path = '../iron-shapes-booleanop' }
+iron-shapes-booleanop = { version = "0.0.3", path = '../iron-shapes-booleanop' }
 serde = { version = "1", optional = true, features = ["derive", "rc"] }
 fnv = "1.0.7" # Fast hashing for small keys.

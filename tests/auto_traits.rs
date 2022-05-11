@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022 Thomas Kramer
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! Test that the auto-traits are implemented for certain public types.
 

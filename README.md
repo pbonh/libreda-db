@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 Thomas Kramer
+
+SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # LibrEDA DB
 
 LibrEDA DB is a collection of interface definitions and data structures for chip layouts and netlists.

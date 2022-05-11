@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2022 Thomas Kramer
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::traits::{HierarchyBase, NetlistBase, NetlistEdit};
 use crate::prelude::{Direction, TerminalId};
 use crate::decorator::{Decorator, MutDecorator};

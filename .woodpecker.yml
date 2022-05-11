@@ -12,3 +12,8 @@ pipeline:
             - git -C ../ clone https://codeberg.org/libreda/splay
             - cargo check
             - cargo test
+
+    reuse:
+        image: fsfe/reuse:latest
+        commands:
+            - reuse lint

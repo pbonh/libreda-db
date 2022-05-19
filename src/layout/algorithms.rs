@@ -34,6 +34,47 @@ use num_traits::{Bounded, Zero};
 pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
     where T: Ord + Bounded + Copy + Zero,
           I: Iterator<Item=REdge<T>> {
+    decompose_disjoint_and_maximal_rectangles(redges, true, false)
+}
+
+/// Decompose a set of manhattanized polygons into maximal rectangles.
+/// The polygons in form of an iterator over all the edges.
+/// A point is considered inside the polygon when the polygon wraps around it a non-zero number of times.
+///
+/// # Example
+/// ```
+///     use libreda_db::prelude::*;
+///     use libreda_db::layout::algorithms::decompose_maximal_rectangles;
+///     // Use a polygon like the following.
+///     //    +--+
+///     //    |  |
+///     // +--+  |
+///     // |     |
+///     // +-----+
+///     let poly = SimpleRPolygon::try_new(vec![
+///         (0, 0), (2, 0), (2, 2), (1, 2), (1, 1), (0, 1)
+///     ].iter().map(|t| Point::from(t)).collect()).unwrap();
+///
+///     // Decompose the polygon into non-overlapping horizontal rectangles.
+///     let rects = decompose_maximal_rectangles(poly.edges());
+///     assert_eq!(rects, vec![Rect::new((0, 0), (2, 1)), Rect::new((1, 0), (2, 2))]);
+/// ```
+pub fn decompose_maximal_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
+    where T: Ord + Bounded + Copy + Zero,
+          I: Iterator<Item=REdge<T>> {
+    decompose_disjoint_and_maximal_rectangles(redges, false, true)
+}
+
+/// Decompose a set of manhattanized polygons into rectangles.
+/// The polygons in form of an iterator over all the edges.
+/// A point is considered inside the polygon when the polygon wraps around it a non-zero number of times.
+///
+/// # Parameters
+/// * `find_disjoint_rectangles`: If true, output horizontal slices which are not overlapping.
+/// * `find_maximal_rectangles`: If true, also output all maximal axis-aligned rectangles which fit in the polygon. They are overlapping.
+fn decompose_disjoint_and_maximal_rectangles<T, I>(redges: I, find_disjoint_rectangles: bool, find_maximal_rectangles: bool) -> Vec<Rect<T>>
+    where T: Ord + Bounded + Copy + Zero,
+          I: Iterator<Item=REdge<T>> {
     // Sweep through the vertical edges from left to right. Keep track of 'open' rectangles.
     // A rectangle is opened when a left boundary is encountered and closed when a right boundary is encountered.
     // Construct a rectangle once a right boundary is encountered.
@@ -129,7 +170,7 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
                 -1
             };
 
-            {
+            if find_disjoint_rectangles { // Create non-overlapping rectangles.
                 // Find rectangles that are closed by this boundary.
                 // Find this by computing the intersection of the y-interval of the right boundary
                 // with all open intervals that are about to be closed (which have value = -increment).
@@ -148,6 +189,74 @@ pub fn decompose_rectangles<T, I>(redges: I) -> Vec<Rect<T>>
                     });
 
                 results.extend(closed_rects);
+            }
+
+            if find_maximal_rectangles {
+                // Create maximal rectangles which likely overlap.
+
+                let increment_inv = -increment;
+                let closed_rects: Vec<_> = open_rects.iter()
+                    .take_while(|(_a, b, _value, _x)| b <= &current_edge.end)
+                    .filter(|(a, _b, value, _x)| a >= &current_edge.start && value == &increment_inv)
+                    .collect();
+
+                // Find x coordinates of all left edges.
+                let mut left_edge_xs: Vec<_> = closed_rects.iter()
+                    .map(|(_a, _b, _value, x)| *x)
+                    .collect();
+
+                left_edge_xs.sort_unstable();
+                left_edge_xs.dedup();
+
+                let x_end = current_edge.offset;
+
+                for x_start in left_edge_xs {
+                    // Find maximum open rectangles which are on the right of `x_start`.
+
+                    let y_intervals = open_rects.iter()
+                        .filter(|(_a, _b, value, _x)| value == &increment_inv)
+                        .filter(|(_, _, _, x)| x <= &x_start)
+                        .map(|&(a, b, _, _)| {
+                            (a, b)
+                        });
+
+                    // Merge the intervals.
+                    let max_y_spans = {
+                        let mut max_y_spans = Vec::new();
+                        let mut open_interval = None;
+                        for (start2, end2) in y_intervals {
+                            if let Some((start1, end1)) = open_interval {
+                                if start2 == end1 {
+                                    // Extend open interval.
+                                    open_interval = Some((start1, end2))
+                                } else {
+                                    // Close interval and start new interval.
+                                    max_y_spans.push((start1, end1));
+                                    open_interval = Some((start2, end2));
+                                }
+                            } else {
+                                open_interval = Some((start2, end2))
+                            }
+                        }
+                        // Add last interval.
+                        if let Some(i) = open_interval {
+                            max_y_spans.push(i);
+                        }
+                        max_y_spans
+                    };
+
+
+                    // Create maximal rectangles.
+                    for (y_start, y_end) in max_y_spans {
+                        if y_end <= current_edge.end && y_start >= current_edge.start {
+                            // The open interval intersects with the closing edge.
+                            let max_rectangle = Rect::new((x_start, y_start), (x_end, y_end));
+                            results.push(max_rectangle)
+                        } else {
+                            // The open interval does not interact with the closing edge. This is not a maximal rectangle.
+                        }
+                    }
+                }
             }
 
             // Update the inside-count for open rectangles that interact with the current edge.

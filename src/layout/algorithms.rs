@@ -331,3 +331,59 @@ fn test_decompose_rectangles_overlapping() {
     let decomposed = decompose_rectangles(rects.iter().flat_map(|r| r.into_edges()));
     assert_eq!(decomposed, vec![Rect::new((0, 0), (10, 10))]);
 }
+
+#[test]
+fn test_decompose_maximal_rectangles() {
+    use crate::prelude::Point;
+    use crate::prelude::SimpleRPolygon;
+    //    +--+
+    //    |  |
+    // +--+  |
+    // |     |
+    // +-----+
+    let poly = SimpleRPolygon::try_new(vec![
+        (0, 0), (2, 0), (2, 2), (1, 2), (1, 1), (0, 1)
+    ].iter().map(|t| Point::from(t)).collect()).unwrap();
+
+    let expected_rects = vec![
+        Rect::new((0, 0), (2, 1)),
+        Rect::new((1, 0), (2, 2))
+    ];
+
+    let rects = decompose_maximal_rectangles(poly.edges());
+    assert_eq!(rects, expected_rects);
+
+    // Test with reversed polygon.
+    let rects = decompose_maximal_rectangles(poly.reversed().edges());
+    assert_eq!(rects, expected_rects);
+}
+
+
+#[test]
+fn test_decompose_maximal_rectangles_2() {
+    use crate::prelude::Point;
+    use crate::prelude::SimpleRPolygon;
+    // +-----+
+    // |     |
+    // +--+  |
+    //    |  |
+    // +--+  |
+    // |     |
+    // +-----+
+    let poly = SimpleRPolygon::try_new(vec![
+        (0, 0), (2, 0), (2, 3), (0, 3), (0, 2), (1, 2), (1, 1), (0, 1)
+    ].iter().map(|t| Point::from(t)).collect()).unwrap();
+
+    let expected_rects = vec![
+        Rect::new((0, 0), (2, 1)),
+        Rect::new((0, 2), (2, 3)),
+        Rect::new((1, 0), (2, 3)),
+    ];
+
+    let rects = decompose_maximal_rectangles(poly.edges());
+    assert_eq!(rects, expected_rects);
+
+    // Test with reversed polygon.
+    let rects = decompose_maximal_rectangles(poly.reversed().edges());
+    assert_eq!(rects, expected_rects);
+}

@@ -79,6 +79,7 @@
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde;
+extern crate num_traits;
 
 /// Re-exports: Crate for geometric primitives (points, polygons, ...).
 pub use iron_shapes;

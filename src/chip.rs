@@ -1493,13 +1493,31 @@ impl LayoutEdit for Chip<Coord> {
 
     fn create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
         // Find next free layer index.
-        let layer_index = self.layer_index_generator.next();
+        let layer_index = loop {
+            let id = self.layer_index_generator.next();
+            if !self.layer_info.contains_key(&id) {
+                break id;
+            }
+        };
+
+        self.create_layer_with_id(layer_index, index, datatype).unwrap(); // Unwrap is fine because layer ID is freshly generated.
+
+        layer_index
+    }
+
+    fn create_layer_with_id(&mut self, layer_id: Self::LayerId, index: u32, datatype: u32) -> Result<(), ()> {
+
+        if self.layer_info.contains_key(&layer_id) {
+            return Err(());
+        }
+
         // Create new entries in the layer lookup tables.
-        self.layers_by_index_datatype.insert((index, datatype), layer_index);
+        self.layers_by_index_datatype.insert((index, datatype), layer_id);
 
         let info = LayerInfo { index, datatype, name: None };
-        self.layer_info.insert(layer_index, info);
-        layer_index
+        self.layer_info.insert(layer_id, info);
+
+        Ok(())
     }
 
     fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {

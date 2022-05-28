@@ -148,6 +148,10 @@ pub trait LayoutEdit: LayoutBase + HierarchyEdit {
     /// Use `set_layer_name()` to define a name.
     fn create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId;
 
+    /// Create a new layer with a specific ID. This is used to clone layer-stacks between layouts while preserving their IDs.
+    /// Returns an `Err` when the ID already exists.
+    fn create_layer_with_id(&mut self, layer_id: Self::LayerId, index: UInt, datatype: UInt) -> Result<(), ()>;
+
     /// Set the name of a layer or clear the layer name when passing `None`.
     /// This method should not change the ID of the layer.
     /// Returns the previous name of the layer.

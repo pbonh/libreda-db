@@ -7,14 +7,16 @@
 //!
 //! TBD
 
+use num_traits::Num;
+
 /// Define essential types used for expressing design rules.
 pub trait RuleBase {
     /// Type used as layer identifier.
     type LayerId: Clone;
     /// Type used to express distances.
-    type Distance: Copy + PartialOrd;
+    type Distance: Num + Copy + PartialOrd;
     /// Type used to express areas.
-    type Area: Copy + PartialOrd;
+    type Area: Num + Copy + PartialOrd;
 }
 
 /// Minimum spacing rules between shapes on the same layer.

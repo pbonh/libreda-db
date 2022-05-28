@@ -522,6 +522,7 @@ impl<'a, T: NetlistBase + 'static, U> NetlistBase for Undo<'a, T, U> {
 impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
     where T: NetlistEdit + 'static,
           U: From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>> {
+
     fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
         let id = self.chip.create_pin(circuit, name, direction);
         self.transactions.push(NetlistUndoOp::CreatePin(id.clone()).into());
@@ -583,6 +584,12 @@ impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
         let id = self.chip.create_layer(index, datatype);
         self.transactions.push(LayoutUndoOp::CreateLayer(id.clone()).into());
         id
+    }
+
+    fn create_layer_with_id(&mut self, layer_id: Self::LayerId, index: u32, datatype: u32) -> Result<(), ()> {
+        self.chip.create_layer_with_id(layer_id.clone(), index, datatype)?;
+        self.transactions.push(LayoutUndoOp::CreateLayer(layer_id.clone()).into());
+        Ok(())
     }
 
     fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {

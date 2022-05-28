@@ -196,6 +196,10 @@ pub trait LayoutEditDecorator: MutDecorator
         self.mut_base().create_layer(index, datatype)
     }
 
+    fn d_create_layer_with_id(&mut self, layer_id: <Self::D as LayoutBase>::LayerId, index: UInt, datatype: UInt) -> Result<(), ()> {
+        self.mut_base().create_layer_with_id(layer_id, index, datatype)
+    }
+
     fn d_set_layer_name(&mut self, layer: &<Self::D as LayoutBase>::LayerId, name: Option<<Self::D as HierarchyBase>::NameType>) -> Option<<Self::D as HierarchyBase>::NameType> {
         self.mut_base().set_layer_name(layer, name)
     }
@@ -234,6 +238,10 @@ impl<T, L> LayoutEdit for T
 
     fn create_layer(&mut self, index: UInt, datatype: UInt) -> Self::LayerId {
         self.d_create_layer(index, datatype)
+    }
+
+    fn create_layer_with_id(&mut self, layer_id: Self::LayerId, index: UInt, datatype: UInt) -> Result<(), ()> {
+        self.d_create_layer_with_id(layer_id, index, datatype)
     }
 
     fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {

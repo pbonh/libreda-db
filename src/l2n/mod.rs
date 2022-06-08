@@ -5,6 +5,8 @@
 
 //! Trait definitions for layouts fused with netlists.
 
+pub mod util;
+
 use super::traits::*;
 
 /// Fused layout and netlist view.

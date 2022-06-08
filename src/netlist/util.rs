@@ -13,6 +13,27 @@ use std::fmt;
 
 use itertools::Itertools;
 
+/// Copy the pin definitoins from a cell to another cell in another netlist.
+/// # Panics
+/// Panics if a pin name is already occupied at the destination cell.
+pub fn copy_pins<NS, ND>(
+    dest_netlist: &mut ND,
+    dest_cell: &ND::CellId,
+    source_netlist: &NS,
+    source_cell: &NS::CellId,
+)
+    where NS: NetlistBase,
+          ND: NetlistEdit
+{
+    for source_pin in source_netlist.each_pin(source_cell) {
+        dest_netlist.create_pin(
+            dest_cell,
+            source_netlist.pin_name(&source_pin).to_string().into(),
+            source_netlist.pin_direction(&source_pin),
+        );
+    }
+}
+
 /// Non-modifying utility functions for netlists.
 /// Import the this trait to use the utility functions all types that implement the `NetlistBase` trait.
 pub trait NetlistUtil: NetlistBase {
@@ -96,7 +117,6 @@ pub trait NetlistUtil: NetlistBase {
         }
         fmt::Result::Ok(())
     }
-
 }
 
 impl<N: NetlistBase> NetlistUtil for N {}
@@ -354,7 +374,6 @@ pub trait NetlistEditUtil: NetlistEdit {
             .collect();
 
         if !unnamed_nets.is_empty() {
-
             let mut id_counter = 0;
             for unnamed_net in unnamed_nets {
                 // Generate a new name.

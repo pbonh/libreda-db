@@ -57,6 +57,24 @@ pub fn copy_all_layers<LS, LT>(
     }
 }
 
+/// Copy all layers (without their contents) from a source layout into a destination layout and preserve
+/// the layer IDs.
+/// Source and target layout must have the same `LayerId` type.
+///
+/// # Panics
+/// Panics if a layer number or layer name already exists.
+pub fn copy_all_layers_preserve_ids<LS, LT>(
+    target_layout: &mut LT,
+    source_layout: &LS,
+)
+    where LS: LayoutBase,
+          LT: LayoutEdit<LayerId=LS::LayerId>,
+{
+    for l in source_layout.each_layer() {
+        copy_layer_preserve_id(target_layout, source_layout, &l);
+    }
+}
+
 /// Copy a layer (without its content) from a source layout into a destination layout.
 ///
 /// # Panics
@@ -70,6 +88,38 @@ pub fn copy_layer<LS, LT>(
 {
     let layer_info = source_layout.layer_info(source_layer);
     let layer_id = target_layout.create_layer(layer_info.index, layer_info.datatype);
+
+    // Convert between the name types via `&str`.
+    let layer_name = layer_info.name.as_ref()
+        .map(|n| {
+            let s: &str = n.borrow();
+            s.to_string().into()
+        });
+
+    target_layout.set_layer_name(&layer_id, layer_name);
+
+    layer_id
+}
+
+
+/// Copy a layer (without its content) from a source layout into a destination layout
+/// while preserving the layer ID.
+/// `LayerId` types of the both layouts must be the same.
+///
+/// # Panics
+/// Panics if the layer number or layer name already exists.
+pub fn copy_layer_preserve_id<LS, LT>(
+    target_layout: &mut LT,
+    source_layout: &LS,
+    source_layer: &LS::LayerId,
+) -> LT::LayerId
+    where LS: LayoutBase,
+          LT: LayoutEdit<LayerId=LS::LayerId>,
+{
+    let layer_info = source_layout.layer_info(source_layer);
+    let layer_id = source_layer.clone();
+    target_layout.create_layer_with_id(layer_id.clone(), layer_info.index, layer_info.datatype)
+        .expect("layer already exists");
 
     // Convert between the name types via `&str`.
     let layer_name = layer_info.name.as_ref()

@@ -77,6 +77,16 @@ pub trait LayoutBase: HierarchyBase {
     fn with_shape<F, R>(&self, shape_id: &Self::ShapeId, f: F) -> R
         where F: FnMut(&Self::LayerId, &Geometry<Self::Coord>) -> R;
 
+    /// Get a clone of the shape geometry.
+    fn shape_geometry(&self, shape_id: &Self::ShapeId) -> Geometry<Self::Coord> {
+        self.with_shape(shape_id, |_, geo| geo.clone())
+    }
+
+    /// Get the layer of a shape.
+    fn shape_layer(&self, shape_id: &Self::ShapeId) -> Self::LayerId {
+        self.with_shape(shape_id, |layer, _| layer.clone())
+    }
+
     /// Get the parent cell and the layer of a shape as a (cell, layer) tuple.
     fn parent_of_shape(&self, shape_id: &Self::ShapeId) -> (Self::CellId, Self::LayerId);
 

@@ -19,6 +19,7 @@ pub use crate::reference_access;
 pub use crate::reference_access::*;
 pub use crate::netlist::util::*;
 pub use crate::technology;
+pub use crate::technology::prelude::*;
 
 /// Re-export of most traits.
 /// This can be useful if only traits should be used but not the rest.

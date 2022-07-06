@@ -13,7 +13,7 @@ LibrEDA DB is a collection of interface definitions and data structures for chip
 To view the documentation of this library in a browser clone this repository
 and run `cargo doc --open`.
 
-Alternatively a possible outdated version is hosted [here](https://libreda.org/doc/libreda_db) or [here](https://libreda.codeberg.page/doc/libreda_db).
+Alternatively a possible outdated version is hosted [here](https://libreda.org/doc/libreda_db/index.html) or [here](https://libreda.codeberg.page/doc/libreda_db/index.html).
 
 ## Current state
 

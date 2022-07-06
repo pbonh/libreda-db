@@ -117,6 +117,15 @@ pub trait NetlistBase: HierarchyBase {
         Box::new(self.each_pin_vec(circuit).into_iter())
     }
 
+    // /// Find the position of the pin.
+    // fn pin_position(&self, pin: &Self::PinId) -> usize {
+    //     self.for_each_pin(&self.parent_cell_of_pin(pin))
+    //         .enumerate()
+    //         .find(|(_, p)| p == pin)
+    //         .map(|(idx, _)| idx)
+    //         .expect("pin ID does not exist")
+    // }
+
     /// Call a function for each pin instance of the circuit instance.
     fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F) where F: FnMut(Self::PinInstId) -> ();
 

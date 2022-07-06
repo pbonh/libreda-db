@@ -107,7 +107,6 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
 }
 
 
-
 impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     /// Iterate over the IDs of all pins of this cell.
     pub fn each_pin_instance_id(&self) -> impl Iterator<Item=N::PinInstId> + '_ {
@@ -341,6 +340,11 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
         self.id.clone()
     }
 
+    /// Access the base structure.
+    pub fn base(&self) -> &'_ N {
+        self.base
+    }
+
     /// Get the terminal ID of this pin instance.
     pub fn terminal_id(&self) -> TerminalId<N> {
         TerminalId::PinInstId(self.id())
@@ -406,6 +410,12 @@ impl<'a, N: NetlistBase + ?Sized> Clone for TerminalRef<'a, N> {
     }
 }
 
+impl<'a, N: NetlistBase> PartialEq for TerminalRef<'a, N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+
 impl<'a, N: NetlistBase> From<PinRef<'a, N>> for TerminalRef<'a, N> {
     fn from(p: PinRef<'a, N>) -> Self {
         Self::Pin(p)
@@ -431,6 +441,14 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     /// Get the ID of the terminal.
     pub fn id(&self) -> TerminalId<N> {
         (*self).clone().into()
+    }
+
+    /// Get a reference to the netlist structure.
+    pub fn base(&self) -> &'_ N {
+        match self {
+            TerminalRef::Pin(p) => p.base(),
+            TerminalRef::PinInst(p) => p.base()
+        }
     }
 
     /// Get the attached net.
@@ -473,4 +491,5 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
                 p.qname(separator)
         }
     }
+
 }

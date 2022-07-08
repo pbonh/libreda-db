@@ -15,9 +15,9 @@ use itertools::Itertools;
 fn test_create_circuit() {
     let mut chip = Chip::new();
     assert_eq!(chip.num_cells(), 0);
-    let a = chip.create_cell("A".to_string().into());
+    let a = chip.create_cell("A".to_string());
     assert_eq!(chip.num_cells(), 1);
-    let b = chip.create_cell("B".to_string().into());
+    let b = chip.create_cell("B".to_string());
     assert_eq!(chip.num_cells(), 2);
     assert_eq!(chip.cell_name(&a), "A");
     assert_eq!(chip.cell_name(&b), "B");
@@ -29,8 +29,8 @@ fn test_create_circuit() {
 fn test_get_cell_by_name() {
     // Find cells by name.
     let mut chip = Chip::new();
-    let a = chip.create_cell("A".to_string().into());
-    let b = chip.create_cell("B".to_string().into());
+    let a = chip.create_cell("A".to_string());
+    let b = chip.create_cell("B".to_string());
     assert_eq!(chip.cell_by_name("A"), Some(a));
     assert_eq!(chip.cell_by_name("B"), Some(b));
     assert_eq!(chip.cell_by_name("C"), None);
@@ -53,9 +53,9 @@ fn test_create_sub_circuit() {
     assert_eq!(chip.template_cell(&inst_a), a);
     assert_eq!(chip.parent_cell(&inst_a), b);
 
-    assert_eq!(chip.each_cell_instance(&b).collect_vec(), vec![inst_a.clone()]);
+    assert_eq!(chip.each_cell_instance(&b).collect_vec(), vec![inst_a]);
     assert_eq!(chip.each_cell_instance(&a).count(), 0);
-    assert_eq!(chip.each_cell_reference(&a).collect_vec(), vec![inst_a.clone()]);
+    assert_eq!(chip.each_cell_reference(&a).collect_vec(), vec![inst_a]);
     assert_eq!(chip.each_cell_reference(&b).count(), 0);
 
     // Check dependency relations.
@@ -64,10 +64,10 @@ fn test_create_sub_circuit() {
     assert_eq!(chip.num_cell_dependencies(&a), 0);
     assert_eq!(chip.num_cell_dependencies(&b), 1);
 
-    assert_eq!(chip.each_dependent_cell(&a).collect_vec(), vec![b.clone()]);
+    assert_eq!(chip.each_dependent_cell(&a).collect_vec(), vec![b]);
     assert_eq!(chip.each_dependent_cell(&b).collect_vec(), vec![]);
     assert_eq!(chip.each_cell_dependency(&a).collect_vec(), vec![]);
-    assert_eq!(chip.each_cell_dependency(&b).collect_vec(), vec![a.clone()]);
+    assert_eq!(chip.each_cell_dependency(&b).collect_vec(), vec![a]);
 }
 
 
@@ -145,12 +145,12 @@ fn test_connect_nets() {
     let top_clk = chip.create_net(&top, Some("clk".into()));
 
     // Connect the clock net.
-    assert_eq!(chip.connect_pin(&top_pin_clk, Some(top_clk.clone())), None);
+    assert_eq!(chip.connect_pin(&top_pin_clk, Some(top_clk)), None);
     assert_eq!(chip.num_net_terminals(&top_clk), 1);
     let inst1_clk_pin = chip.pin_instance(&inst1, &a_clk);
     let inst2_clk_pin = chip.pin_instance(&inst2, &a_clk);
-    assert_eq!(chip.connect_pin_instance(&inst1_clk_pin, Some(top_clk.clone())), None);
-    assert_eq!(chip.connect_pin_instance(&inst2_clk_pin, Some(top_clk.clone())), None);
+    assert_eq!(chip.connect_pin_instance(&inst1_clk_pin, Some(top_clk)), None);
+    assert_eq!(chip.connect_pin_instance(&inst2_clk_pin, Some(top_clk)), None);
     assert_eq!(chip.num_net_terminals(&top_clk), 3);
 
     let top_clk_terminals = chip.each_terminal_of_net(&top_clk).collect_vec();
@@ -264,15 +264,15 @@ fn test_flatten_circuit_instance() {
     let b_inst = chip.create_cell_instance(&a, &b, Some("b_inst".into()));
 
     let net1 = chip.create_net(&top, Some("Net1".into()));
-    chip.connect_pin(&top_pin_a, Some(net1.clone()));
+    chip.connect_pin(&top_pin_a, Some(net1));
     let a_pin_inst_a = chip.each_pin_instance_vec(&a_inst);
-    chip.connect_pin_instance(&a_pin_inst_a[0], Some(net1.clone()));
+    chip.connect_pin_instance(&a_pin_inst_a[0], Some(net1));
     assert_eq!(chip.num_net_terminals(&net1), 2);
 
     let net2 = chip.create_net(&a, Some("Net2".into()));
     let b_pin_inst_a = chip.each_pin_instance_vec(&b_inst);
-    chip.connect_pin_instance(&b_pin_inst_a[0], Some(net2.clone()));
-    chip.connect_pin(&a_pin_a, Some(net2.clone()));
+    chip.connect_pin_instance(&b_pin_inst_a[0], Some(net2));
+    chip.connect_pin(&a_pin_a, Some(net2));
     assert_eq!(chip.num_net_terminals(&net2), 2);
 
     // Flatten the middle circuit.

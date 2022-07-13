@@ -4,7 +4,7 @@
 
 [package]
 name = "libreda-db"
-version = "0.0.9"
+version = "0.0.10"
 authors = ["Thomas Kramer <code@tkramer.ch>"]
 edition = "2021"
 license = "AGPL-3.0-or-later"

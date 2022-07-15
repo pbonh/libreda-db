@@ -2,9 +2,15 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+//! # Experimental
 //!
+//! Simplify usage of cell libraries.
+
+// TODO: Remove when implemented.
+#![allow(unused)]
 
 use crate::prelude::HierarchyBase;
+
 
 /// Identifier of a library.
 #[derive(Copy, Clone, Debug, Hash, PartialOrd, PartialEq, Eq, Ord)]

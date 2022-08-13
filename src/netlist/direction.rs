@@ -32,12 +32,17 @@ impl Default for Direction {
 }
 
 impl Direction {
-    /// Check if this direction.rs is 'input'.
+    /// Check if this direction is 'input'.
     pub fn is_input(&self) -> bool {
         self == &Direction::Input
     }
-    /// Check if this direction.rs is 'output'.
+    /// Check if this direction is 'output'.
     pub fn is_output(&self) -> bool {
         self == &Direction::Output
+    }
+
+    /// Check if this direciton is either 'Supply' or 'Ground'.
+    pub fn is_power(&self) -> bool {
+        matches!(self, Direction::Supply | Direction::Ground)
     }
 }

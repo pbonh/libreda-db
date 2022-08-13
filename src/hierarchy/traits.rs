@@ -234,6 +234,16 @@ pub trait HierarchyBase {
     }
 }
 
+/// Additional requirement that all ID types are `Send + Sync` as needed for multithreading
+pub trait HierarchyMultithread {}
+
+impl<H> HierarchyMultithread for H
+    where H: HierarchyBase,
+          H::CellId: Send + Sync,
+          H::CellInstId: Send + Sync,
+{}
+
+
 
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
 pub trait HierarchyEdit: HierarchyBase {

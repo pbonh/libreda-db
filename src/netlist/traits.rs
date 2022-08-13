@@ -18,6 +18,7 @@
 //! [`NetlistEditUtil`]: crate::netlist::util::NetlistEditUtil
 
 use std::hash::Hash;
+use crate::prelude::HierarchyMultithread;
 use super::prelude::*;
 pub use crate::traits::{HierarchyBase, HierarchyEdit};
 
@@ -264,6 +265,15 @@ pub trait NetlistBase: HierarchyBase {
     }
 }
 
+/// Additional requirement that all ID types are `Send + Sync` as needed for multithreading
+pub trait NetlistMultithread {}
+
+impl<N> NetlistMultithread for N
+    where N: NetlistBase + HierarchyMultithread,
+          N::PinId: Send + Sync,
+          N::PinInstId: Send + Sync,
+          N::NetId: Send + Sync,
+{}
 
 /// Trait for netlists that support editing.
 ///

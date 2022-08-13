@@ -11,7 +11,7 @@ use std::hash::Hash;
 use crate::layout::types::{UInt, LayerInfo};
 use iron_shapes::transform::SimpleTransform;
 use iron_shapes::CoordinateType;
-use crate::prelude::{Geometry, Rect};
+use crate::prelude::{Geometry, HierarchyMultithread, Rect};
 use crate::traits::{HierarchyBase, HierarchyEdit};
 use crate::prelude::PropertyValue;
 use num_traits::Num;
@@ -21,7 +21,7 @@ use num_traits::Num;
 /// This traits specifies methods for accessing the components of a layout.
 pub trait LayoutBase: HierarchyBase {
     /// Number type used for coordinates and distances.
-    type Coord: CoordinateType + std::fmt::Display + Hash + 'static;
+    type Coord: CoordinateType + std::fmt::Debug + std::fmt::Display + Hash + 'static;
     /// Number type for areas.
     /// This is possibly another type then `Coord` for the following reasons:
     /// * Distances and areas are semantically different.
@@ -127,11 +127,21 @@ pub trait LayoutBase: HierarchyBase {
     }
 }
 
+/// Additional requirement that all ID types are `Send + Sync` as needed for multithreading
+pub trait LayoutMultithread {}
+
+impl<L> LayoutMultithread for L
+    where L: LayoutBase + HierarchyMultithread,
+          L::LayerId: Send + Sync,
+          L::ShapeId: Send + Sync,
+          L::Coord: Send + Sync,
+{}
+
 /// Access shapes and instances in a layout based on their locations.
 pub trait RegionSearch: LayoutBase {
 
     /// Iterate over the IDs of all shapes (on all layers) whose bounding-box overlaps with the `search_region`.
-    fn each_shape_in_region(&self, cell: &Self::CellId, layer_id: &Self::LayerId, search_region: &Rect<Self::Coord>) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+    fn each_shape_in_region(&self, cell: &Self::CellId, search_region: &Rect<Self::Coord>) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
         let cell = cell.clone(); // Get an owned ID.
         let search_region = search_region.clone(); // Get an owned rectangle.
         Box::new(self.each_layer()

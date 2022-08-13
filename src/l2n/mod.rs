@@ -22,6 +22,13 @@ pub trait L2NBase: LayoutBase + NetlistBase {
     fn get_pin_of_shape(&self, shape_id: &Self::ShapeId) -> Option<Self::PinId>;
 }
 
+/// Additional requirement that all ID types are `Send + Sync` as needed for multithreading
+pub trait L2NMultithread: LayoutMultithread + NetlistMultithread {}
+
+impl<L> L2NMultithread for L
+    where L: L2NBase + LayoutMultithread + NetlistMultithread
+{}
+
 /// Fused layout and netlist view.
 /// This trait makes the link between netlist elements and layout elements.
 pub trait L2NEdit: L2NBase + LayoutEdit + NetlistEdit {

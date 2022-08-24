@@ -41,11 +41,20 @@ pub trait MinimumSpacing: DistanceRuleBase {
     // fn min_spacing_same_net(layer: &Self::LayerId) -> Self::Distance;
 }
 
-/// Minimum with rules.
+/// Minimum width rules.
 pub trait MinimumWidth: DistanceRuleBase {
 
     /// Minimal width of a shape with a certain length.
     fn min_width(&self,
+                 layer: &Self::LayerId,
+                 shape_length: Option<Self::Distance>) -> Option<Self::Distance>;
+}
+
+/// Default width rules.
+pub trait DefaultWidth: DistanceRuleBase {
+
+    /// Default width of a wire segment of a certain length.
+    fn default_width(&self,
                  layer: &Self::LayerId,
                  shape_length: Option<Self::Distance>) -> Option<Self::Distance>;
 }

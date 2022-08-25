@@ -65,3 +65,22 @@ pub trait PreferredRoutingDirection: RuleBase {
     /// Get the preferred routing direction on this metal layer.
     fn preferred_routing_direction(&self, layer: &Self::LayerId) -> Option<Orientation2D>;
 }
+
+/// Rules commonly used for routing.
+pub trait RoutingRules: PreferredRoutingDirection + DefaultWidth + MinimumSpacing + MinimumWidth {
+
+    /// Get the default routing pitch on this layer for x and y directions.
+    fn default_pitch(&self, layer: &Self::LayerId) -> Option<(Self::Distance, Self::Distance)>;
+
+    /// Get the default routing pitch for wires with the preferred routing direction.
+    /// Return `None` if no default pitch or no routing direction is defined for this layer.
+    fn default_pitch_preferred_direction(&self, layer: &Self::LayerId) -> Option<Self::Distance> {
+        let pitch = self.default_pitch(layer)?;
+        let preferred_direction = self.preferred_routing_direction(layer)?;
+
+        match preferred_direction {
+            Orientation2D::Horizontal => Some(pitch.1),
+            Orientation2D::Vertical => Some(pitch.0),
+        }
+    }
+}

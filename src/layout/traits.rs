@@ -128,7 +128,7 @@ pub trait LayoutBase: HierarchyBase {
 }
 
 /// Additional requirement that all ID types are `Send + Sync` as needed for multithreading
-pub trait LayoutMultithread {}
+pub trait LayoutMultithread: LayoutBase + HierarchyMultithread {}
 
 impl<L> LayoutMultithread for L
     where L: LayoutBase + HierarchyMultithread,

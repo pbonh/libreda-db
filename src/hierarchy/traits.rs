@@ -235,7 +235,7 @@ pub trait HierarchyBase {
 }
 
 /// Additional requirement that all ID types are `Send + Sync` as needed for multithreading
-pub trait HierarchyMultithread {}
+pub trait HierarchyMultithread: HierarchyBase {}
 
 impl<H> HierarchyMultithread for H
     where H: HierarchyBase,

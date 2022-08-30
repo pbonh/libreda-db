@@ -100,6 +100,7 @@ pub mod rw_reference_access;
 pub mod chip;
 pub mod undo;
 pub mod flat_view;
+pub mod profile;
 
 pub mod technology;
 

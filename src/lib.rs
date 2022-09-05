@@ -106,7 +106,7 @@ pub mod technology;
 
 mod decorator;
 mod library;
-mod index_map;
+mod slab_alloc;
 
 
 

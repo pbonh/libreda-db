@@ -9,11 +9,18 @@ type IdType = u32;
 /// Integer type used as pointer into the data array.
 type IndexType = u32;
 
-/// Map-like container which does not let the caller choose the key but generates it
-/// when an element is inserted.
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct IndexMap<T> {
+struct Element<T> {
+    id: IdType,
+    next_free: usize,
+    value: T
+}
+
+/// Container which efficiently allocates space for its elements.
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct SlabAlloc<T> {
     data: Vec<Option<(IdType, T)>>,
     id_counter: IdType,
     free_indices: Vec<IndexType>,
@@ -21,7 +28,7 @@ pub struct IndexMap<T> {
     len: usize,
 }
 
-/// Key into an [`IndexMap`].
+/// Key into an [`SlabAlloc`].
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Index {
@@ -38,7 +45,7 @@ impl Index {
 }
 
 #[allow(unused)]
-impl<T> IndexMap<T> {
+impl<T> SlabAlloc<T> {
     /// Create an empty container.
     pub fn new() -> Self {
         Self {
@@ -183,8 +190,8 @@ impl<T> IndexMap<T> {
 
 
 #[test]
-fn test_index_map() {
-    let mut map = IndexMap::new();
+fn test_slab_allocator() {
+    let mut map = SlabAlloc::new();
 
     let h1 = map.insert(1);
     let h2 = map.insert(2);

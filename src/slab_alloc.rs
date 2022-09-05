@@ -4,25 +4,32 @@
 
 //! Container with `O(1)` insertion, lookup and remove operations.
 
-/// Integer type used to make handles unique.
-type IdType = u32;
-/// Integer type used as pointer into the data array.
-type IndexType = u32;
+use num_traits::{FromPrimitive, PrimInt, ToPrimitive, Unsigned};
 
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-struct Element<T> {
+struct Element<IdType, T> {
     id: IdType,
-    next_free: usize,
-    value: T
+    value: Option<T>
 }
+
+/// Slab allocator with 8-bit indices. Can hold at most 2^8 elements.
+pub type SlabAlloc8 = SlabAlloc<u8, u8>;
+/// Slab allocator with 16-bit indices. Can hold at most 2^16 elements.
+pub type SlabAlloc16 = SlabAlloc<u16, u16>;
+/// Slab allocator with 32-bit indices. Can hold at most 2^32 elements.
+pub type SlabAlloc32 = SlabAlloc<u32, u32>;
+/// Slab allocator with 64-bit indices. Can hold at most 2^64 elements.
+pub type SlabAlloc64 = SlabAlloc<u64, u64>;
+/// Slab allocator with n-bit indices. Can hold at most 2^n elements.
+/// Where `n` is the machine word size.
+pub type SlabAllocUsize = SlabAlloc<usize, usize>;
 
 /// Container which efficiently allocates space for its elements.
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct SlabAlloc<T> {
-    data: Vec<Option<(IdType, T)>>,
-    id_counter: IdType,
+pub struct SlabAlloc<T, IndexType = u32, IdType = u32> {
+    data: Vec<Element<IdType, T>>,
     free_indices: Vec<IndexType>,
     /// Number of elements currently in the map.
     len: usize,
@@ -31,25 +38,27 @@ pub struct SlabAlloc<T> {
 /// Key into an [`SlabAlloc`].
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Index {
+pub struct Index<IndexType, IdType> {
     /// Pointer into the data array.
     index: IndexType,
     /// A monotonically increasing ID which makes sure that the same index is not repeated.
     id: IdType,
 }
 
-impl Index {
+impl<IndexType, IdType> Index<IndexType, IdType>
+    where IndexType: PrimInt + Unsigned + ToPrimitive {
     fn index(&self) -> usize {
-        self.index as usize
+        self.index.to_usize().unwrap()
     }
 }
 
 #[allow(unused)]
-impl<T> SlabAlloc<T> {
+impl<T, IndexType, IdType> SlabAlloc<T, IndexType, IdType>
+    where IndexType: PrimInt + Unsigned + ToPrimitive + FromPrimitive,
+          IdType: PrimInt + Unsigned {
     /// Create an empty container.
     pub fn new() -> Self {
         Self {
-            id_counter: 0,
             free_indices: vec![],
             data: vec![],
             len: 0,
@@ -57,40 +66,52 @@ impl<T> SlabAlloc<T> {
     }
 
     /// Access an element.
-    pub fn get(&self, index: Index) -> Option<&T> {
-        let data: &(_, _) = self.data.get(index.index())
-            .and_then(|o| o.as_ref())?;
-
-        if data.0 == index.id {
-            Some(&data.1)
+    pub fn get(&self, index: Index<IndexType, IdType>) -> Option<&T> {
+        if let Some(entry) = self.data.get(index.index()) {
+            if entry.id == index.id {
+                entry.value.as_ref()
+            } else {
+                None
+            }
         } else {
             None
         }
+
     }
 
-    pub fn contains_key(&self, index: Index) -> bool {
+    pub fn contains_key(&self, index: Index<IndexType, IdType>) -> bool {
         self.get(index).is_some()
     }
 
     /// Insert an element and return the index of it.
-    pub fn insert(&mut self, value: T) -> Index {
+    ///
+    /// # Panics
+    /// Panics when the amount of indices is exhausted. This happens
+    /// when there are already `IndexType::max_value()` elements in the container.
+    pub fn insert(&mut self, value: T) -> Index<IndexType, IdType> {
         // Find a new free index.
         let index = self.free_indices.pop()
             .unwrap_or_else(|| {
-                let idx = self.data.len() as IndexType;
-                self.data.push(None); // Extend by one element.
+                let idx = IndexType::from_usize(self.data.len())
+                    .expect("slab allocator: out of indices");
+                self.data.push(Element {
+                    id: IdType::zero(),
+                    value: None
+                }); // Extend by one element.
                 idx
             });
 
-        let id = self.id_counter;
-        self.id_counter += 1;
+        let index_usize = index.to_usize().unwrap();
+        debug_assert!(self.data[index_usize].value.is_none());
 
-        debug_assert!(self.data[index as usize].is_none());
-        self.data[index as usize] = Some((id, value));
+        let entry = self.data.get_mut(index_usize).unwrap();
+        let id = entry.id;
+
+        entry.value = Some(value);
         self.len += 1;
 
         Index {
-            index: index,
+            index,
             id,
         }
     }
@@ -101,19 +122,20 @@ impl<T> SlabAlloc<T> {
     }
 
     /// Remove an element.
-    pub fn remove(&mut self, index: Index) -> Option<T> {
-        let data_id = self.data.get(index.index())
-            .and_then(|o| o.as_ref())?.0;
+    pub fn remove(&mut self, index: Index<IndexType, IdType>) -> Option<T> {
+        let entry = self.data.get_mut(index.index())?;
 
-        if data_id == index.id {
+        if entry.id == index.id {
             // ID matches.
-            let (_, value) = self.data.get_mut(index.index())
-                .and_then(|o| o.take())?;
+            let old_value = entry.value.take()?;
 
             self.free_indices.push(index.index);
             self.len -= 1;
 
-            Some(value)
+            // Make sure the next allocation uses a fresh ID value for this index.
+            entry.id = entry.id + IdType::one();
+
+            Some(old_value)
         } else {
             None
         }
@@ -129,11 +151,11 @@ impl<T> SlabAlloc<T> {
 
     /// Reclaim as much space as possible.
     pub fn shrink(&mut self) {
-        while self.data.last().map(|o| o.is_none()).unwrap_or(false) {
+        while self.data.last().map(|entry| entry.value.is_none()).unwrap_or(false) {
             self.data.pop();
         }
 
-        self.free_indices.retain(|idx| (*idx as usize) < self.data.len());
+        self.free_indices.retain(|idx| idx.to_usize().unwrap() < self.data.len());
     }
 
     /// Drop all data.
@@ -141,49 +163,61 @@ impl<T> SlabAlloc<T> {
         self.data.clear();
         self.free_indices.clear();
         self.len = 0;
-        self.id_counter = 0;
     }
 
     /// Iterate over all key-value pairs.
-    pub fn iter(&self) -> impl Iterator<Item=(Index, &T)> {
+    pub fn iter(&self) -> impl Iterator<Item=(Index<IndexType, IdType>, &T)> {
         self.data.iter()
             .enumerate()
-            .filter_map(|(index, value)| {
-                value.as_ref().map(|(id, v)| (Index {index: index as IndexType, id: *id}, v))
+            .filter_map(|(index, entry)| {
+                let index = IndexType::from_usize(index).unwrap();
+                entry.value.as_ref()
+                    .map(|v| (Index { index, id: entry.id }, v))
             })
     }
 
     /// Iterate over all key-value pairs.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=(Index, &mut T)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=(Index<IndexType, IdType>, &mut T)> {
         self.data.iter_mut()
             .enumerate()
-            .filter_map(|(index, value)| {
-                value.as_mut().map(|(id, v)| (Index {index: index as IndexType, id: *id}, v))
+            .filter_map(|(index, entry)| {
+                entry.value.as_mut()
+                    .map(|v| {
+                        let index = IndexType::from_usize(index).unwrap();
+                        (Index {
+                            index,
+                            id: entry.id,
+                        }, v)
+                    })
             })
     }
 
     /// Iterate over all values in the map.
-    pub fn values(&self) ->  impl Iterator<Item=&T> {
+    pub fn values(&self) -> impl Iterator<Item=&T> {
         self.data.iter()
-            .filter_map(|value| {
-                value.as_ref().map(|(_, v)| v)
+            .filter_map(|entry| {
+                entry.value.as_ref()
             })
     }
 
     /// Iterate over all mutable values in the map.
-    pub fn values_mut(&mut self) ->  impl Iterator<Item=&mut T> {
+    pub fn values_mut(&mut self) -> impl Iterator<Item=&mut T> {
         self.data.iter_mut()
-            .filter_map(|value| {
-                value.as_mut().map(|(_, v)| v)
+            .filter_map(|entry| {
+                entry.value.as_mut()
             })
     }
 
     /// Iterate over all keys in the map.
-    pub fn keys(&self)->  impl Iterator<Item=Index> + '_ {
+    pub fn keys(&self) -> impl Iterator<Item=Index<IndexType, IdType>> + '_ {
         self.data.iter()
             .enumerate()
-            .filter_map(|(index, value)| {
-                value.as_ref().map(|(id, _)| Index {index: index as IndexType, id: *id})
+            .filter_map(|(index, entry)| {
+                entry.value.as_ref()
+                    .map(|_| {
+                        let index = IndexType::from_usize(index).unwrap();
+                        Index { index, id: entry.id }
+                    })
             })
     }
 }
@@ -191,7 +225,7 @@ impl<T> SlabAlloc<T> {
 
 #[test]
 fn test_slab_allocator() {
-    let mut map = SlabAlloc::new();
+    let mut map = SlabAlloc32::new();
 
     let h1 = map.insert(1);
     let h2 = map.insert(2);

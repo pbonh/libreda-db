@@ -4,6 +4,8 @@
 
 //! Container with `O(1)` insertion, lookup and remove operations.
 
+#![allow(unused)]
+
 use num_traits::{FromPrimitive, PrimInt, ToPrimitive, Unsigned};
 
 #[derive(Debug, Default, Clone)]

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Profile data-base performance by measuring time spent in function calls.
+//! Acquire performance metrics of single data-base functions.
 
 use crate::prelude::*;
 use crate::decorator::{Decorator, MutDecorator};
@@ -10,7 +10,7 @@ use crate::decorator::hierarchy::*;
 use crate::decorator::layout::*;
 use crate::decorator::netlist::*;
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 
 
@@ -53,13 +53,39 @@ pub struct PerfCounter {
     /// Number of function calls.
     pub num_calls: usize,
     /// Total time spent in this function.
-    pub duration: Duration,
+    pub total_time: Duration,
+}
+
+/// Context manager for a performance counter.
+/// This is used to track when the measured function exits.
+pub struct PerfCounterManager<'a> {
+    /// Instant then the time measurement was started.
+    start_time: std::time::Instant,
+    counter: &'a mut PerfCounter,
+}
+
+impl<'a> PerfCounterManager<'a> {
+    /// Stop measuring the time and add the duration to the total spent time.
+    fn stop_measurement(self) {
+            let elapsed = self.start_time.elapsed();
+            self.counter.total_time += elapsed;
+
+    }
 }
 
 impl PerfCounter {
-    fn register_call(&mut self) {
+    /// Start measuring the spent time.
+    /// Must call `stop()` on the return value.
+    #[must_use]
+    fn start_measurement(&mut self) -> PerfCounterManager {
         self.num_calls += 1;
+        PerfCounterManager {
+            start_time: std::time::Instant::now(),
+            counter: self
+        }
     }
+
+
 }
 
 impl<'a, T> Decorator for DBPerf<'a, T> {
@@ -104,11 +130,9 @@ impl<'a, H: HierarchyEdit + 'static> HierarchyEditDecorator for DBPerf<'a, H> {
 impl<'a, L: LayoutEdit + 'static> LayoutEditDecorator for DBPerf<'a, L> {
 
     fn d_insert_shape(&mut self, parent_cell: &<Self::D as HierarchyBase>::CellId, layer: &<Self::D as LayoutBase>::LayerId, geometry: Geometry<<Self::D as LayoutBase>::Coord>) -> <Self::D as LayoutBase>::ShapeId {
-        let counter = &mut self.perf_data.insert_shape;
-        counter.register_call();
-        let t = Instant::now();
+        let m = self.perf_data.insert_shape.start_measurement();
         let ret = self.chip.insert_shape(parent_cell, layer, geometry);
-        counter.duration += t.elapsed();
+        m.stop_measurement();
         ret
     }
 

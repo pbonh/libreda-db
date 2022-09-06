@@ -129,7 +129,7 @@ impl<'a, H: HierarchyEdit + 'static> HierarchyEditDecorator for DBPerf<'a, H> {
 // Inherit everything from LayoutEdit.
 impl<'a, L: LayoutEdit + 'static> LayoutEditDecorator for DBPerf<'a, L> {
 
-    fn d_insert_shape(&mut self, parent_cell: &<Self::D as HierarchyBase>::CellId, layer: &<Self::D as LayoutBase>::LayerId, geometry: Geometry<<Self::D as LayoutBase>::Coord>) -> <Self::D as LayoutBase>::ShapeId {
+    fn d_insert_shape(&mut self, parent_cell: &L::CellId, layer: &L::LayerId, geometry: Geometry<L::Coord>) -> L::ShapeId {
         let m = self.perf_data.insert_shape.start_measurement();
         let ret = self.chip.insert_shape(parent_cell, layer, geometry);
         m.stop_measurement();

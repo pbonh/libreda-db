@@ -127,6 +127,7 @@ impl<'a, H: HierarchyEdit + 'static> HierarchyEditDecorator for DBPerf<'a, H> {
 }
 
 // Inherit everything from LayoutEdit.
+// TODO: Since every function should be measured, implement LayoutEdit directly without using the '*Decorator' traits.
 impl<'a, L: LayoutEdit + 'static> LayoutEditDecorator for DBPerf<'a, L> {
 
     fn d_insert_shape(&mut self, parent_cell: &L::CellId, layer: &L::LayerId, geometry: Geometry<L::Coord>) -> L::ShapeId {

@@ -186,6 +186,11 @@ impl<'a, H: HierarchyBase> CellInstRef<'a, H> {
         self.base.cell_instance_name(&self.id)
     }
 
+    /// Get a qualified name for this instance.
+    pub fn qname(&self, separator: &str) -> String {
+        format!("{}{}{}", self.parent().name(), separator, self.name().unwrap_or_else(|| "<unnamed>".to_string().into()))
+    }
+
     /// Get the parent cell of this instance.
     pub fn parent(&self) -> CellRef<'a, H> {
         CellRef {

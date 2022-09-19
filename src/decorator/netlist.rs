@@ -2,9 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::traits::{HierarchyBase, NetlistBase, NetlistEdit};
+use crate::traits::{HierarchyBase, HierarchyEdit, NetlistBase, NetlistEdit};
 use crate::prelude::{Direction, TerminalId};
 use crate::decorator::{Decorator, MutDecorator};
+use crate::decorator::hierarchy::HierarchyEditDecorator;
 
 /// Define the same functions as [`NetlistBase`] but just prepend a `d_` to
 /// avoid naming conflicts.
@@ -278,7 +279,7 @@ impl<T, N> NetlistBase for T
 }
 
 pub trait NetlistEditDecorator: MutDecorator
-    where Self::D: NetlistBase + NetlistEdit {
+    where Self::D: NetlistEdit {
     /// Create a new pin in this cell.
     /// Also adds the pin to all instances of the cell.
     fn d_create_pin(&mut self, cell: &<Self::D as HierarchyBase>::CellId, name: <Self::D as HierarchyBase>::NameType, direction: Direction) -> <Self::D as NetlistBase>::PinId {
@@ -326,4 +327,69 @@ pub trait NetlistEditDecorator: MutDecorator
     fn d_connect_pin_instance(&mut self, pin: &<Self::D as NetlistBase>::PinInstId, net: Option<<Self::D as NetlistBase>::NetId>) -> Option<<Self::D as NetlistBase>::NetId> {
         self.mut_base().connect_pin_instance(pin, net)
     }
+
+    // fn d_connect_terminal(&mut self, terminal: &TerminalId<Self>, net: Option<<Self::D as NetlistBase>::NetId>) -> Option<<Self::D as NetlistBase>::NetId> {
+    //     self.base().connect_terminal(terminal, net)
+    // }
+    //
+    // fn d_disconnect_terminal(&mut self, terminal: &TerminalId<Self>) -> Option<<Self::D as NetlistBase>::NetId> {
+    //     self.base().disconnect_terminal(terminal)
+    // }
+}
+
+impl<T, N> NetlistEdit for T
+    where
+        T: HierarchyEdit<NameType=N::NameType, CellId=N::CellId, CellInstId=N::CellInstId>
+        + NetlistBase<NetId=N::NetId, PinId=N::PinId, PinInstId=N::PinInstId>
+        + NetlistEditDecorator<D=N>,
+        N: NetlistEdit + 'static,
+
+{
+    fn create_pin(&mut self, cell: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
+        self.d_create_pin(cell, name, direction)
+    }
+
+    fn remove_pin(&mut self, id: &Self::PinId) {
+        self.d_remove_pin(id)
+    }
+
+    fn rename_pin(&mut self, pin: &Self::PinId, new_name: Self::NameType) -> Self::NameType {
+        self.d_rename_pin(pin, new_name)
+    }
+
+    fn create_net(&mut self, parent: &Self::CellId, name: Option<Self::NameType>) -> Self::NetId {
+        self.d_create_net(parent, name)
+    }
+
+    fn rename_net(&mut self, net_id: &Self::NetId, new_name: Option<Self::NameType>) -> Option<Self::NameType> {
+        self.d_rename_net(net_id, new_name)
+    }
+
+    fn remove_net(&mut self, net: &Self::NetId) {
+        self.d_remove_net(net)
+    }
+
+    fn connect_pin(&mut self, pin: &Self::PinId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        self.d_connect_pin(pin, net)
+    }
+
+    // fn disconnect_pin(&mut self, pin: &Self::PinId) -> Option<Self::NetId> {
+    //     self.d_disconnect_pin(pin)
+    // }
+
+    fn connect_pin_instance(&mut self, pin: &Self::PinInstId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+        self.d_connect_pin_instance(pin, net)
+    }
+
+    // fn disconnect_pin_instance(&mut self, pin_instance: &Self::PinInstId) -> Option<Self::NetId> {
+    //     self.d_disconnect_pin_instance(pin_instance)
+    // }
+
+    // fn connect_terminal(&mut self, terminal: &TerminalId<Self>, net: Option<Self::NetId>) -> Option<Self::NetId> {
+    //     self.d_connect_terminal(terminal, net)
+    // }
+
+    // fn disconnect_terminal(&mut self, terminal: &TerminalId<Self>) -> Option<Self::NetId> {
+    //     self.d_disconnect_terminal(terminal)
+    // }
 }

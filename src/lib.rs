@@ -101,6 +101,7 @@ pub mod chip;
 pub mod undo;
 pub mod flat_view;
 pub mod profile;
+pub mod region_search;
 
 pub mod technology;
 

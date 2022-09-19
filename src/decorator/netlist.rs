@@ -5,7 +5,6 @@
 use crate::traits::{HierarchyBase, HierarchyEdit, NetlistBase, NetlistEdit};
 use crate::prelude::{Direction, TerminalId};
 use crate::decorator::{Decorator, MutDecorator};
-use crate::decorator::hierarchy::HierarchyEditDecorator;
 
 /// Define the same functions as [`NetlistBase`] but just prepend a `d_` to
 /// avoid naming conflicts.

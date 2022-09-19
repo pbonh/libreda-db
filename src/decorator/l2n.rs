@@ -2,9 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::chip::Net;
 use crate::traits::*;
-use crate::prelude::{Direction, LayoutBase, NetlistBase, TerminalId};
 use crate::decorator::{Decorator, MutDecorator};
 use super::layout::LayoutEditDecorator;
 
@@ -134,7 +132,7 @@ fn test_l2n_edit_decorator() {
     impl<'a, H: LayoutBase> LayoutBaseDecorator for DummyDecorator<&'a mut H> {}
 
     impl<'a, L: LayoutEdit> LayoutEditDecorator for DummyDecorator<&'a mut L> {}
-    
+
     impl<'a, N: NetlistBase> NetlistBaseDecorator for DummyDecorator<&'a mut N> {}
 
     impl<'a, N: NetlistEdit> NetlistEditDecorator for DummyDecorator<&'a mut N> {}

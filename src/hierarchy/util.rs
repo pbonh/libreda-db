@@ -5,6 +5,7 @@
 
 //! Utility functions for dealing with the hierarchy of netlists or layouts.
 
+use fnv::FnvHashSet;
 use super::traits::{HierarchyBase, HierarchyEdit};
 
 /// Non-modifying utility functions for the cell hierarchy..
@@ -32,6 +33,36 @@ pub trait HierarchyUtil: HierarchyBase {
     fn each_leaf_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
         Box::new(self.each_cell()
             .filter(move |c| self.is_leaf_cell(c)))
+    }
+
+    /// Iterate over topologically sorted cells (from leaf-cells to top-cells).
+    fn each_cell_bottom_to_top(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+        let mut unsorted_cells: Vec<_> = self.each_cell_vec();
+        let mut visited_cells: FnvHashSet<_> = Default::default();
+        let mut sorted_cells = vec![];
+
+        unsorted_cells.retain(|cell| {
+            let all_dependencies_resolved = self.each_cell_dependency(cell)
+                .all(|dependency| visited_cells.contains(&dependency));
+            if all_dependencies_resolved {
+                sorted_cells.push(cell.clone());
+                visited_cells.insert(cell.clone());
+                false
+            } else {
+                true
+            }
+        });
+
+        debug_assert!({
+            let mut is_topo_sorted = true;
+            for (i, cell) in sorted_cells.iter().enumerate() {
+                is_topo_sorted &= self.each_cell_dependency(&cell)
+                    .all(|dependency| sorted_cells[0..i].contains(&dependency))
+            }
+            is_topo_sorted
+        });
+
+        Box::new(sorted_cells.into_iter())
     }
 }
 

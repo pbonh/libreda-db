@@ -86,9 +86,9 @@ pub trait HierarchyBase {
     + PartialOrd + Ord
     + std::fmt::Display + std::fmt::Debug;
     /// Cell/module identifier type.
-    type CellId: Eq + Hash + Clone + std::fmt::Debug;
+    type CellId: Eq + Hash + Clone + std::fmt::Debug + 'static;
     /// Cell instance identifier type.
-    type CellInstId: Eq + Hash + Clone + std::fmt::Debug;
+    type CellInstId: Eq + Hash + Clone + std::fmt::Debug + 'static;
 
     /// Find a cell by its name.
     /// Return the cell with the given name. Returns `None` if the cell does not exist.

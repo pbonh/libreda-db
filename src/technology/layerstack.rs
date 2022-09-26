@@ -19,9 +19,9 @@ pub enum RoutingLayerType {
 /// Annotate a layer ID as 'via' or 'routing' layer.
 pub struct RoutingLayer<LayerId> {
     /// ID of the layer. This identifies the layer in the data-base structures.
-    id: LayerId,
+    pub id: LayerId,
     /// Type of the routing layer (via or metal).
-    layer_type: RoutingLayerType
+    pub layer_type: RoutingLayerType
 }
 
 impl<LayerId> RoutingLayer<LayerId> {

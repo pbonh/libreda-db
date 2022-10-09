@@ -7,8 +7,8 @@
 //!
 //! Implementations for the various netlist formats are located in other crates.
 
+use crate::netlist::traits::{NetlistBase, NetlistEdit};
 use std::io::{Read, Write};
-use crate::netlist::traits::{NetlistEdit, NetlistBase};
 
 /// Read a netlist from a byte stream.
 pub trait NetlistReader {
@@ -16,7 +16,11 @@ pub trait NetlistReader {
     type Error;
 
     /// Read a netlist from a byte stream and populate the netlist data structure.
-    fn read_into_netlist<R: Read, N: NetlistEdit>(&self, reader: &mut R, netlist: &mut N) -> Result<(), Self::Error>;
+    fn read_into_netlist<R: Read, N: NetlistEdit>(
+        &self,
+        reader: &mut R,
+        netlist: &mut N,
+    ) -> Result<(), Self::Error>;
 
     /// Read a netlist from a byte stream.
     fn read_netlist<R: Read, N: NetlistEdit>(&self, reader: &mut R) -> Result<N, Self::Error> {
@@ -32,5 +36,9 @@ pub trait NetlistWriter {
     type Error;
 
     /// Write the netlist data structure to a byte stream.
-    fn write_netlist<W: Write, N: NetlistBase>(&self, writer: &mut W, netlist: &N) -> Result<(), Self::Error>;
+    fn write_netlist<W: Write, N: NetlistBase>(
+        &self,
+        writer: &mut W,
+        netlist: &N,
+    ) -> Result<(), Self::Error>;
 }

@@ -11,7 +11,6 @@
 
 use crate::prelude::HierarchyBase;
 
-
 /// Identifier of a library.
 #[derive(Copy, Clone, Debug, Hash, PartialOrd, PartialEq, Eq, Ord)]
 pub struct LibraryId(usize);
@@ -37,18 +36,20 @@ impl<'a, T> LibraryWrapper<'a, T> {
     }
 
     /// Get reference to owned data and to libraries.
-    fn libraries(&self) -> impl Iterator<Item=(LibraryId, &T)> {
-        std::iter::once((LibraryId(0), &self.owned))
-            .chain(
-                self.libraries.iter()
-                    .enumerate()
-                    .map(|(id, lib)| (LibraryId(id + 1), *lib))
-            )
+    fn libraries(&self) -> impl Iterator<Item = (LibraryId, &T)> {
+        std::iter::once((LibraryId(0), &self.owned)).chain(
+            self.libraries
+                .iter()
+                .enumerate()
+                .map(|(id, lib)| (LibraryId(id + 1), *lib)),
+        )
     }
 }
 
 impl<'a, T> HierarchyBase for LibraryWrapper<'a, T>
-    where T: HierarchyBase {
+where
+    T: HierarchyBase,
+{
     type NameType = T::NameType;
     type CellId = (LibraryId, T::CellId);
     type CellInstId = (LibraryId, T::CellInstId);
@@ -58,27 +59,26 @@ impl<'a, T> HierarchyBase for LibraryWrapper<'a, T>
     fn cell_by_name(&self, name: &str) -> Option<Self::CellId> {
         // Find in libraries.
         self.libraries()
-            .flat_map(|(lib_id, lib)| {
-                lib.cell_by_name(name)
-                    .map(|cell| (lib_id, cell))
-            })
+            .flat_map(|(lib_id, lib)| lib.cell_by_name(name).map(|cell| (lib_id, cell)))
             .next()
     }
 
-    fn cell_instance_by_name(&self, (lib_id, parent_cell): &Self::CellId, name: &str) -> Option<Self::CellInstId> {
+    fn cell_instance_by_name(
+        &self,
+        (lib_id, parent_cell): &Self::CellId,
+        name: &str,
+    ) -> Option<Self::CellInstId> {
         self.get_library(lib_id)
             .cell_instance_by_name(parent_cell, name)
             .map(|inst| (*lib_id, inst))
     }
 
     fn cell_name(&self, (lib_id, cell): &Self::CellId) -> Self::NameType {
-        self.get_library(lib_id)
-            .cell_name(cell)
+        self.get_library(lib_id).cell_name(cell)
     }
 
     fn cell_instance_name(&self, (lib_id, cell_inst): &Self::CellInstId) -> Option<Self::NameType> {
-        self.get_library(lib_id)
-            .cell_instance_name(cell_inst)
+        self.get_library(lib_id).cell_instance_name(cell_inst)
     }
 
     fn parent_cell(&self, (lib_id, cell_instance): &Self::CellInstId) -> Self::CellId {
@@ -93,23 +93,38 @@ impl<'a, T> HierarchyBase for LibraryWrapper<'a, T>
         unimplemented!()
     }
 
-    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> () {
+    fn for_each_cell<F>(&self, f: F)
+    where
+        F: FnMut(Self::CellId) -> (),
+    {
         unimplemented!()
     }
 
-    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellInstId) -> (),
+    {
         unimplemented!()
     }
 
-    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellId) -> (),
+    {
         unimplemented!()
     }
 
-    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> () {
+    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellId) -> (),
+    {
         unimplemented!()
     }
 
-    fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> () {
+    fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellInstId) -> (),
+    {
         unimplemented!()
     }
 

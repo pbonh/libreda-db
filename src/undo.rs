@@ -17,14 +17,14 @@
 //! For example if a cell is deleted this can be undone. The restored cell, pins, instances, etc.
 //! will have the same properties but different IDs.
 
-use crate::traits::*;
-use crate::netlist::direction::Direction;
-use crate::layout::prelude::{Geometry, SimpleTransform};
-use std::ops::Deref;
-use crate::prelude::PropertyValue;
 use crate::decorator::hierarchy::HierarchyBaseDecorator;
-use crate::decorator::{Decorator, MutDecorator};
 use crate::decorator::layout::LayoutBaseDecorator;
+use crate::decorator::{Decorator, MutDecorator};
+use crate::layout::prelude::{Geometry, SimpleTransform};
+use crate::netlist::direction::Direction;
+use crate::prelude::PropertyValue;
+use crate::traits::*;
+use std::ops::Deref;
 
 /// Undo operations on the netlist.
 pub enum NetlistUndoOp<T: NetlistBase> {
@@ -77,7 +77,6 @@ pub enum LayoutUndoOp<T: LayoutBase> {
     ReplaceShape(T::ShapeId, Geometry<T::Coord>),
     /// Store the old transform.
     SetTransform(T::CellInstId, SimpleTransform<T::Coord>),
-
 }
 
 impl<T: LayoutBase> From<HierarchyUndoOp<T>> for LayoutUndoOp<T> {
@@ -184,25 +183,26 @@ impl<'a, T: HierarchyEdit, U> Undo<'a, T, U> {
     /// Undo a hierarchy operation.
     fn undo_hierarchy_op(&mut self, op: HierarchyUndoOp<T>) {
         match op {
-            HierarchyUndoOp::CreateCell(c) =>
-                self.chip.remove_cell(&c),
-            HierarchyUndoOp::CreateCellInstance(c) =>
-                self.chip.remove_cell_instance(&c),
-            HierarchyUndoOp::RenameCell { cell, previous_name } =>
-                self.chip.rename_cell(&cell, previous_name),
-            HierarchyUndoOp::RenameCellInst { inst, previous_name } =>
-                self.chip.rename_cell_instance(&inst, previous_name)
+            HierarchyUndoOp::CreateCell(c) => self.chip.remove_cell(&c),
+            HierarchyUndoOp::CreateCellInstance(c) => self.chip.remove_cell_instance(&c),
+            HierarchyUndoOp::RenameCell {
+                cell,
+                previous_name,
+            } => self.chip.rename_cell(&cell, previous_name),
+            HierarchyUndoOp::RenameCellInst {
+                inst,
+                previous_name,
+            } => self.chip.rename_cell_instance(&inst, previous_name),
         }
     }
 }
 
-
 impl<'a, T: L2NBase + 'static, U> L2NBase for Undo<'a, T, U> {
-    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item = Self::ShapeId> + '_> {
         self.chip.shapes_of_net(net_id)
     }
 
-    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item = Self::ShapeId> + '_> {
         self.chip.shapes_of_pin(pin_id)
     }
 
@@ -226,13 +226,13 @@ impl<'a, T: L2NEdit, U> Undo<'a, T, U> {
             // L2N specific operations
             L2NUndoOp::SetNetOfShape {
                 shape_id,
-                previous_net
+                previous_net,
             } => {
                 self.chip.set_net_of_shape(&shape_id, previous_net);
             }
             L2NUndoOp::SetPinOfShape {
                 shape_id,
-                previous_pin
+                previous_pin,
             } => {
                 self.chip.set_pin_of_shape(&shape_id, previous_pin);
             }
@@ -269,19 +269,23 @@ impl<'a, T: LayoutEdit, U> Undo<'a, T, U> {
                 // TODO
                 log::error!("Creating a layer cannot be undone.");
             }
-            LayoutUndoOp::SetLayerName(id, old_name) =>
-                { self.chip.set_layer_name(&id, old_name); }
-            LayoutUndoOp::InsertShape(id) =>
-                { self.chip.remove_shape(&id); }
-            LayoutUndoOp::RemoveShape { parent_cell, layer, geometry } => {
+            LayoutUndoOp::SetLayerName(id, old_name) => {
+                self.chip.set_layer_name(&id, old_name);
+            }
+            LayoutUndoOp::InsertShape(id) => {
+                self.chip.remove_shape(&id);
+            }
+            LayoutUndoOp::RemoveShape {
+                parent_cell,
+                layer,
+                geometry,
+            } => {
                 self.chip.insert_shape(&parent_cell, &layer, geometry);
             }
             LayoutUndoOp::ReplaceShape(id, geometry) => {
                 self.chip.replace_shape(&id, geometry);
             }
-            LayoutUndoOp::SetTransform(inst, old_tf) => {
-                self.chip.set_transform(&inst, old_tf)
-            }
+            LayoutUndoOp::SetTransform(inst, old_tf) => self.chip.set_transform(&inst, old_tf),
         }
     }
 }
@@ -309,20 +313,21 @@ impl<'a, T: NetlistEdit, U> Undo<'a, T, U> {
     /// Undo a netlist operation.
     fn undo_netlist_op(&mut self, op: NetlistUndoOp<T>) {
         match op {
-            NetlistUndoOp::HierarchyOp(op) =>
-                self.undo_hierarchy_op(op),
-            NetlistUndoOp::CreatePin(p) =>
-                self.chip.remove_pin(&p),
-            NetlistUndoOp::RenamePin(p, n) =>
-                { self.chip.rename_pin(&p, n); }
-            NetlistUndoOp::CreateNet(n) =>
-                self.chip.remove_net(&n),
-            NetlistUndoOp::ConnectPin(p, n) =>
-                { self.chip.connect_pin(&p, n); }
-            NetlistUndoOp::ConnectPinInstance(p, n) =>
-                { self.chip.connect_pin_instance(&p, n); }
-            NetlistUndoOp::RenameNet(net, name) =>
-                { self.chip.rename_net(&net, name); }
+            NetlistUndoOp::HierarchyOp(op) => self.undo_hierarchy_op(op),
+            NetlistUndoOp::CreatePin(p) => self.chip.remove_pin(&p),
+            NetlistUndoOp::RenamePin(p, n) => {
+                self.chip.rename_pin(&p, n);
+            }
+            NetlistUndoOp::CreateNet(n) => self.chip.remove_net(&n),
+            NetlistUndoOp::ConnectPin(p, n) => {
+                self.chip.connect_pin(&p, n);
+            }
+            NetlistUndoOp::ConnectPinInstance(p, n) => {
+                self.chip.connect_pin_instance(&p, n);
+            }
+            NetlistUndoOp::RenameNet(net, name) => {
+                self.chip.rename_net(&net, name);
+            }
         }
     }
 }
@@ -364,7 +369,6 @@ impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
         }
     }
 
-
     /// Undoes all transactions.
     pub fn undo_all(&mut self) {
         while !self.transactions.is_empty() {
@@ -372,7 +376,6 @@ impl<'a, T: HierarchyEdit> Undo<'a, T, HierarchyUndoOp<T>> {
         }
     }
 }
-
 
 impl<'a, H, U> Decorator for Undo<'a, H, U> {
     type D = H;
@@ -398,7 +401,6 @@ impl<'a, H: HierarchyBase + 'static, U> HierarchyBaseDecorator for Undo<'a, H, U
 // Inherit everything from LayoutBase.
 impl<'a, L: LayoutBase + 'static, U> LayoutBaseDecorator for Undo<'a, L, U> {}
 
-
 impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit for Undo<'a, T, U> {
     fn new() -> Self {
         unimplemented!()
@@ -406,7 +408,8 @@ impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit 
 
     fn create_cell(&mut self, name: Self::NameType) -> Self::CellId {
         let id = self.chip.create_cell(name);
-        self.transactions.push(HierarchyUndoOp::CreateCell(id.clone()).into());
+        self.transactions
+            .push(HierarchyUndoOp::CreateCell(id.clone()).into());
         id
     }
 
@@ -414,9 +417,17 @@ impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit 
         unimplemented!()
     }
 
-    fn create_cell_instance(&mut self, parent_cell: &Self::CellId, template_cell: &Self::CellId, name: Option<Self::NameType>) -> Self::CellInstId {
-        let id = self.chip.create_cell_instance(parent_cell, template_cell, name);
-        self.transactions.push(HierarchyUndoOp::CreateCellInstance(id.clone()).into());
+    fn create_cell_instance(
+        &mut self,
+        parent_cell: &Self::CellId,
+        template_cell: &Self::CellId,
+        name: Option<Self::NameType>,
+    ) -> Self::CellInstId {
+        let id = self
+            .chip
+            .create_cell_instance(parent_cell, template_cell, name);
+        self.transactions
+            .push(HierarchyUndoOp::CreateCellInstance(id.clone()).into());
         id
     }
 
@@ -427,13 +438,25 @@ impl<'a, T: HierarchyEdit + 'static, U: From<HierarchyUndoOp<T>>> HierarchyEdit 
     fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>) {
         let previous_name = self.d_cell_instance_name(inst);
         self.chip.rename_cell_instance(inst, new_name);
-        self.transactions.push(HierarchyUndoOp::RenameCellInst { inst: inst.clone(), previous_name }.into());
+        self.transactions.push(
+            HierarchyUndoOp::RenameCellInst {
+                inst: inst.clone(),
+                previous_name,
+            }
+            .into(),
+        );
     }
 
     fn rename_cell(&mut self, cell: &Self::CellId, new_name: Self::NameType) {
         let previous_name = self.d_cell_name(cell);
         self.chip.rename_cell(cell, new_name);
-        self.transactions.push(HierarchyUndoOp::RenameCell { cell: cell.clone(), previous_name }.into());
+        self.transactions.push(
+            HierarchyUndoOp::RenameCell {
+                cell: cell.clone(),
+                previous_name,
+            }
+            .into(),
+        );
     }
 }
 
@@ -494,15 +517,24 @@ impl<'a, T: NetlistBase + 'static, U> NetlistBase for Undo<'a, T, U> {
         self.chip.net_name(net)
     }
 
-    fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> () {
+    fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::PinId) -> (),
+    {
         self.chip.for_each_pin(circuit, f)
     }
 
-    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F) where F: FnMut(Self::PinInstId) -> () {
+    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F)
+    where
+        F: FnMut(Self::PinInstId) -> (),
+    {
         self.chip.for_each_pin_instance(circuit_inst, f)
     }
 
-    fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::NetId) -> () {
+    fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::NetId) -> (),
+    {
         self.chip.for_each_internal_net(circuit, f)
     }
 
@@ -510,22 +542,35 @@ impl<'a, T: NetlistBase + 'static, U> NetlistBase for Undo<'a, T, U> {
         self.chip.num_pins(circuit)
     }
 
-    fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> () {
+    fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F)
+    where
+        F: FnMut(Self::PinId) -> (),
+    {
         self.chip.for_each_pin_of_net(net, f)
     }
 
-    fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinInstId) -> () {
+    fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F)
+    where
+        F: FnMut(Self::PinInstId) -> (),
+    {
         self.chip.for_each_pin_instance_of_net(net, f)
     }
 }
 
 impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
-    where T: NetlistEdit + 'static,
-          U: From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>> {
-
-    fn create_pin(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId {
+where
+    T: NetlistEdit + 'static,
+    U: From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>>,
+{
+    fn create_pin(
+        &mut self,
+        circuit: &Self::CellId,
+        name: Self::NameType,
+        direction: Direction,
+    ) -> Self::PinId {
         let id = self.chip.create_pin(circuit, name, direction);
-        self.transactions.push(NetlistUndoOp::CreatePin(id.clone()).into());
+        self.transactions
+            .push(NetlistUndoOp::CreatePin(id.clone()).into());
         id
     }
 
@@ -535,19 +580,26 @@ impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
 
     fn rename_pin(&mut self, pin: &Self::PinId, new_name: Self::NameType) -> Self::NameType {
         let prev_name = self.chip.pin_name(pin);
-        self.transactions.push(NetlistUndoOp::RenamePin(pin.clone(), prev_name).into());
+        self.transactions
+            .push(NetlistUndoOp::RenamePin(pin.clone(), prev_name).into());
         self.chip.rename_pin(pin, new_name)
     }
 
     fn create_net(&mut self, parent: &Self::CellId, name: Option<Self::NameType>) -> Self::NetId {
         let id = self.chip.create_net(parent, name);
-        self.transactions.push(NetlistUndoOp::CreateNet(id.clone()).into());
+        self.transactions
+            .push(NetlistUndoOp::CreateNet(id.clone()).into());
         id
     }
 
-    fn rename_net(&mut self, net_id: &Self::NetId, new_name: Option<Self::NameType>) -> Option<Self::NameType> {
+    fn rename_net(
+        &mut self,
+        net_id: &Self::NetId,
+        new_name: Option<Self::NameType>,
+    ) -> Option<Self::NameType> {
         let old_name = self.chip.rename_net(net_id, new_name);
-        self.transactions.push(NetlistUndoOp::RenameNet(net_id.clone(), old_name.clone()).into());
+        self.transactions
+            .push(NetlistUndoOp::RenameNet(net_id.clone(), old_name.clone()).into());
         old_name
     }
 
@@ -561,46 +613,74 @@ impl<'a, T, U> NetlistEdit for Undo<'a, T, U>
 
     fn connect_pin(&mut self, pin: &Self::PinId, net: Option<Self::NetId>) -> Option<Self::NetId> {
         let prev_net = self.chip.connect_pin(pin, net);
-        self.transactions.push(NetlistUndoOp::ConnectPin(pin.clone(), prev_net.clone()).into());
+        self.transactions
+            .push(NetlistUndoOp::ConnectPin(pin.clone(), prev_net.clone()).into());
         prev_net
     }
 
-    fn connect_pin_instance(&mut self, pin: &Self::PinInstId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+    fn connect_pin_instance(
+        &mut self,
+        pin: &Self::PinInstId,
+        net: Option<Self::NetId>,
+    ) -> Option<Self::NetId> {
         let prev_net = self.chip.connect_pin_instance(pin, net);
-        self.transactions.push(NetlistUndoOp::ConnectPinInstance(pin.clone(), prev_net.clone()).into());
+        self.transactions
+            .push(NetlistUndoOp::ConnectPinInstance(pin.clone(), prev_net.clone()).into());
         prev_net
     }
 }
 
 impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
-    where T: LayoutEdit + 'static,
-          U: From<LayoutUndoOp<T>> + From<HierarchyUndoOp<T>> {
+where
+    T: LayoutEdit + 'static,
+    U: From<LayoutUndoOp<T>> + From<HierarchyUndoOp<T>>,
+{
     fn set_dbu(&mut self, dbu: Self::Coord) {
-        self.transactions.push(LayoutUndoOp::SetDbu(self.dbu()).into());
+        self.transactions
+            .push(LayoutUndoOp::SetDbu(self.dbu()).into());
         self.chip.set_dbu(dbu)
     }
 
     fn create_layer(&mut self, index: u32, datatype: u32) -> Self::LayerId {
         let id = self.chip.create_layer(index, datatype);
-        self.transactions.push(LayoutUndoOp::CreateLayer(id.clone()).into());
+        self.transactions
+            .push(LayoutUndoOp::CreateLayer(id.clone()).into());
         id
     }
 
-    fn create_layer_with_id(&mut self, layer_id: Self::LayerId, index: u32, datatype: u32) -> Result<(), ()> {
-        self.chip.create_layer_with_id(layer_id.clone(), index, datatype)?;
-        self.transactions.push(LayoutUndoOp::CreateLayer(layer_id.clone()).into());
+    fn create_layer_with_id(
+        &mut self,
+        layer_id: Self::LayerId,
+        index: u32,
+        datatype: u32,
+    ) -> Result<(), ()> {
+        self.chip
+            .create_layer_with_id(layer_id.clone(), index, datatype)?;
+        self.transactions
+            .push(LayoutUndoOp::CreateLayer(layer_id.clone()).into());
         Ok(())
     }
 
-    fn set_layer_name(&mut self, layer: &Self::LayerId, name: Option<Self::NameType>) -> Option<Self::NameType> {
+    fn set_layer_name(
+        &mut self,
+        layer: &Self::LayerId,
+        name: Option<Self::NameType>,
+    ) -> Option<Self::NameType> {
         let old_name = self.layer_info(layer).name.clone();
-        self.transactions.push(LayoutUndoOp::SetLayerName(layer.clone(), old_name).into());
+        self.transactions
+            .push(LayoutUndoOp::SetLayerName(layer.clone(), old_name).into());
         self.chip.set_layer_name(layer, name)
     }
 
-    fn insert_shape(&mut self, parent_cell: &T::CellId, layer: &T::LayerId, geometry: Geometry<Self::Coord>) -> Self::ShapeId {
+    fn insert_shape(
+        &mut self,
+        parent_cell: &T::CellId,
+        layer: &T::LayerId,
+        geometry: Geometry<Self::Coord>,
+    ) -> Self::ShapeId {
         let id = self.chip.insert_shape(parent_cell, layer, geometry);
-        self.transactions.push(LayoutUndoOp::InsertShape(id.clone()).into());
+        self.transactions
+            .push(LayoutUndoOp::InsertShape(id.clone()).into());
         id
     }
 
@@ -608,51 +688,89 @@ impl<'a, T, U> LayoutEdit for Undo<'a, T, U>
         let geometry = self.chip.remove_shape(shape_id);
         let (parent_cell, layer) = self.parent_of_shape(shape_id);
         if let Some(geometry) = &geometry {
-            self.transactions.push(LayoutUndoOp::RemoveShape {
-                parent_cell,
-                layer,
-                geometry: geometry.clone(),
-            }.into());
+            self.transactions.push(
+                LayoutUndoOp::RemoveShape {
+                    parent_cell,
+                    layer,
+                    geometry: geometry.clone(),
+                }
+                .into(),
+            );
         }
         geometry
     }
 
-    fn replace_shape(&mut self, shape_id: &Self::ShapeId, geometry: Geometry<Self::Coord>) -> Geometry<Self::Coord> {
+    fn replace_shape(
+        &mut self,
+        shape_id: &Self::ShapeId,
+        geometry: Geometry<Self::Coord>,
+    ) -> Geometry<Self::Coord> {
         let old_geometry = self.chip.replace_shape(shape_id, geometry);
 
-        self.transactions.push(LayoutUndoOp::ReplaceShape(shape_id.clone(), old_geometry.clone()).into());
+        self.transactions
+            .push(LayoutUndoOp::ReplaceShape(shape_id.clone(), old_geometry.clone()).into());
 
         old_geometry
     }
 
     fn set_transform(&mut self, cell_inst: &Self::CellInstId, tf: SimpleTransform<Self::Coord>) {
         let old_transform = self.get_transform(cell_inst);
-        self.transactions.push(LayoutUndoOp::SetTransform(cell_inst.clone(), old_transform).into());
+        self.transactions
+            .push(LayoutUndoOp::SetTransform(cell_inst.clone(), old_transform).into());
         self.chip.set_transform(cell_inst, tf)
     }
 
-    fn set_shape_property(&mut self, shape: &Self::ShapeId, key: Self::NameType, _value: PropertyValue) {
+    fn set_shape_property(
+        &mut self,
+        shape: &Self::ShapeId,
+        key: Self::NameType,
+        _value: PropertyValue,
+    ) {
         let _old_property = self.get_shape_property(shape, &key);
         unimplemented!("set_shape_property() is currently not undoable.")
     }
 }
 
 impl<'a, T, U> L2NEdit for Undo<'a, T, U>
-    where T: L2NEdit + 'static,
-          U: From<L2NUndoOp<T>> + From<LayoutUndoOp<T>> + From<NetlistUndoOp<T>> + From<HierarchyUndoOp<T>> {
-    fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
+where
+    T: L2NEdit + 'static,
+    U: From<L2NUndoOp<T>>
+        + From<LayoutUndoOp<T>>
+        + From<NetlistUndoOp<T>>
+        + From<HierarchyUndoOp<T>>,
+{
+    fn set_pin_of_shape(
+        &mut self,
+        shape_id: &Self::ShapeId,
+        pin: Option<Self::PinId>,
+    ) -> Option<Self::PinId> {
         let previous_pin = self.get_pin_of_shape(shape_id);
-        self.transactions.push(L2NUndoOp::SetPinOfShape { shape_id: shape_id.clone(), previous_pin }.into());
+        self.transactions.push(
+            L2NUndoOp::SetPinOfShape {
+                shape_id: shape_id.clone(),
+                previous_pin,
+            }
+            .into(),
+        );
         self.chip.set_pin_of_shape(shape_id, pin)
     }
 
-    fn set_net_of_shape(&mut self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+    fn set_net_of_shape(
+        &mut self,
+        shape_id: &Self::ShapeId,
+        net: Option<Self::NetId>,
+    ) -> Option<Self::NetId> {
         let previous_net = self.get_net_of_shape(shape_id);
-        self.transactions.push(L2NUndoOp::SetNetOfShape { shape_id: shape_id.clone(), previous_net }.into());
+        self.transactions.push(
+            L2NUndoOp::SetNetOfShape {
+                shape_id: shape_id.clone(),
+                previous_net,
+            }
+            .into(),
+        );
         self.chip.set_net_of_shape(shape_id, net)
     }
 }
-
 
 #[test]
 fn test_hierarchy_undoing() {
@@ -674,12 +792,10 @@ fn test_hierarchy_undoing() {
     assert!(undo.cell_by_name("TOP").is_some());
     assert!(undo.cell_instance_by_name(&top, "inst1").is_some());
 
-
     // Undo create_cell_instance.
     assert_eq!(undo.num_child_instances(&top), 1);
     undo.undo();
     assert_eq!(undo.num_child_instances(&top), 0);
-
 
     assert_eq!(undo.num_cells(), 2);
     // Undo create pins and cells.

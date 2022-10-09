@@ -6,5 +6,5 @@
 //! Traits and datastructures for the representation of technology related properties,
 //! especially design rules.
 pub mod layerstack;
-pub mod rules;
 pub mod prelude;
+pub mod rules;

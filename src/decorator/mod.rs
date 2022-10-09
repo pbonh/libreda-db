@@ -10,9 +10,9 @@
 //!
 
 pub mod hierarchy;
+pub mod l2n;
 pub mod layout;
 pub mod netlist;
-pub mod l2n;
 
 pub trait Decorator {
     /// The decorated type.

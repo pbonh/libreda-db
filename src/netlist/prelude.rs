@@ -5,9 +5,9 @@
 
 //! The `prelude` helps to import most commonly used modules.
 
+pub use super::arc_id::*;
 pub use super::direction::*;
 pub use super::io::*;
-pub use super::traits::*;
-pub use super::arc_id::*;
 pub use super::terminal_id::*;
+pub use super::traits::*;
 pub use super::util::*;

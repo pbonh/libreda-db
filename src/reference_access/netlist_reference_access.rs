@@ -3,8 +3,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::traits::NetlistBase;
 use crate::netlist::prelude::*;
+use crate::traits::NetlistBase;
 
 use super::hierarchy_reference_access::*;
 
@@ -45,50 +45,44 @@ pub trait NetlistReferenceAccess: NetlistBase {
 
 impl<T: NetlistBase> NetlistReferenceAccess for T {}
 
-
 impl<'a, N: NetlistBase> CellRef<'a, N> {
     /// Iterate over the IDs of all pins of this cell.
-    pub fn each_pin_id(&self) -> impl Iterator<Item=N::PinId> + '_ {
+    pub fn each_pin_id(&self) -> impl Iterator<Item = N::PinId> + '_ {
         self.base.each_pin(&self.id)
     }
 
     /// Iterate over all pins of this cell.
-    pub fn each_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
-        self.base.each_pin(&self.id)
-            .map(move |id| PinRef {
-                base: self.base,
-                id,
-            })
+    pub fn each_pin(&self) -> impl Iterator<Item = PinRef<'a, N>> + '_ {
+        self.base.each_pin(&self.id).map(move |id| PinRef {
+            base: self.base,
+            id,
+        })
     }
 
     /// Iterate over all input pins of this cell.
-    pub fn each_input_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
+    pub fn each_input_pin(&self) -> impl Iterator<Item = PinRef<'a, N>> + '_ {
         self.each_pin().filter(|p| p.direction().is_input())
     }
 
     /// Iterate over all output pins of this cell.
-    pub fn each_output_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
+    pub fn each_output_pin(&self) -> impl Iterator<Item = PinRef<'a, N>> + '_ {
         self.each_pin().filter(|p| p.direction().is_output())
     }
 
     /// Find a pin by it's name.
     pub fn pin_by_name(&self, name: &str) -> Option<PinRef<'a, N>> {
-        self.base.pin_by_name(&self.id, name)
-            .map(|id| {
-                PinRef {
-                    base: self.base,
-                    id,
-                }
-            })
+        self.base.pin_by_name(&self.id, name).map(|id| PinRef {
+            base: self.base,
+            id,
+        })
     }
 
     /// Iterate over all nets that live directly in this cell.
-    pub fn each_net(&self) -> impl Iterator<Item=NetRef<'a, N>> + '_ {
-        self.base.each_internal_net(&self.id)
-            .map(move |id| NetRef {
-                base: self.base,
-                id,
-            })
+    pub fn each_net(&self) -> impl Iterator<Item = NetRef<'a, N>> + '_ {
+        self.base.each_internal_net(&self.id).map(move |id| NetRef {
+            base: self.base,
+            id,
+        })
     }
 
     /// Get the number of nets inside this cell.
@@ -98,24 +92,23 @@ impl<'a, N: NetlistBase> CellRef<'a, N> {
 
     /// Find a net by its name.
     pub fn net_by_name(&self, name: &str) -> Option<NetRef<'a, N>> {
-        self.base.net_by_name(&self.id, name)
-            .map(|id| NetRef {
-                base: self.base,
-                id,
-            })
+        self.base.net_by_name(&self.id, name).map(|id| NetRef {
+            base: self.base,
+            id,
+        })
     }
 }
 
-
 impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     /// Iterate over the IDs of all pins of this cell.
-    pub fn each_pin_instance_id(&self) -> impl Iterator<Item=N::PinInstId> + '_ {
+    pub fn each_pin_instance_id(&self) -> impl Iterator<Item = N::PinInstId> + '_ {
         self.base.each_pin_instance(&self.id)
     }
 
     /// Iterate over all pins of this cell.
-    pub fn each_pin_instance(&self) -> impl Iterator<Item=PinInstRef<'a, N>> + '_ {
-        self.base.each_pin_instance(&self.id)
+    pub fn each_pin_instance(&self) -> impl Iterator<Item = PinInstRef<'a, N>> + '_ {
+        self.base
+            .each_pin_instance(&self.id)
             .map(move |id| PinInstRef {
                 base: self.base,
                 id,
@@ -123,15 +116,13 @@ impl<'a, N: NetlistBase> CellInstRef<'a, N> {
     }
 
     /// Iterate over all nets are connected to this instance. A net might appear more than once.
-    pub fn each_net(&self) -> impl Iterator<Item=NetRef<'a, N>> + '_ {
-        self.base.each_external_net(&self.id)
-            .map(move |id| NetRef {
-                base: self.base,
-                id,
-            })
+    pub fn each_net(&self) -> impl Iterator<Item = NetRef<'a, N>> + '_ {
+        self.base.each_external_net(&self.id).map(move |id| NetRef {
+            base: self.base,
+            id,
+        })
     }
 }
-
 
 /// A reference to a net.
 /// This is just a wrapper around a netlist and a net ID.
@@ -162,61 +153,59 @@ impl<'a, N: NetlistBase> NetRef<'a, N> {
     }
 
     /// Iterate over each pin attached to this net.
-    pub fn each_pin(&self) -> impl Iterator<Item=PinRef<'a, N>> + '_ {
-        self.base.each_pin_of_net(&self.id)
-            .map(move |id| {
-                PinRef {
-                    base: self.base,
-                    id,
-                }
-            })
+    pub fn each_pin(&self) -> impl Iterator<Item = PinRef<'a, N>> + '_ {
+        self.base.each_pin_of_net(&self.id).map(move |id| PinRef {
+            base: self.base,
+            id,
+        })
     }
 
     /// Iterate over each pin instance attached to this net.
-    pub fn each_pin_instance(&self) -> impl Iterator<Item=PinInstRef<'a, N>> + '_ {
-        self.base.each_pin_instance_of_net(&self.id)
-            .map(move |id| {
-                PinInstRef {
-                    base: self.base,
-                    id,
-                }
+    pub fn each_pin_instance(&self) -> impl Iterator<Item = PinInstRef<'a, N>> + '_ {
+        self.base
+            .each_pin_instance_of_net(&self.id)
+            .map(move |id| PinInstRef {
+                base: self.base,
+                id,
             })
     }
 
     /// Iterate over terminal attached to this net.
-    pub fn each_terminal(&self) -> impl Iterator<Item=TerminalRef<'a, N>> + '_ {
-        let pins = self.each_pin()
-            .map(|p| p.into());
-        let pin_insts = self.each_pin_instance()
-            .map(|p| p.into());
+    pub fn each_terminal(&self) -> impl Iterator<Item = TerminalRef<'a, N>> + '_ {
+        let pins = self.each_pin().map(|p| p.into());
+        let pin_insts = self.each_pin_instance().map(|p| p.into());
         pins.chain(pin_insts)
     }
 
     /// Iterate over all terminals that drive the net. This should usually be one.
     /// Returns the pins that are marked as `inputs` and pin instances marked as `outputs`.
     /// Skips `InOut` terminals.
-    pub fn each_driver(&self) -> impl Iterator<Item=TerminalRef<'a, N>> + '_ {
-        self.each_terminal()
-            .filter(|t| match t {
-                TerminalRef::Pin(p) => p.direction().is_input(),
-                TerminalRef::PinInst(p) => p.pin().direction().is_output()
-            })
+    pub fn each_driver(&self) -> impl Iterator<Item = TerminalRef<'a, N>> + '_ {
+        self.each_terminal().filter(|t| match t {
+            TerminalRef::Pin(p) => p.direction().is_input(),
+            TerminalRef::PinInst(p) => p.pin().direction().is_output(),
+        })
     }
 
     /// Iterate over all terminals that drive the net. This should usually be one.
     /// Returns the pins that are marked as `inputs` and pin instances marked as `outputs`.
     /// Skips `InOut` terminals.
-    pub fn each_sink(&self) -> impl Iterator<Item=TerminalRef<'a, N>> + '_ {
-        self.each_terminal()
-            .filter(|t| match t {
-                TerminalRef::Pin(p) => p.direction().is_output(),
-                TerminalRef::PinInst(p) => p.pin().direction().is_input()
-            })
+    pub fn each_sink(&self) -> impl Iterator<Item = TerminalRef<'a, N>> + '_ {
+        self.each_terminal().filter(|t| match t {
+            TerminalRef::Pin(p) => p.direction().is_output(),
+            TerminalRef::PinInst(p) => p.pin().direction().is_input(),
+        })
     }
 
     /// Get a qualified name for this net.
     pub fn qname(&self, separator: &str) -> String {
-        format!("{}{}{}", self.parent().name(), separator, self.name().unwrap_or_else(|| "<unnamed>".to_string().into()))
+        format!(
+            "{}{}{}",
+            self.parent().name(),
+            separator,
+            self.name()
+                .unwrap_or_else(|| "<unnamed>".to_string().into())
+        )
     }
 
     /// Get the number of external pins attached to this net (pins towards the outside of the circuit).
@@ -281,11 +270,10 @@ impl<'a, N: NetlistBase> PinRef<'a, N> {
 
     /// Get the net which is attached to the pin from inside the cell.
     pub fn net(&self) -> Option<NetRef<'a, N>> {
-        self.base.net_of_pin(&self.id)
-            .map(|id| NetRef {
-                base: self.base,
-                id,
-            })
+        self.base.net_of_pin(&self.id).map(|id| NetRef {
+            base: self.base,
+            id,
+        })
     }
 
     /// Get the cell which contains this pin.
@@ -368,11 +356,10 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
 
     /// Get the net which is attached to this pin instance.
     pub fn net(&self) -> Option<NetRef<'a, N>> {
-        self.base.net_of_pin_instance(&self.id)
-            .map(|id| NetRef {
-                base: self.base,
-                id,
-            })
+        self.base.net_of_pin_instance(&self.id).map(|id| NetRef {
+            base: self.base,
+            id,
+        })
     }
 
     /// Convert the pin instance reference into a terminal reference.
@@ -384,12 +371,16 @@ impl<'a, N: NetlistBase> PinInstRef<'a, N> {
     /// For pin instances: 'cell_name:cell_instance:pin_name'
     /// Where `:` is defined by `separator`.
     pub fn qname(&self, separator: &str) -> String {
-        format!("{}{}{}{}{}",
-                self.pin().cell().name(),
-                separator,
-                self.cell_instance().name().unwrap_or_else(|| "<unnamed>".to_string().into()),
-                separator,
-                self.pin().name())
+        format!(
+            "{}{}{}{}{}",
+            self.pin().cell().name(),
+            separator,
+            self.cell_instance()
+                .name()
+                .unwrap_or_else(|| "<unnamed>".to_string().into()),
+            separator,
+            self.pin().name()
+        )
     }
 }
 
@@ -432,7 +423,7 @@ impl<'a, N: NetlistBase> Into<TerminalId<N>> for TerminalRef<'a, N> {
     fn into(self) -> TerminalId<N> {
         match self {
             TerminalRef::Pin(p) => TerminalId::PinId(p.id),
-            TerminalRef::PinInst(p) => TerminalId::PinInstId(p.id)
+            TerminalRef::PinInst(p) => TerminalId::PinInstId(p.id),
         }
     }
 }
@@ -447,7 +438,7 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     pub fn base(&self) -> &'_ N {
         match self {
             TerminalRef::Pin(p) => p.base(),
-            TerminalRef::PinInst(p) => p.base()
+            TerminalRef::PinInst(p) => p.base(),
         }
     }
 
@@ -455,7 +446,7 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     pub fn net(&self) -> Option<NetRef<'a, N>> {
         match self {
             TerminalRef::Pin(p) => p.net(),
-            TerminalRef::PinInst(p) => p.net()
+            TerminalRef::PinInst(p) => p.net(),
         }
     }
 
@@ -463,7 +454,7 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     pub fn pin_name(&self) -> N::NameType {
         match self {
             TerminalRef::Pin(p) => p.name(),
-            TerminalRef::PinInst(p) => p.pin().name()
+            TerminalRef::PinInst(p) => p.pin().name(),
         }
     }
 
@@ -472,10 +463,8 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     /// For a pin instance, this equals the parent of the cell instance which contains the pin instance.
     pub fn parent(&self) -> CellRef<N> {
         match self {
-            TerminalRef::Pin(p) =>
-                p.cell(),
-            TerminalRef::PinInst(p) =>
-                p.cell_instance().parent()
+            TerminalRef::Pin(p) => p.cell(),
+            TerminalRef::PinInst(p) => p.cell_instance().parent(),
         }
     }
 
@@ -485,11 +474,8 @@ impl<'a, N: NetlistBase> TerminalRef<'a, N> {
     /// Where `:` is defined by `separator`.
     pub fn qname(&self, separator: &str) -> String {
         match self {
-            TerminalRef::Pin(p) =>
-                p.qname(separator),
-            TerminalRef::PinInst(p) =>
-                p.qname(separator)
+            TerminalRef::Pin(p) => p.qname(separator),
+            TerminalRef::PinInst(p) => p.qname(separator),
         }
     }
-
 }

@@ -22,5 +22,5 @@ num-traits = "0.2"
 iron-shapes = { version = "0.0.8", path = "../iron-shapes", features = ["serde"] }
 iron-shapes-booleanop = { version = "0.0.3", path = '../iron-shapes-booleanop' }
 serde = { version = "1", optional = true, features = ["derive", "rc"] }
-fnv = "1.0.7" # Fast hashing for small keys.
+fnv = "1.0" # Fast hashing for small keys.
 rstar = "0.9" # Fast region queries.

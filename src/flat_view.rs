@@ -7,7 +7,7 @@
 //! The presented view is flattened until leaf cells.
 //! Internally this works by using component IDs that are actually paths through the hierarchy.
 
-use crate::traits::{HierarchyBase};
+use crate::traits::HierarchyBase;
 use std::collections::{HashMap, HashSet};
 
 /// Wrapper around ID types.
@@ -104,7 +104,6 @@ impl<'a, N: HierarchyBase> FlatView<'a, N> {
     }
 }
 
-
 impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
     type NameType = N::NameType;
     type CellId = N::CellId;
@@ -123,7 +122,11 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
         }
     }
 
-    fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId> {
+    fn cell_instance_by_name(
+        &self,
+        parent_cell: &Self::CellId,
+        name: &str,
+    ) -> Option<Self::CellInstId> {
         let path = name.split(&self.path_separator);
         let mut parent_cell = parent_cell.clone();
         let mut current_inst = vec![];
@@ -160,14 +163,13 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
 
     fn cell_instance_name(&self, cell_inst: &Self::CellInstId) -> Option<Self::NameType> {
         // Try to find the name of each path element.
-        let path_names: Option<Vec<_>> = cell_inst.iter()
+        let path_names: Option<Vec<_>> = cell_inst
+            .iter()
             .map(|inst| self.base.cell_instance_name(inst))
             .collect();
         // If a name could be found for each element
         // join them with the path separator.
-        path_names.map(|names|
-            names.join(&self.path_separator).into()
-        )
+        path_names.map(|names| names.join(&self.path_separator).into())
     }
 
     fn parent_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
@@ -175,10 +177,14 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
     }
 
     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId {
-        self.base.template_cell(&cell_instance[cell_instance.len() - 1])
+        self.base
+            .template_cell(&cell_instance[cell_instance.len() - 1])
     }
 
-    fn for_each_cell<F>(&self, mut f: F) where F: FnMut(Self::CellId) -> () {
+    fn for_each_cell<F>(&self, mut f: F)
+    where
+        F: FnMut(Self::CellId) -> (),
+    {
         self.base.for_each_cell(|c| {
             // Iterate over top-level and leaf cells only.
             if self.cell_exists_in_flat_view(&c) {
@@ -187,8 +193,10 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
         })
     }
 
-    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, mut f: F) where F: FnMut(Self::CellInstId) -> () {
-
+    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, mut f: F)
+    where
+        F: FnMut(Self::CellInstId) -> (),
+    {
         // Depth-first traversal of the dependency graph.
         // Start with the top-level instances.
         let mut stack = vec![self.base.each_cell_instance(cell)];
@@ -220,7 +228,10 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
         }
     }
 
-    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, mut f: F) where F: FnMut(Self::CellId) -> () {
+    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, mut f: F)
+    where
+        F: FnMut(Self::CellId) -> (),
+    {
         let mut visited = HashSet::new();
         let mut stack = self.base.each_cell_dependency_vec(cell);
         while let Some(dep) = stack.pop() {
@@ -237,7 +248,10 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
         }
     }
 
-    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, mut f: F) where F: FnMut(Self::CellId) -> () {
+    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, mut f: F)
+    where
+        F: FnMut(Self::CellId) -> (),
+    {
         // Only top-level cells can be dependent cells in the flat view.
         let mut visited = HashSet::new();
         let mut stack = self.base.each_dependent_cell_vec(cell);
@@ -255,8 +269,14 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
     }
 
     fn for_each_cell_reference<F>(&self, cell: &Self::CellId, mut f: F)
-        where F: FnMut(Self::CellInstId) -> () {
-        assert!(self.cell_exists_in_flat_view(&cell), "Cell does not exist in flat view: {}", self.base.cell_name(cell));
+    where
+        F: FnMut(Self::CellInstId) -> (),
+    {
+        assert!(
+            self.cell_exists_in_flat_view(&cell),
+            "Cell does not exist in flat view: {}",
+            self.base.cell_name(cell)
+        );
 
         let mut references = vec![self.base.each_cell_reference(&cell)];
         let mut path_rev = vec![];
@@ -291,12 +311,12 @@ impl<'a, N: HierarchyBase> HierarchyBase for FlatView<'a, N> {
             let mut counted_cells: HashMap<N::CellId, usize> = Default::default();
             self.base.for_each_cell_instance(cell, |inst| {
                 let template = self.base.template_cell(&inst);
-                *counted_cells.entry(template)
-                    .or_insert(0) += 1;
+                *counted_cells.entry(template).or_insert(0) += 1;
             });
 
             // Compute recursively the number of children.
-            counted_cells.into_iter()
+            counted_cells
+                .into_iter()
                 .map(|(cell, num)| num * self.base.num_child_instances(&cell))
                 .sum()
         }

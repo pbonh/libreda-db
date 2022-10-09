@@ -4,8 +4,7 @@
 
 //! Test that the auto-traits are implemented for certain public types.
 
-
-fn is_normal<T: Sized + Send + Sync + Unpin> () {}
+fn is_normal<T: Sized + Send + Sync + Unpin>() {}
 
 #[test]
 fn chip_is_normal_type() {

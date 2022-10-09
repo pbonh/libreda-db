@@ -25,17 +25,17 @@
 //!
 //! ```
 
-use std::sync::Arc;
 use iron_shapes::point::Deref;
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
 /// Resource counted string, used for names.
 /// `RcString`s can be efficiently cloned.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RcString {
-    string: Arc<String>
+    string: Arc<String>,
 }
 
 impl std::fmt::Display for RcString {
@@ -47,7 +47,9 @@ impl std::fmt::Display for RcString {
 impl RcString {
     /// Create a new resource counted string.
     pub fn new(string: String) -> Self {
-        RcString { string: Arc::new(string) }
+        RcString {
+            string: Arc::new(string),
+        }
     }
 }
 
@@ -91,7 +93,9 @@ impl From<Arc<String>> for RcString {
 
 impl From<&Arc<String>> for RcString {
     fn from(string: &Arc<String>) -> Self {
-        Self { string: string.clone() }
+        Self {
+            string: string.clone(),
+        }
     }
 }
 

@@ -34,20 +34,20 @@
 //! ```
 
 mod hierarchy_reference_access;
-mod netlist_reference_access;
-mod layout_reference_access;
 mod l2n_reference_access;
+mod layout_reference_access;
+mod netlist_reference_access;
 
 // Public exports.
 pub use hierarchy_reference_access::*;
-pub use netlist_reference_access::*;
-pub use layout_reference_access::*;
 pub use l2n_reference_access::*;
+pub use layout_reference_access::*;
+pub use netlist_reference_access::*;
 
 #[test]
 fn test_chip_reference_access() {
-    use crate::prelude::*;
     use crate::chip::Chip;
+    use crate::prelude::*;
 
     let mut chip = Chip::new();
     let top = chip.create_cell("TOP".into());
@@ -65,7 +65,11 @@ fn test_chip_reference_access() {
     assert_eq!(&sub_inst1_ref.template().id(), &sub);
 
     // Access nets and pins.
-    assert_eq!(top_ref.each_net().count(), 2, "LOW and HIGH nets should be there.");
+    assert_eq!(
+        top_ref.each_net().count(),
+        2,
+        "LOW and HIGH nets should be there."
+    );
     assert_eq!(top_ref.each_pin().count(), 1);
     assert_eq!(sub_inst1_ref.each_pin_instance().count(), 1);
 }

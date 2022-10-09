@@ -3,12 +3,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::prelude::{LayoutBase, SimpleTransform, Rect, LayerInfo, Geometry};
 use super::hierarchy_reference_access::*;
+use crate::prelude::{Geometry, LayerInfo, LayoutBase, Rect, SimpleTransform};
 
 /// Trait that provides object-like read access to a layout structure and its elements.
-pub trait LayoutReferenceAccess: LayoutBase
-{
+pub trait LayoutReferenceAccess: LayoutBase {
     /// Get a cell object by its ID.
     fn shape_ref(&self, shape_id: &Self::ShapeId) -> ShapeRef<'_, Self> {
         ShapeRef {
@@ -26,25 +25,17 @@ pub trait LayoutReferenceAccess: LayoutBase
     }
 
     /// Iterate over all layers defined in this layout.
-    fn each_layer_ref(&self) -> Box<dyn Iterator<Item=LayerRef<'_, Self>> + '_> {
-        Box::new(
-            self.each_layer()
-                .map(move |id| LayerRef {
-                    id,
-                    base: self,
-                })
-        )
+    fn each_layer_ref(&self) -> Box<dyn Iterator<Item = LayerRef<'_, Self>> + '_> {
+        Box::new(self.each_layer().map(move |id| LayerRef { id, base: self }))
     }
 
     /// Get a layer object by the layer name.
     fn layer_ref_by_name(&self, name: &str) -> Option<LayerRef<'_, Self>> {
-        self.layer_by_name(name)
-            .map(|id| self.layer_ref(&id))
+        self.layer_by_name(name).map(|id| self.layer_ref(&id))
     }
 }
 
 impl<T: LayoutBase> LayoutReferenceAccess for T {}
-
 
 impl<'a, L: LayoutBase> CellInstRef<'a, L> {
     /// Get the geometric transform that describes the location of a cell instance relative to its parent.
@@ -55,8 +46,12 @@ impl<'a, L: LayoutBase> CellInstRef<'a, L> {
 
 impl<'a, L: LayoutBase> CellRef<'a, L> {
     /// Iterate over all shapes on a layer.
-    pub fn each_shape_per_layer(&self, layer_id: &L::LayerId) -> impl Iterator<Item=ShapeRef<L>> + '_ {
-        self.base.each_shape_id(&self.id, layer_id)
+    pub fn each_shape_per_layer(
+        &self,
+        layer_id: &L::LayerId,
+    ) -> impl Iterator<Item = ShapeRef<L>> + '_ {
+        self.base
+            .each_shape_id(&self.id, layer_id)
             .map(move |id| ShapeRef {
                 id,
                 base: self.base,
@@ -64,8 +59,9 @@ impl<'a, L: LayoutBase> CellRef<'a, L> {
     }
 
     /// Iterate over all shapes defined in this cell.
-    pub fn each_shape(&self) -> impl Iterator<Item=ShapeRef<L>> + '_ {
-        self.base.each_layer()
+    pub fn each_shape(&self) -> impl Iterator<Item = ShapeRef<L>> + '_ {
+        self.base
+            .each_layer()
             .flat_map(move |id| self.each_shape_per_layer(&id))
     }
 
@@ -139,9 +135,6 @@ impl<'a, L: LayoutBase> ShapeRef<'a, L> {
 
     /// Get the cloned geometry struct representing this shape.
     pub fn geometry_cloned(&self) -> Geometry<L::Coord> {
-        self.base.with_shape(&self.id,
-                             |_layer, geo| {
-                                 geo.clone()
-                             })
+        self.base.with_shape(&self.id, |_layer, geo| geo.clone())
     }
 }

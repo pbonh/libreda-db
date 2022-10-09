@@ -6,8 +6,8 @@
 #![allow(missing_docs)]
 
 use crate::traits::{HierarchyBase, HierarchyEdit};
-use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard, Arc};
 use std::hash::{Hash, Hasher};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Wrapper around a Netlist or Layout, etc. into a `Arc<RwLock<_>>` to provide
 /// save read and write access. Access is checked at runtime.
@@ -16,12 +16,14 @@ use std::hash::{Hash, Hasher};
 /// In contrast to the API of [`HierarchyBase`] and others the object-like API avoids returning iterators
 /// but returns vectors of elements. This allows to keep the lock-time short.
 pub struct RwRefAccess<T> {
-    base: Arc<RwLock<T>>
+    base: Arc<RwLock<T>>,
 }
 
 impl<T> RwRefAccess<T> {
     pub fn new(base: T) -> Self {
-        Self { base: Arc::new(RwLock::new(base)) }
+        Self {
+            base: Arc::new(RwLock::new(base)),
+        }
     }
 
     /// Get read access to the underlying data structure.
@@ -29,9 +31,7 @@ impl<T> RwRefAccess<T> {
     /// # Panics
     /// Panics when called during an ongoing write access.
     pub fn read(&self) -> RwLockReadGuard<'_, T> {
-        self.base
-            .read()
-            .expect("Failed to get read access.")
+        self.base.read().expect("Failed to get read access.")
     }
 
     /// Get exclusive write access to the underlying data structure.
@@ -39,15 +39,15 @@ impl<T> RwRefAccess<T> {
     /// # Panics
     /// Panics when called during an ongoing read or write access.
     pub fn write(&self) -> RwLockWriteGuard<'_, T> {
-        self.base
-            .write()
-            .expect("Failed to get write access.")
+        self.base.write().expect("Failed to get write access.")
     }
 }
 
 impl<T> Clone for RwRefAccess<T> {
     fn clone(&self) -> Self {
-        Self { base: self.base.clone() }
+        Self {
+            base: self.base.clone(),
+        }
     }
 }
 
@@ -84,10 +84,7 @@ impl<H: HierarchyBase> RwRefAccess<H> {
 
     /// Get a vector with all cells.
     pub fn each_cell(&self) -> Vec<CellRef<H>> {
-        self.read()
-            .each_cell()
-            .map(|id| self.cell(id))
-            .collect()
+        self.read().each_cell().map(|id| self.cell(id)).collect()
     }
 
     /// Get the number of cells.
@@ -97,23 +94,18 @@ impl<H: HierarchyBase> RwRefAccess<H> {
 
     /// Find a cell by its name.
     pub fn cell_by_name(&self, name: &str) -> Option<CellRef<H>> {
-        self.read()
-            .cell_by_name(name)
-            .map(|id| self.cell(id))
+        self.read().cell_by_name(name).map(|id| self.cell(id))
     }
 }
 
-
 impl<H: HierarchyEdit> RwRefAccess<H> {
     pub fn create_cell(&self, name: H::NameType) -> CellRef<H> {
-        let id = self.write()
-            .create_cell(name);
+        let id = self.write().create_cell(name);
         self.cell(id)
     }
 
     pub fn remove_cell(&self, cell: CellRef<H>) {
-        self.write()
-            .remove_cell(&cell.id)
+        self.write().remove_cell(&cell.id)
     }
 }
 
@@ -142,7 +134,6 @@ impl<T: HierarchyBase> Hash for CellRef<T> {
     }
 }
 
-
 impl<H: HierarchyBase> CellRef<H> {
     /// Access the base structure.
     pub fn base(&self) -> &RwRefAccess<H> {
@@ -166,7 +157,8 @@ impl<H: HierarchyBase> CellRef<H> {
 
     /// Get all cell instances inside this cell.
     pub fn each_cell_instance(&self) -> Vec<CellInstRef<H>> {
-        self.base.read()
+        self.base
+            .read()
             .each_cell_instance(&self.id)
             .map(move |id| CellInstRef {
                 base: self.base.clone(),
@@ -177,7 +169,9 @@ impl<H: HierarchyBase> CellRef<H> {
 
     /// Find a child instance by its name.
     pub fn cell_instance_by_name(&self, name: &str) -> Option<CellInstRef<H>> {
-        self.base.read().cell_instance_by_name(&self.id, name)
+        self.base
+            .read()
+            .cell_instance_by_name(&self.id, name)
             .map(|id| CellInstRef {
                 base: self.base.clone(),
                 id,
@@ -191,7 +185,8 @@ impl<H: HierarchyBase> CellRef<H> {
 
     /// Get all instances of this cell.
     pub fn each_reference(&self) -> Vec<CellInstRef<H>> {
-        self.base.read()
+        self.base
+            .read()
             .each_cell_reference(&self.id)
             .map(|id| CellInstRef {
                 base: self.base.clone(),
@@ -202,7 +197,8 @@ impl<H: HierarchyBase> CellRef<H> {
 
     /// Get all dependencies of this cell.
     pub fn each_cell_dependency(&self) -> Vec<CellRef<H>> {
-        self.base.read()
+        self.base
+            .read()
             .each_cell_dependency(&self.id)
             .map(|id| CellRef {
                 base: self.base.clone(),
@@ -213,7 +209,8 @@ impl<H: HierarchyBase> CellRef<H> {
 
     /// Get all cells that directly depend on this cell.
     pub fn each_dependent_cell(&self) -> Vec<CellRef<H>> {
-        self.base.read()
+        self.base
+            .read()
             .each_dependent_cell(&self.id)
             .map(|id| CellRef {
                 base: self.base.clone(),
@@ -228,20 +225,23 @@ impl<H: HierarchyBase> CellRef<H> {
     }
 }
 
-
 impl<H: HierarchyEdit> CellRef<H> {
-    pub fn create_instance(&self, template: &CellRef<H>, name: Option<H::NameType>) -> CellInstRef<H> {
-        let id = self.base.write()
+    pub fn create_instance(
+        &self,
+        template: &CellRef<H>,
+        name: Option<H::NameType>,
+    ) -> CellInstRef<H> {
+        let id = self
+            .base
+            .write()
             .create_cell_instance(&self.id, &template.id, name);
         self.base.cell_inst(id)
     }
 
     pub fn remove_instance(&self, inst: CellInstRef<H>) {
-        self.base.write()
-            .remove_cell_instance(&inst.id);
+        self.base.write().remove_cell_instance(&inst.id);
     }
 }
-
 
 /// Default implementation for `CellInstRef`.
 /// This is just a wrapper around a netlist and a cell ID.
@@ -260,7 +260,6 @@ impl<T: HierarchyBase> PartialEq for CellInstRef<T> {
         self.base == other.base && self.id == other.id
     }
 }
-
 
 impl<H: HierarchyBase> CellInstRef<H> {
     /// Access the base structure.
@@ -310,8 +309,8 @@ mod tests {
     use crate::chip::Chip;
     use crate::prelude::*;
     use crate::rw_reference_access::RwRefAccess;
-    use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
 
     /// Create a chip with two cells TOP and SUB. TOP contains an instance of SUB.
     fn create_test_chip() -> RwRefAccess<Chip> {
@@ -358,7 +357,6 @@ mod tests {
         assert!(top != sub);
     }
 
-
     #[test]
     fn test_cell_hash() {
         let chip = create_test_chip();
@@ -404,7 +402,6 @@ mod tests {
         let children = top.each_cell_instance();
         assert_eq!(children.len(), 1);
     }
-
 
     #[test]
     fn test_cell_dependencies() {

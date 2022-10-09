@@ -7,8 +7,8 @@
 //!
 //! TBD
 
-use num_traits::Num;
 use crate::prelude::Orientation2D;
+use num_traits::Num;
 
 /// Define essential types used for expressing design rules.
 pub trait RuleBase {
@@ -26,16 +26,16 @@ pub trait DistanceRuleBase: RuleBase {
 
 /// Minimum spacing rules between shapes on the same layer.
 pub trait MinimumSpacing: DistanceRuleBase {
-
     /// Absolute minimum spacing between two shapes on the `layer`.
     fn min_spacing_absolute(&self, layer: &Self::LayerId) -> Option<Self::Distance>;
 
     /// Minimum spacing between two shapes on the `layer` dependent on the geometries.
-    fn min_spacing(&self,
-                   layer: &Self::LayerId,
-                   run_length: Self::Distance,
-                   width: Self::Distance) -> Option<Self::Distance>;
-
+    fn min_spacing(
+        &self,
+        layer: &Self::LayerId,
+        run_length: Self::Distance,
+        width: Self::Distance,
+    ) -> Option<Self::Distance>;
 
     // Use another MinimumSpacing instance for same-net spacing.
     // fn min_spacing_same_net(layer: &Self::LayerId) -> Self::Distance;
@@ -43,32 +43,34 @@ pub trait MinimumSpacing: DistanceRuleBase {
 
 /// Minimum width rules.
 pub trait MinimumWidth: DistanceRuleBase {
-
     /// Minimal width of a shape with a certain length.
-    fn min_width(&self,
-                 layer: &Self::LayerId,
-                 shape_length: Option<Self::Distance>) -> Option<Self::Distance>;
+    fn min_width(
+        &self,
+        layer: &Self::LayerId,
+        shape_length: Option<Self::Distance>,
+    ) -> Option<Self::Distance>;
 }
 
 /// Default width rules.
 pub trait DefaultWidth: DistanceRuleBase {
-
     /// Default width of a wire segment of a certain length.
-    fn default_width(&self,
-                 layer: &Self::LayerId,
-                 shape_length: Option<Self::Distance>) -> Option<Self::Distance>;
+    fn default_width(
+        &self,
+        layer: &Self::LayerId,
+        shape_length: Option<Self::Distance>,
+    ) -> Option<Self::Distance>;
 }
 
 /// Preferred routing direction on metal layers.
 pub trait PreferredRoutingDirection: RuleBase {
-
     /// Get the preferred routing direction on this metal layer.
     fn preferred_routing_direction(&self, layer: &Self::LayerId) -> Option<Orientation2D>;
 }
 
 /// Rules commonly used for routing.
-pub trait RoutingRules: PreferredRoutingDirection + DefaultWidth + MinimumSpacing + MinimumWidth {
-
+pub trait RoutingRules:
+    PreferredRoutingDirection + DefaultWidth + MinimumSpacing + MinimumWidth
+{
     /// Get the default routing pitch on this layer for x and y directions.
     fn default_pitch(&self, layer: &Self::LayerId) -> Option<(Self::Distance, Self::Distance)>;
 

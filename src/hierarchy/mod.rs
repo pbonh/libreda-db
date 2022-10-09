@@ -5,6 +5,6 @@
 
 //! Concept of 'hierarchy' which is used in layouts and netlists.
 
-pub mod util;
-pub mod traits;
 pub mod prelude;
+pub mod traits;
+pub mod util;

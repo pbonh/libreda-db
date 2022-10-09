@@ -4,15 +4,13 @@
 
 //! Acquire performance metrics of single data-base functions.
 
-use crate::prelude::*;
-use crate::decorator::{Decorator, MutDecorator};
 use crate::decorator::hierarchy::*;
 use crate::decorator::layout::*;
 use crate::decorator::netlist::*;
+use crate::decorator::{Decorator, MutDecorator};
+use crate::prelude::*;
 
 use std::time::Duration;
-
-
 
 /// Wrapper around netlist, layout and L2N structures that allows measuring time spend in function calls.
 ///
@@ -25,12 +23,11 @@ pub struct DBPerf<'a, T> {
 }
 
 impl<'a, T> DBPerf<'a, T> {
-
     /// Wrap the `chip` structure into a performance counter.
     pub fn new(chip: &'a mut T) -> Self {
         Self {
             chip,
-            perf_data: Default::default()
+            perf_data: Default::default(),
         }
     }
 
@@ -67,9 +64,8 @@ pub struct PerfCounterManager<'a> {
 impl<'a> PerfCounterManager<'a> {
     /// Stop measuring the time and add the duration to the total spent time.
     fn stop_measurement(self) {
-            let elapsed = self.start_time.elapsed();
-            self.counter.total_time += elapsed;
-
+        let elapsed = self.start_time.elapsed();
+        self.counter.total_time += elapsed;
     }
 }
 
@@ -81,11 +77,9 @@ impl PerfCounter {
         self.num_calls += 1;
         PerfCounterManager {
             start_time: std::time::Instant::now(),
-            counter: self
+            counter: self,
         }
     }
-
-
 }
 
 impl<'a, T> Decorator for DBPerf<'a, T> {
@@ -102,7 +96,6 @@ impl<'a, T> MutDecorator for DBPerf<'a, T> {
     }
 }
 
-
 // Inherit everything from HierarchyBase.
 impl<'a, H: HierarchyBase + 'static> HierarchyBaseDecorator for DBPerf<'a, H> {
     type NameType = H::NameType;
@@ -113,32 +106,31 @@ impl<'a, H: HierarchyBase + 'static> HierarchyBaseDecorator for DBPerf<'a, H> {
 // Inherit everything from LayoutBase.
 impl<'a, L: LayoutBase + 'static> LayoutBaseDecorator for DBPerf<'a, L> {}
 
-
 // Inherit everything from NetlistBase.
 impl<'a, N: NetlistBase + 'static> NetlistBaseDecorator for DBPerf<'a, N> {}
 
 // Inherit everything from HierarchyEdit.
 impl<'a, H: HierarchyEdit + 'static> HierarchyEditDecorator for DBPerf<'a, H> {
-
     fn d_new() -> Self {
         unimplemented!()
     }
-
 }
 
 // Inherit everything from LayoutEdit.
 // TODO: Since every function should be measured, implement LayoutEdit directly without using the '*Decorator' traits.
 impl<'a, L: LayoutEdit + 'static> LayoutEditDecorator for DBPerf<'a, L> {
-
-    fn d_insert_shape(&mut self, parent_cell: &L::CellId, layer: &L::LayerId, geometry: Geometry<L::Coord>) -> L::ShapeId {
+    fn d_insert_shape(
+        &mut self,
+        parent_cell: &L::CellId,
+        layer: &L::LayerId,
+        geometry: Geometry<L::Coord>,
+    ) -> L::ShapeId {
         let m = self.perf_data.insert_shape.start_measurement();
         let ret = self.chip.insert_shape(parent_cell, layer, geometry);
         m.stop_measurement();
         ret
     }
-
 }
-
 
 // Inherit everything from NetlistBase.
 impl<'a, N: NetlistEdit + 'static> NetlistEditDecorator for DBPerf<'a, N> {}

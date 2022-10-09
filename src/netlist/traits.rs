@@ -17,12 +17,10 @@
 //! [`NetlistUtil`]: crate::netlist::util::NetlistUtil
 //! [`NetlistEditUtil`]: crate::netlist::util::NetlistEditUtil
 
-use std::hash::Hash;
-use crate::prelude::HierarchyMultithread;
 use super::prelude::*;
+use crate::prelude::HierarchyMultithread;
 pub use crate::traits::{HierarchyBase, HierarchyEdit};
-
-
+use std::hash::Hash;
 
 /// Most basic trait for traversing a netlist.
 /// A netlist extends the `HierarchyBase` and hence is hierarchical.
@@ -71,7 +69,6 @@ pub trait NetlistBase: HierarchyBase {
             .expect("No such pin found in this cell.")
     }
 
-
     /// Get the ID of the parent circuit of this net.
     fn parent_cell_of_net(&self, net: &Self::NetId) -> Self::CellId;
 
@@ -102,9 +99,10 @@ pub trait NetlistBase: HierarchyBase {
     /// Get the name of the net.
     fn net_name(&self, net: &Self::NetId) -> Option<Self::NameType>;
 
-
     /// Call a function for each pin of the circuit.
-    fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::PinId) -> ();
+    fn for_each_pin<F>(&self, circuit: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::PinId) -> ();
 
     /// Get a `Vec` with the IDs of all pins of this circuit.
     fn each_pin_vec(&self, circuit: &Self::CellId) -> Vec<Self::PinId> {
@@ -114,7 +112,10 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Iterate over all pins of a circuit.
-    fn each_pin<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::PinId> + 'a> {
+    fn each_pin<'a>(
+        &'a self,
+        circuit: &Self::CellId,
+    ) -> Box<dyn Iterator<Item = Self::PinId> + 'a> {
         Box::new(self.each_pin_vec(circuit).into_iter())
     }
 
@@ -128,7 +129,9 @@ pub trait NetlistBase: HierarchyBase {
     // }
 
     /// Call a function for each pin instance of the circuit instance.
-    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F) where F: FnMut(Self::PinInstId) -> ();
+    fn for_each_pin_instance<F>(&self, circuit_inst: &Self::CellInstId, f: F)
+    where
+        F: FnMut(Self::PinInstId) -> ();
 
     /// Get a `Vec` with the IDs of all pin instance of this circuit instance.
     fn each_pin_instance_vec(&self, circuit_instance: &Self::CellInstId) -> Vec<Self::PinInstId> {
@@ -138,23 +141,34 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Iterate over all pin instances of a circuit.
-    fn each_pin_instance<'a>(&'a self, circuit_instance: &Self::CellInstId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
+    fn each_pin_instance<'a>(
+        &'a self,
+        circuit_instance: &Self::CellInstId,
+    ) -> Box<dyn Iterator<Item = Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_vec(circuit_instance).into_iter())
     }
 
     /// Iterate over all external nets connected to the circuit instance.
     /// A net might appear more than once.
-    fn each_external_net<'a>(&'a self, circuit_instance: &Self::CellInstId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
-        Box::new(self.each_pin_instance(circuit_instance)
-            .flat_map(move |pin_id| self.net_of_pin_instance(&pin_id)))
+    fn each_external_net<'a>(
+        &'a self,
+        circuit_instance: &Self::CellInstId,
+    ) -> Box<dyn Iterator<Item = Self::NetId> + 'a> {
+        Box::new(
+            self.each_pin_instance(circuit_instance)
+                .flat_map(move |pin_id| self.net_of_pin_instance(&pin_id)),
+        )
     }
 
     /// Iterate over all external nets connected to the circuit instance.
     /// A net might appear more than once.
     fn for_each_external_net<F>(&self, circuit_instance: &Self::CellInstId, mut f: F)
-        where F: FnMut(Self::NetId) {
+    where
+        F: FnMut(Self::NetId),
+    {
         self.for_each_pin_instance(circuit_instance, |i| {
-            self.net_of_pin_instance(&i).iter()
+            self.net_of_pin_instance(&i)
+                .iter()
                 .cloned()
                 .for_each(|n| f(n))
         });
@@ -169,7 +183,9 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Call a function for net of the circuit.
-    fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F) where F: FnMut(Self::NetId) -> ();
+    fn for_each_internal_net<F>(&self, circuit: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::NetId) -> ();
 
     /// Get a `Vec` with all nets in this circuit.
     fn each_internal_net_vec(&self, circuit: &Self::CellId) -> Vec<Self::NetId> {
@@ -179,7 +195,10 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Iterate over all defined nets inside a circuit.
-    fn each_internal_net<'a>(&'a self, circuit: &Self::CellId) -> Box<dyn Iterator<Item=Self::NetId> + 'a> {
+    fn each_internal_net<'a>(
+        &'a self,
+        circuit: &Self::CellId,
+    ) -> Box<dyn Iterator<Item = Self::NetId> + 'a> {
         Box::new(self.each_internal_net_vec(circuit).into_iter())
     }
 
@@ -214,7 +233,9 @@ pub trait NetlistBase: HierarchyBase {
     fn num_pins(&self, circuit: &Self::CellId) -> usize;
 
     /// Call a function for each pin connected to this net.
-    fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinId) -> ();
+    fn for_each_pin_of_net<F>(&self, net: &Self::NetId, f: F)
+    where
+        F: FnMut(Self::PinId) -> ();
 
     /// Get a `Vec` with all pin IDs connected to this net.
     fn each_pin_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::PinId> {
@@ -224,13 +245,17 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Iterate over all pins of a net.
-    fn each_pin_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=Self::PinId> + 'a> {
+    fn each_pin_of_net<'a>(
+        &'a self,
+        net: &Self::NetId,
+    ) -> Box<dyn Iterator<Item = Self::PinId> + 'a> {
         Box::new(self.each_pin_of_net_vec(net).into_iter())
     }
 
-
     /// Call a function for each pin instance connected to this net.
-    fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F) where F: FnMut(Self::PinInstId) -> ();
+    fn for_each_pin_instance_of_net<F>(&self, net: &Self::NetId, f: F)
+    where
+        F: FnMut(Self::PinInstId) -> ();
 
     /// Get a `Vec` with all pin instance IDs connected to this net.
     fn each_pin_instance_of_net_vec(&self, net: &Self::NetId) -> Vec<Self::PinInstId> {
@@ -240,13 +265,18 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Iterate over all pins of a net.
-    fn each_pin_instance_of_net<'a>(&'a self, net: &Self::NetId) -> Box<dyn Iterator<Item=Self::PinInstId> + 'a> {
+    fn each_pin_instance_of_net<'a>(
+        &'a self,
+        net: &Self::NetId,
+    ) -> Box<dyn Iterator<Item = Self::PinInstId> + 'a> {
         Box::new(self.each_pin_instance_of_net_vec(net).into_iter())
     }
 
     /// Call a function for each terminal connected to this net.
     fn for_each_terminal_of_net<F>(&self, net: &Self::NetId, mut f: F)
-        where F: FnMut(TerminalId<Self>) -> () {
+    where
+        F: FnMut(TerminalId<Self>) -> (),
+    {
         self.for_each_pin_of_net(net, |p| f(TerminalId::PinId(p)));
         self.for_each_pin_instance_of_net(net, |p| f(TerminalId::PinInstId(p)));
     }
@@ -259,8 +289,10 @@ pub trait NetlistBase: HierarchyBase {
     }
 
     /// Iterate over all terminals of a net.
-    fn each_terminal_of_net<'a>(&'a self, net: &Self::NetId)
-                                -> Box<dyn Iterator<Item=TerminalId<Self>> + 'a> {
+    fn each_terminal_of_net<'a>(
+        &'a self,
+        net: &Self::NetId,
+    ) -> Box<dyn Iterator<Item = TerminalId<Self>> + 'a> {
         Box::new(self.each_terminal_of_net_vec(net).into_iter())
     }
 }
@@ -269,11 +301,13 @@ pub trait NetlistBase: HierarchyBase {
 pub trait NetlistMultithread {}
 
 impl<N> NetlistMultithread for N
-    where N: NetlistBase + HierarchyMultithread,
-          N::PinId: Send + Sync,
-          N::PinInstId: Send + Sync,
-          N::NetId: Send + Sync,
-{}
+where
+    N: NetlistBase + HierarchyMultithread,
+    N::PinId: Send + Sync,
+    N::PinInstId: Send + Sync,
+    N::NetId: Send + Sync,
+{
+}
 
 /// Trait for netlists that support editing.
 ///
@@ -289,14 +323,18 @@ impl<N> NetlistMultithread for N
 ///
 /// [`NetlistEditUtil`]: crate::netlist::util::NetlistEditUtil
 pub trait NetlistEdit: NetlistBase + HierarchyEdit {
-
     // /// Create a multi-bit port.
     // /// Internally creates a pin for every bit of the port.
     // fn create_bus(&mut self, circuit: &Self::CellId, name: Self::NameType, direction: Direction, width: usize) -> Vec<Self::PinId>;
 
     /// Create a new pin in this cell.
     /// Also adds the pin to all instances of the cell.
-    fn create_pin(&mut self, cell: &Self::CellId, name: Self::NameType, direction: Direction) -> Self::PinId;
+    fn create_pin(
+        &mut self,
+        cell: &Self::CellId,
+        name: Self::NameType,
+        direction: Direction,
+    ) -> Self::PinId;
 
     /// Remove the pin from this circuit and from all instances of this circuit.
     fn remove_pin(&mut self, id: &Self::PinId);
@@ -307,13 +345,15 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     fn rename_pin(&mut self, pin: &Self::PinId, new_name: Self::NameType) -> Self::NameType;
 
     /// Create a net net that lives in the `parent` circuit.
-    fn create_net(&mut self, parent: &Self::CellId,
-                  name: Option<Self::NameType>) -> Self::NetId;
+    fn create_net(&mut self, parent: &Self::CellId, name: Option<Self::NameType>) -> Self::NetId;
 
     /// Set a new name for the net. This might panic if the name already exists.
     /// Returns the old name.
-    fn rename_net(&mut self, net_id: &Self::NetId,
-                  new_name: Option<Self::NameType>) -> Option<Self::NameType>;
+    fn rename_net(
+        &mut self,
+        net_id: &Self::NetId,
+        new_name: Option<Self::NameType>,
+    ) -> Option<Self::NameType>;
 
     /// Delete the net if it exists and disconnect all connected terminals.
     fn remove_net(&mut self, net: &Self::NetId);
@@ -330,7 +370,11 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
 
     /// Connect a pin instance to a net.
     /// Returns the old connected net, if any.
-    fn connect_pin_instance(&mut self, pin: &Self::PinInstId, net: Option<Self::NetId>) -> Option<Self::NetId>;
+    fn connect_pin_instance(
+        &mut self,
+        pin: &Self::PinInstId,
+        net: Option<Self::NetId>,
+    ) -> Option<Self::NetId>;
 
     /// Disconnect the pin instance from any connected net.
     /// Returns the old connected net, if any.
@@ -338,10 +382,13 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
         self.connect_pin_instance(pin_instance, None)
     }
 
-
     /// Connect a terminal to a net.
     /// Returns the old connected net, if any.
-    fn connect_terminal(&mut self, terminal: &TerminalId<Self>, net: Option<Self::NetId>) -> Option<Self::NetId> {
+    fn connect_terminal(
+        &mut self,
+        terminal: &TerminalId<Self>,
+        net: Option<Self::NetId>,
+    ) -> Option<Self::NetId> {
         match terminal {
             TerminalId::PinId(p) => self.connect_pin(p, net),
             TerminalId::PinInstId(p) => self.connect_pin_instance(p, net),
@@ -353,5 +400,4 @@ pub trait NetlistEdit: NetlistBase + HierarchyEdit {
     fn disconnect_terminal(&mut self, terminal: &TerminalId<Self>) -> Option<Self::NetId> {
         self.connect_terminal(terminal, None)
     }
-
 }

@@ -7,15 +7,19 @@
 //!
 //! Implementations for the various layout formats are located in other crates.
 
-use std::io::{Read, Write};
 use crate::prelude::{LayoutBase, LayoutEdit};
+use std::io::{Read, Write};
 
 /// Trait for reading a layout from a byte stream.
 pub trait LayoutStreamReader {
     /// Type of error that could happen while reading a layout.
     type Error;
     /// Read a layout from a byte stream and populate the layout data structure.
-    fn read_layout<R: Read, L: LayoutEdit<Coord=i32>>(&self, reader: &mut R, layout: &mut L) -> Result<(), Self::Error>;
+    fn read_layout<R: Read, L: LayoutEdit<Coord = i32>>(
+        &self,
+        reader: &mut R,
+        layout: &mut L,
+    ) -> Result<(), Self::Error>;
 }
 
 /// Trait for writing a layout to a byte stream.
@@ -23,5 +27,9 @@ pub trait LayoutStreamWriter {
     /// Type of error that could happen while writing a layout.
     type Error;
     /// Write the layout data structure to a byte stream.
-    fn write_layout<W: Write, L: LayoutBase<Coord=i32>>(&self, writer: &mut W, layout: &L) -> Result<(), Self::Error>;
+    fn write_layout<W: Write, L: LayoutBase<Coord = i32>>(
+        &self,
+        writer: &mut W,
+        layout: &L,
+    ) -> Result<(), Self::Error>;
 }

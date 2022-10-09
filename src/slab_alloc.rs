@@ -54,7 +54,9 @@ pub struct SlabIndex<IndexType, IdType> {
 }
 
 impl<IndexType, IdType> SlabIndex<IndexType, IdType>
-    where IndexType: PrimInt + Unsigned + ToPrimitive {
+where
+    IndexType: PrimInt + Unsigned + ToPrimitive,
+{
     fn index(&self) -> usize {
         self.index.to_usize().unwrap()
     }
@@ -62,8 +64,10 @@ impl<IndexType, IdType> SlabIndex<IndexType, IdType>
 
 #[allow(unused)]
 impl<T, IndexType, IdType> SlabAlloc<T, IndexType, IdType>
-    where IndexType: PrimInt + Unsigned + ToPrimitive + FromPrimitive,
-          IdType: PrimInt + Unsigned {
+where
+    IndexType: PrimInt + Unsigned + ToPrimitive + FromPrimitive,
+    IdType: PrimInt + Unsigned,
+{
     /// Create an empty container.
     pub fn new() -> Self {
         Self {
@@ -110,16 +114,15 @@ impl<T, IndexType, IdType> SlabAlloc<T, IndexType, IdType>
     /// when there are already `IndexType::max_value()` elements in the container.
     pub fn insert(&mut self, value: T) -> SlabIndex<IndexType, IdType> {
         // Find a new free index.
-        let index = self.free_indices.pop()
-            .unwrap_or_else(|| {
-                let idx = IndexType::from_usize(self.data.len())
-                    .expect("slab allocator: out of indices");
-                self.data.push(Element {
-                    id: IdType::zero(),
-                    value: None,
-                }); // Extend by one element.
-                idx
-            });
+        let index = self.free_indices.pop().unwrap_or_else(|| {
+            let idx =
+                IndexType::from_usize(self.data.len()).expect("slab allocator: out of indices");
+            self.data.push(Element {
+                id: IdType::zero(),
+                value: None,
+            }); // Extend by one element.
+            idx
+        });
 
         let index_usize = index.to_usize().unwrap();
         debug_assert!(self.data[index_usize].value.is_none());
@@ -130,10 +133,7 @@ impl<T, IndexType, IdType> SlabAlloc<T, IndexType, IdType>
         entry.value = Some(value);
         self.len += 1;
 
-        SlabIndex {
-            index,
-            id,
-        }
+        SlabIndex { index, id }
     }
 
     /// Allocate space to hold `n` elements.
@@ -175,11 +175,17 @@ impl<T, IndexType, IdType> SlabAlloc<T, IndexType, IdType>
 
     /// Reclaim as much space as possible.
     pub fn shrink(&mut self) {
-        while self.data.last().map(|entry| entry.value.is_none()).unwrap_or(false) {
+        while self
+            .data
+            .last()
+            .map(|entry| entry.value.is_none())
+            .unwrap_or(false)
+        {
             self.data.pop();
         }
 
-        self.free_indices.retain(|idx| idx.to_usize().unwrap() < self.data.len());
+        self.free_indices
+            .retain(|idx| idx.to_usize().unwrap() < self.data.len());
     }
 
     /// Drop all data.
@@ -190,62 +196,65 @@ impl<T, IndexType, IdType> SlabAlloc<T, IndexType, IdType>
     }
 
     /// Iterate over all key-value pairs.
-    pub fn iter(&self) -> impl Iterator<Item=(SlabIndex<IndexType, IdType>, &T)> {
-        self.data.iter()
-            .enumerate()
-            .filter_map(|(index, entry)| {
-                let index = IndexType::from_usize(index).unwrap();
-                entry.value.as_ref()
-                    .map(|v| (SlabIndex { index, id: entry.id }, v))
+    pub fn iter(&self) -> impl Iterator<Item = (SlabIndex<IndexType, IdType>, &T)> {
+        self.data.iter().enumerate().filter_map(|(index, entry)| {
+            let index = IndexType::from_usize(index).unwrap();
+            entry.value.as_ref().map(|v| {
+                (
+                    SlabIndex {
+                        index,
+                        id: entry.id,
+                    },
+                    v,
+                )
             })
+        })
     }
 
     /// Iterate over all key-value pairs.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item=(SlabIndex<IndexType, IdType>, &mut T)> {
-        self.data.iter_mut()
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (SlabIndex<IndexType, IdType>, &mut T)> {
+        self.data
+            .iter_mut()
             .enumerate()
             .filter_map(|(index, entry)| {
-                entry.value.as_mut()
-                    .map(|v| {
-                        let index = IndexType::from_usize(index).unwrap();
-                        (SlabIndex {
+                entry.value.as_mut().map(|v| {
+                    let index = IndexType::from_usize(index).unwrap();
+                    (
+                        SlabIndex {
                             index,
                             id: entry.id,
-                        }, v)
-                    })
+                        },
+                        v,
+                    )
+                })
             })
     }
 
     /// Iterate over all values in the map.
-    pub fn values(&self) -> impl Iterator<Item=&T> {
-        self.data.iter()
-            .filter_map(|entry| {
-                entry.value.as_ref()
-            })
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.data.iter().filter_map(|entry| entry.value.as_ref())
     }
 
     /// Iterate over all mutable values in the map.
-    pub fn values_mut(&mut self) -> impl Iterator<Item=&mut T> {
-        self.data.iter_mut()
-            .filter_map(|entry| {
-                entry.value.as_mut()
-            })
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.data
+            .iter_mut()
+            .filter_map(|entry| entry.value.as_mut())
     }
 
     /// Iterate over all keys in the map.
-    pub fn keys(&self) -> impl Iterator<Item=SlabIndex<IndexType, IdType>> + '_ {
-        self.data.iter()
-            .enumerate()
-            .filter_map(|(index, entry)| {
-                entry.value.as_ref()
-                    .map(|_| {
-                        let index = IndexType::from_usize(index).unwrap();
-                        SlabIndex { index, id: entry.id }
-                    })
+    pub fn keys(&self) -> impl Iterator<Item = SlabIndex<IndexType, IdType>> + '_ {
+        self.data.iter().enumerate().filter_map(|(index, entry)| {
+            entry.value.as_ref().map(|_| {
+                let index = IndexType::from_usize(index).unwrap();
+                SlabIndex {
+                    index,
+                    id: entry.id,
+                }
             })
+        })
     }
 }
-
 
 #[test]
 fn test_slab_allocator() {

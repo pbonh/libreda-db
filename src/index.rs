@@ -6,12 +6,12 @@
 //! Data structure for creating indices related to some other type. This is used to create
 //! handles for data stored in hash maps.
 
-use std::marker::PhantomData;
-use std::hash::{Hash, Hasher};
+use num_traits::{One, PrimInt, Zero};
 use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Formatter;
-use num_traits::{Zero, One, PrimInt};
+use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
 
 /// An identifier for an arbitrary type `T`.
 /// This is a wrapper around `usize` which is bound to a type `T`.
@@ -22,7 +22,9 @@ pub struct Index<T, Int = u32> {
 }
 
 impl<T, Int> fmt::Debug for Index<T, Int>
-    where Int: std::fmt::Display {
+where
+    Int: std::fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Index({})", self.index)
     }

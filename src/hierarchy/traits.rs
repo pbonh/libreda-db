@@ -7,9 +7,9 @@
 
 #![allow(unused_variables)]
 
+use crate::prelude::PropertyValue;
 use std::borrow::Borrow;
 use std::hash::Hash;
-use crate::prelude::PropertyValue;
 
 /// Most basic trait for the hierarchical flyweight pattern which is
 /// used to efficiently represent chip layouts and netlists.
@@ -81,10 +81,17 @@ use crate::prelude::PropertyValue;
 /// ```
 pub trait HierarchyBase {
     /// Type for names of cells, instances, etc.
-    type NameType: Eq + Hash + From<String> + Into<String> + Clone
-    + Borrow<String> + Borrow<str>
-    + PartialOrd + Ord
-    + std::fmt::Display + std::fmt::Debug;
+    type NameType: Eq
+        + Hash
+        + From<String>
+        + Into<String>
+        + Clone
+        + Borrow<String>
+        + Borrow<str>
+        + PartialOrd
+        + Ord
+        + std::fmt::Display
+        + std::fmt::Debug;
     /// Cell/module identifier type.
     type CellId: Eq + Hash + Clone + std::fmt::Debug + 'static;
     /// Cell instance identifier type.
@@ -96,7 +103,11 @@ pub trait HierarchyBase {
 
     /// Find a cell instance by its name.
     /// Returns `None` if the name does not exist.
-    fn cell_instance_by_name(&self, parent_cell: &Self::CellId, name: &str) -> Option<Self::CellInstId>;
+    fn cell_instance_by_name(
+        &self,
+        parent_cell: &Self::CellId,
+        name: &str,
+    ) -> Option<Self::CellInstId>;
 
     /// Get the name of the cell.
     fn cell_name(&self, cell: &Self::CellId) -> Self::NameType;
@@ -111,7 +122,9 @@ pub trait HierarchyBase {
     fn template_cell(&self, cell_instance: &Self::CellInstId) -> Self::CellId;
 
     /// Call a function on each cell of the netlist.
-    fn for_each_cell<F>(&self, f: F) where F: FnMut(Self::CellId) -> ();
+    fn for_each_cell<F>(&self, f: F)
+    where
+        F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of all cell IDs in this netlist.
     fn each_cell_vec(&self) -> Vec<Self::CellId> {
@@ -121,12 +134,14 @@ pub trait HierarchyBase {
     }
 
     /// Iterate over all cells.
-    fn each_cell(&self) -> Box<dyn Iterator<Item=Self::CellId> + '_> {
+    fn each_cell(&self) -> Box<dyn Iterator<Item = Self::CellId> + '_> {
         Box::new(self.each_cell_vec().into_iter())
     }
 
     /// Call a function on each instance in this cell.
-    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
+    fn for_each_cell_instance<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellInstId) -> ();
 
     /// Get a `Vec` of the IDs of all instances in this cell.
     fn each_cell_instance_vec(&self, cell: &Self::CellId) -> Vec<Self::CellInstId> {
@@ -136,12 +151,17 @@ pub trait HierarchyBase {
     }
 
     /// Iterate over all instances in a cell.
-    fn each_cell_instance(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_cell_instance(
+        &self,
+        cell: &Self::CellId,
+    ) -> Box<dyn Iterator<Item = Self::CellInstId> + '_> {
         Box::new(self.each_cell_instance_vec(cell).into_iter())
     }
 
     /// Call a function for each cell that is a child of this `cell`.
-    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
+    fn for_each_cell_dependency<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of each cell that is a child of this `cell`.
     fn each_cell_dependency_vec(&self, cell: &Self::CellId) -> Vec<Self::CellId> {
@@ -151,7 +171,10 @@ pub trait HierarchyBase {
     }
 
     /// Iterate over all cells that are instantiated in this `cell`.
-    fn each_cell_dependency<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
+    fn each_cell_dependency<'a>(
+        &'a self,
+        cell: &Self::CellId,
+    ) -> Box<dyn Iterator<Item = Self::CellId> + 'a> {
         Box::new(self.each_cell_dependency_vec(cell).into_iter())
     }
 
@@ -164,7 +187,9 @@ pub trait HierarchyBase {
     }
 
     /// Call a function for each cell that directly depends on `cell`.
-    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellId) -> ();
+    fn for_each_dependent_cell<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellId) -> ();
 
     /// Get a `Vec` of each cell that directly depends on `cell`.
     fn each_dependent_cell_vec(&self, cell: &Self::CellId) -> Vec<Self::CellId> {
@@ -174,7 +199,10 @@ pub trait HierarchyBase {
     }
 
     /// Iterate over each cell that directly depends on `cell`.
-    fn each_dependent_cell<'a>(&'a self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellId> + 'a> {
+    fn each_dependent_cell<'a>(
+        &'a self,
+        cell: &Self::CellId,
+    ) -> Box<dyn Iterator<Item = Self::CellId> + 'a> {
         Box::new(self.each_dependent_cell_vec(cell).into_iter())
     }
 
@@ -188,7 +216,9 @@ pub trait HierarchyBase {
 
     /// Iterate over all instances of this `cell`, i.e. instances that use this cell as
     /// a template.
-    fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F) where F: FnMut(Self::CellInstId) -> ();
+    fn for_each_cell_reference<F>(&self, cell: &Self::CellId, f: F)
+    where
+        F: FnMut(Self::CellInstId) -> ();
 
     /// Get a `Vec` with all cell instances referencing this cell.
     fn each_cell_reference_vec(&self, cell: &Self::CellId) -> Vec<Self::CellInstId> {
@@ -199,7 +229,10 @@ pub trait HierarchyBase {
 
     /// Iterate over all instances of this `cell`, i.e. instances that use this cell as
     /// a template.
-    fn each_cell_reference(&self, cell: &Self::CellId) -> Box<dyn Iterator<Item=Self::CellInstId> + '_> {
+    fn each_cell_reference(
+        &self,
+        cell: &Self::CellId,
+    ) -> Box<dyn Iterator<Item = Self::CellInstId> + '_> {
         // Provide an inefficient default implementation.
         Box::new(self.each_cell_reference_vec(cell).into_iter())
     }
@@ -224,12 +257,20 @@ pub trait HierarchyBase {
     }
 
     /// Get a property of a cell.
-    fn get_cell_property(&self, cell: &Self::CellId, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_cell_property(
+        &self,
+        cell: &Self::CellId,
+        key: &Self::NameType,
+    ) -> Option<PropertyValue> {
         None
     }
 
     /// Get a property of a cell instance.
-    fn get_cell_instance_property(&self, inst: &Self::CellInstId, key: &Self::NameType) -> Option<PropertyValue> {
+    fn get_cell_instance_property(
+        &self,
+        inst: &Self::CellInstId,
+        key: &Self::NameType,
+    ) -> Option<PropertyValue> {
         None
     }
 }
@@ -238,12 +279,12 @@ pub trait HierarchyBase {
 pub trait HierarchyMultithread: HierarchyBase {}
 
 impl<H> HierarchyMultithread for H
-    where H: HierarchyBase,
-          H::CellId: Send + Sync,
-          H::CellInstId: Send + Sync,
-{}
-
-
+where
+    H: HierarchyBase,
+    H::CellId: Send + Sync,
+    H::CellInstId: Send + Sync,
+{
+}
 
 /// Edit functions for a hierarchical flyweight structure like a netlist or a cell-based layout.
 pub trait HierarchyEdit: HierarchyBase {
@@ -294,10 +335,12 @@ pub trait HierarchyEdit: HierarchyBase {
     /// assert_eq!(chip.num_child_instances(&top), 2);
     /// assert_eq!(chip.num_cell_references(&sub), 2);
     /// ```
-    fn create_cell_instance(&mut self,
-                            parent_cell: &Self::CellId,
-                            template_cell: &Self::CellId,
-                            name: Option<Self::NameType>) -> Self::CellInstId;
+    fn create_cell_instance(
+        &mut self,
+        parent_cell: &Self::CellId,
+        template_cell: &Self::CellId,
+        name: Option<Self::NameType>,
+    ) -> Self::CellInstId;
 
     /// Remove cell instance if it exists.
     /// # Example
@@ -329,7 +372,6 @@ pub trait HierarchyEdit: HierarchyBase {
     /// Panics if an instance with this name already exists in the parent cell.
     fn rename_cell_instance(&mut self, inst: &Self::CellInstId, new_name: Option<Self::NameType>);
 
-
     /// Change the name of a cell.
     ///
     /// # Panics
@@ -340,8 +382,20 @@ pub trait HierarchyEdit: HierarchyBase {
     fn set_chip_property(&mut self, key: Self::NameType, value: PropertyValue) {}
 
     /// Set a property of a cell.
-    fn set_cell_property(&mut self, cell: &Self::CellId, key: Self::NameType, value: PropertyValue) {}
+    fn set_cell_property(
+        &mut self,
+        cell: &Self::CellId,
+        key: Self::NameType,
+        value: PropertyValue,
+    ) {
+    }
 
     /// Set a property of a cell instance.
-    fn set_cell_instance_property(&mut self, inst: &Self::CellInstId, key: Self::NameType, value: PropertyValue) {}
+    fn set_cell_instance_property(
+        &mut self,
+        inst: &Self::CellInstId,
+        key: Self::NameType,
+        value: PropertyValue,
+    ) {
+    }
 }

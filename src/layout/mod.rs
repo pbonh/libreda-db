@@ -12,7 +12,6 @@
 //! Each cell instance also holds the placement information, i.e. the location, rotation, mirroring and
 //! possibly magnification.
 
-
 pub mod prelude;
 
 pub mod io;

@@ -13,25 +13,22 @@ pub enum RoutingLayerType {
     /// Via layer.
     Cut,
     /// Routing layer.
-    Routing
+    Routing,
 }
 
 /// Annotate a layer ID as 'via' or 'routing' layer.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RoutingLayer<LayerId> {
     /// ID of the layer. This identifies the layer in the data-base structures.
     pub id: LayerId,
     /// Type of the routing layer (via or metal).
-    pub layer_type: RoutingLayerType
+    pub layer_type: RoutingLayerType,
 }
 
 impl<LayerId> RoutingLayer<LayerId> {
-
     /// Associate a layer ID with a layer type.
     pub fn new(id: LayerId, layer_type: RoutingLayerType) -> Self {
-        Self {
-            id,
-            layer_type
-        }
+        Self { id, layer_type }
     }
 
     /// Get the a reference to the ID of the layer.
@@ -68,13 +65,18 @@ impl<LayerId> RoutingLayer<LayerId> {
 
 /// Define standardized access for routing and via layers.
 pub trait RoutingLayerStack: RuleBase {
-
     /// Get the stack of routing and via layers in process order.
     fn layer_stack(&self) -> Vec<RoutingLayer<Self::LayerId>>;
 
+    /// Get the layer ids of the layer stack (routing layers and via layers).
+    fn layer_stack_ids(&self) -> Vec<Self::LayerId> {
+        self.layer_stack().into_iter().map(|l| l.id).collect()
+    }
+
     /// Get the stack of routing metal layers in process order.
     fn routing_layer_stack(&self) -> Vec<Self::LayerId> {
-        self.layer_stack().into_iter()
+        self.layer_stack()
+            .into_iter()
             .filter(|l| l.is_metal_layer())
             .map(|l| l.id())
             .collect()
@@ -82,7 +84,8 @@ pub trait RoutingLayerStack: RuleBase {
 
     /// Get the stack of via layers in process order.
     fn via_layer_stack(&self) -> Vec<Self::LayerId> {
-        self.layer_stack().into_iter()
+        self.layer_stack()
+            .into_iter()
             .filter(|l| l.is_via_layer())
             .map(|l| l.id())
             .collect()
@@ -90,7 +93,8 @@ pub trait RoutingLayerStack: RuleBase {
 
     /// Find the closest metal layer above the given layer.
     fn get_upper_metal_layer(&self, layer: &Self::LayerId) -> Option<Self::LayerId> {
-        self.layer_stack().into_iter()
+        self.layer_stack()
+            .into_iter()
             .skip_while(|l| l.as_id() != layer)
             .skip(1)
             .find(|l| l.is_metal_layer())
@@ -99,7 +103,9 @@ pub trait RoutingLayerStack: RuleBase {
 
     /// Find the closest metal layer under the given layer.
     fn get_lower_metal_layer(&self, layer: &Self::LayerId) -> Option<Self::LayerId> {
-        self.layer_stack().into_iter().rev()
+        self.layer_stack()
+            .into_iter()
+            .rev()
             .skip_while(|l| l.as_id() != layer)
             .skip(1)
             .find(|l| l.is_metal_layer())

@@ -5,12 +5,12 @@
 
 //! Container structs for user defined properties.
 
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::borrow::Borrow;
-use std::convert::TryInto;
-use std::sync::Arc;
 use crate::rc_string::RcString;
+use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::hash::Hash;
+use std::sync::Arc;
 
 // trait AnyValue: Any + Clone + std::fmt::Debug {}
 
@@ -33,13 +33,12 @@ pub enum PropertyValue {
     // Any(Box<dyn AnyValue>),
 }
 
-
 impl PropertyValue {
     /// Try to get a string value.
     pub fn get_string(&self) -> Option<RcString> {
         match self {
             PropertyValue::String(s) => Some(s.clone()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -47,7 +46,7 @@ impl PropertyValue {
     pub fn get_str(&self) -> Option<&str> {
         match self {
             PropertyValue::String(s) => Some(s.as_str()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -55,7 +54,7 @@ impl PropertyValue {
     pub fn get_bytes(&self) -> Option<&Vec<u8>> {
         match self {
             PropertyValue::Bytes(s) => Some(s),
-            _ => None
+            _ => None,
         }
     }
 
@@ -63,7 +62,7 @@ impl PropertyValue {
     pub fn get_float(&self) -> Option<f64> {
         match self {
             PropertyValue::Float(v) => Some(*v),
-            _ => None
+            _ => None,
         }
     }
 
@@ -71,7 +70,7 @@ impl PropertyValue {
     pub fn get_sint(&self) -> Option<i32> {
         match self {
             PropertyValue::SInt(v) => Some(*v),
-            _ => None
+            _ => None,
         }
     }
 
@@ -79,7 +78,7 @@ impl PropertyValue {
     pub fn get_uint(&self) -> Option<u32> {
         match self {
             PropertyValue::UInt(v) => Some(*v),
-            _ => None
+            _ => None,
         }
     }
 
@@ -179,8 +178,10 @@ impl From<f64> for PropertyValue {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PropertyStore<K>
-    where K: Hash + Eq {
-    content: HashMap<K, PropertyValue>
+where
+    K: Hash + Eq,
+{
+    content: HashMap<K, PropertyValue>,
 }
 
 impl<K: Hash + Eq> Default for PropertyStore<K> {
@@ -193,7 +194,7 @@ impl<K: Hash + Eq> PropertyStore<K> {
     /// Create an empty property store.
     pub fn new() -> Self {
         PropertyStore {
-            content: HashMap::new()
+            content: HashMap::new(),
         }
     }
 
@@ -205,29 +206,36 @@ impl<K: Hash + Eq> PropertyStore<K> {
 
     /// Get a property value by the property key.
     pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&PropertyValue>
-        where K: Borrow<Q>,
-              Q: Eq + Hash {
+    where
+        K: Borrow<Q>,
+        Q: Eq + Hash,
+    {
         self.content.get(key)
     }
 
     /// Check if the `key` is contained in this property store.
     pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
-        where K: Borrow<Q>,
-              Q: Eq + Hash {
+    where
+        K: Borrow<Q>,
+        Q: Eq + Hash,
+    {
         self.content.contains_key(key)
     }
 
     /// Get a string property value by key.
     /// If the property value is not a string `None` is returned.
     pub fn get_string<Q: ?Sized>(&self, key: &Q) -> Option<&RcString>
-        where K: Borrow<Q>,
-              Q: Eq + Hash {
-        self.get(key)
-            .and_then(|v| if let PropertyValue::String(s) = v {
+    where
+        K: Borrow<Q>,
+        Q: Eq + Hash,
+    {
+        self.get(key).and_then(|v| {
+            if let PropertyValue::String(s) = v {
                 Some(s)
             } else {
                 None
-            })
+            }
+        })
     }
 }
 
@@ -241,34 +249,40 @@ pub trait WithProperties {
     /// The property store might not always be initialized. For instance for
     /// objects without any defined properties, it will likely be `None`.
     fn with_properties<F, R>(&self, f: F) -> R
-        where F: FnOnce(Option<&PropertyStore<Self::Key>>) -> R;
+    where
+        F: FnOnce(Option<&PropertyStore<Self::Key>>) -> R;
 
     /// Get mutable reference to the property storage.
     fn with_properties_mut<F, R>(&self, f: F) -> R
-        where F: FnOnce(&mut PropertyStore<Self::Key>) -> R;
+    where
+        F: FnOnce(&mut PropertyStore<Self::Key>) -> R;
 
     /// Get a property value by the property key.
     fn property<Q: ?Sized>(&self, key: &Q) -> Option<PropertyValue>
-        where Self::Key: Borrow<Q>,
-              Q: Eq + Hash {
-        self.with_properties(|p|
-            p.and_then(|p| p.get(key).cloned())
-        )
+    where
+        Self::Key: Borrow<Q>,
+        Q: Eq + Hash,
+    {
+        self.with_properties(|p| p.and_then(|p| p.get(key).cloned()))
     }
 
     /// Get a string property value by key.
     /// If the property value is not a string `None` is returned.
     fn property_str<Q: ?Sized>(&self, key: &Q) -> Option<RcString>
-        where Self::Key: Borrow<Q>,
-              Q: Eq + Hash {
-        self.with_properties(|p|
-            p.and_then(|p| p.get_string(key).cloned())
-        )
+    where
+        Self::Key: Borrow<Q>,
+        Q: Eq + Hash,
+    {
+        self.with_properties(|p| p.and_then(|p| p.get_string(key).cloned()))
     }
 
     /// Insert a property.
     /// Returns the old property value if there was already a property stored under this key.
-    fn set_property<V: Into<PropertyValue>>(&self, key: Self::Key, value: V) -> Option<PropertyValue> {
+    fn set_property<V: Into<PropertyValue>>(
+        &self,
+        key: Self::Key,
+        value: V,
+    ) -> Option<PropertyValue> {
         self.with_properties_mut(|p| p.insert(key, value))
     }
 }

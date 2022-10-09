@@ -86,28 +86,25 @@ pub use iron_shapes;
 pub use iron_shapes_booleanop;
 
 // Public modules.
-pub mod prelude;
-pub mod traits;
-pub mod hierarchy;
-pub mod netlist;
-pub mod layout;
-pub mod l2n;
-pub mod index;
-pub mod rc_string;
-pub mod property_storage;
-pub mod reference_access;
-pub mod rw_reference_access;
 pub mod chip;
-pub mod undo;
 pub mod flat_view;
+pub mod hierarchy;
+pub mod index;
+pub mod l2n;
+pub mod layout;
+pub mod netlist;
+pub mod prelude;
 pub mod profile;
+pub mod property_storage;
+pub mod rc_string;
+pub mod reference_access;
 pub mod region_search;
+pub mod rw_reference_access;
+pub mod traits;
+pub mod undo;
 
 pub mod technology;
 
 mod decorator;
 mod library;
 mod slab_alloc;
-
-
-

@@ -7,9 +7,9 @@
 
 #![cfg(test)]
 
+use itertools::Itertools;
 use libreda_db::chip::Chip;
 use libreda_db::prelude::*;
-use itertools::Itertools;
 
 #[test]
 fn test_create_circuit() {
@@ -35,7 +35,6 @@ fn test_get_cell_by_name() {
     assert_eq!(chip.cell_by_name("B"), Some(b));
     assert_eq!(chip.cell_by_name("C"), None);
 }
-
 
 #[test]
 fn test_create_sub_circuit() {
@@ -69,7 +68,6 @@ fn test_create_sub_circuit() {
     assert_eq!(chip.each_cell_dependency(&a).collect_vec(), vec![]);
     assert_eq!(chip.each_cell_dependency(&b).collect_vec(), vec![a]);
 }
-
 
 #[test]
 fn test_get_sub_circuit_by_name() {
@@ -149,8 +147,14 @@ fn test_connect_nets() {
     assert_eq!(chip.num_net_terminals(&top_clk), 1);
     let inst1_clk_pin = chip.pin_instance(&inst1, &a_clk);
     let inst2_clk_pin = chip.pin_instance(&inst2, &a_clk);
-    assert_eq!(chip.connect_pin_instance(&inst1_clk_pin, Some(top_clk)), None);
-    assert_eq!(chip.connect_pin_instance(&inst2_clk_pin, Some(top_clk)), None);
+    assert_eq!(
+        chip.connect_pin_instance(&inst1_clk_pin, Some(top_clk)),
+        None
+    );
+    assert_eq!(
+        chip.connect_pin_instance(&inst2_clk_pin, Some(top_clk)),
+        None
+    );
     assert_eq!(chip.num_net_terminals(&top_clk), 3);
 
     let top_clk_terminals = chip.each_terminal_of_net(&top_clk).collect_vec();
@@ -163,7 +167,6 @@ fn test_connect_nets() {
     // chip.connect_pin_instance(, Some(top_net2.clone()));
 }
 
-
 // Check if creating recursive circuits leads to an error.
 #[test]
 #[should_panic(expected = "Cannot create recursive instances.")]
@@ -171,7 +174,7 @@ fn test_circuit_no_recursion_1() {
     let mut chip = Chip::new();
     let top = chip.create_cell("top".into());
     // This should fail:
-    let _top_inst = chip.create_cell_instance(&top, &top,Some("top_inst".into()));
+    let _top_inst = chip.create_cell_instance(&top, &top, Some("top_inst".into()));
 }
 
 #[test]
@@ -180,9 +183,9 @@ fn test_circuit_no_recursion_2() {
     let mut chip = Chip::new();
     let top = chip.create_cell("top".into());
     let sub = chip.create_cell("sub".into());
-    let _sub_inst = chip.create_cell_instance(&top, &sub,Some("sub_inst".into()));
+    let _sub_inst = chip.create_cell_instance(&top, &sub, Some("sub_inst".into()));
     // This should fail:
-    let _top_inst = chip.create_cell_instance(&sub, &top,Some("recursive_inst".into()));
+    let _top_inst = chip.create_cell_instance(&sub, &top, Some("recursive_inst".into()));
 }
 
 // #[test]
@@ -223,7 +226,6 @@ fn test_circuit_no_recursion_2() {
 //     assert_eq!(net1.each_instance().unique().count(), 2);
 // }
 
-
 #[test]
 fn test_rename_net() {
     let mut chip = Chip::new();
@@ -243,7 +245,6 @@ fn test_rename_net() {
     // No name.
     chip.rename_net(&net1, None);
     assert_eq!(None, chip.net_by_name(&top, "Net1"));
-
 }
 
 #[test]

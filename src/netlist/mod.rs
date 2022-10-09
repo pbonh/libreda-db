@@ -22,10 +22,10 @@
 //! [`NetlistBase`]: traits::NetlistBase
 //! [`NetlistEdit`]: traits::NetlistEdit
 
-pub mod prelude;
-pub mod io;
+pub mod arc_id;
 pub mod direction;
+pub mod io;
+pub mod prelude;
+pub mod terminal_id;
 pub mod traits;
 pub mod util;
-pub mod terminal_id;
-pub mod arc_id;

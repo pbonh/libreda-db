@@ -5,8 +5,8 @@
 
 //! The `prelude` helps to import most commonly used modules.
 
-pub use iron_shapes::prelude::*;
-pub use super::traits::*;
 pub use super::io::*;
+pub use super::traits::*;
 pub use super::types::*;
 pub use super::util::*;
+pub use iron_shapes::prelude::*;

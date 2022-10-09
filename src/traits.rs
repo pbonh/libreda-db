@@ -6,6 +6,6 @@
 //! Re-export all traits defined in this crate.
 
 pub use crate::hierarchy::traits::*;
+pub use crate::l2n::*;
 pub use crate::layout::traits::*;
 pub use crate::netlist::traits::*;
-pub use crate::l2n::*;

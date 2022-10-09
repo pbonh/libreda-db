@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::traits::*;
-use crate::decorator::{Decorator, MutDecorator};
 use super::layout::LayoutEditDecorator;
+use crate::decorator::{Decorator, MutDecorator};
+use crate::traits::*;
 
 /// Define the same functions as [`L2NBase`] but just prepend a `d_` to
 /// avoid naming conflicts.
@@ -12,38 +12,51 @@ use super::layout::LayoutEditDecorator;
 /// This allows to selectively re-implement some functions or fully delegate
 /// the trait to an attribute of a struct.
 pub trait L2NBaseDecorator: Decorator
-    where Self::D: L2NBase
+where
+    Self::D: L2NBase,
 {
-    fn d_shapes_of_net(&self, net_id: &<Self::D as NetlistBase>::NetId) -> Box<dyn Iterator<Item=<Self::D as LayoutBase>::ShapeId> + '_> {
+    fn d_shapes_of_net(
+        &self,
+        net_id: &<Self::D as NetlistBase>::NetId,
+    ) -> Box<dyn Iterator<Item = <Self::D as LayoutBase>::ShapeId> + '_> {
         self.base().shapes_of_net(net_id)
     }
 
-    fn d_shapes_of_pin(&self, pin_id: &<Self::D as NetlistBase>::PinId) -> Box<dyn Iterator<Item=<Self::D as LayoutBase>::ShapeId> + '_> {
+    fn d_shapes_of_pin(
+        &self,
+        pin_id: &<Self::D as NetlistBase>::PinId,
+    ) -> Box<dyn Iterator<Item = <Self::D as LayoutBase>::ShapeId> + '_> {
         self.base().shapes_of_pin(pin_id)
     }
 
-    fn d_get_net_of_shape(&self, shape_id: &<Self::D as LayoutBase>::ShapeId) -> Option<<Self::D as NetlistBase>::NetId> {
+    fn d_get_net_of_shape(
+        &self,
+        shape_id: &<Self::D as LayoutBase>::ShapeId,
+    ) -> Option<<Self::D as NetlistBase>::NetId> {
         self.base().get_net_of_shape(shape_id)
     }
 
-    fn d_get_pin_of_shape(&self, shape_id: &<Self::D as LayoutBase>::ShapeId) -> Option<<Self::D as NetlistBase>::PinId> {
+    fn d_get_pin_of_shape(
+        &self,
+        shape_id: &<Self::D as LayoutBase>::ShapeId,
+    ) -> Option<<Self::D as NetlistBase>::PinId> {
         self.base().get_pin_of_shape(shape_id)
     }
 }
 
 impl<T, N> L2NBase for T
-    where
-        T: HierarchyBase<NameType=N::NameType, CellId=N::CellId, CellInstId=N::CellInstId>
-        + NetlistBase<PinId=N::PinId, NetId=N::NetId, PinInstId=N::PinInstId>
-        + LayoutBase<LayerId=N::LayerId, ShapeId=N::ShapeId>
-        + L2NBaseDecorator<D=N>,
-        N: L2NBase + 'static
+where
+    T: HierarchyBase<NameType = N::NameType, CellId = N::CellId, CellInstId = N::CellInstId>
+        + NetlistBase<PinId = N::PinId, NetId = N::NetId, PinInstId = N::PinInstId>
+        + LayoutBase<LayerId = N::LayerId, ShapeId = N::ShapeId>
+        + L2NBaseDecorator<D = N>,
+    N: L2NBase + 'static,
 {
-    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+    fn shapes_of_net(&self, net_id: &Self::NetId) -> Box<dyn Iterator<Item = Self::ShapeId> + '_> {
         self.d_shapes_of_net(net_id)
     }
 
-    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item=Self::ShapeId> + '_> {
+    fn shapes_of_pin(&self, pin_id: &Self::PinId) -> Box<dyn Iterator<Item = Self::ShapeId> + '_> {
         self.d_shapes_of_pin(pin_id)
     }
 
@@ -56,46 +69,62 @@ impl<T, N> L2NBase for T
     }
 }
 
-
 pub trait L2NEditDecorator: MutDecorator
-    where Self::D: L2NEdit
+where
+    Self::D: L2NEdit,
 {
-    fn d_set_pin_of_shape(&mut self, shape_id: &<Self::D as LayoutBase>::ShapeId, pin: Option<<Self::D as NetlistBase>::PinId>) -> Option<<Self::D as NetlistBase>::PinId> {
+    fn d_set_pin_of_shape(
+        &mut self,
+        shape_id: &<Self::D as LayoutBase>::ShapeId,
+        pin: Option<<Self::D as NetlistBase>::PinId>,
+    ) -> Option<<Self::D as NetlistBase>::PinId> {
         self.mut_base().set_pin_of_shape(shape_id, pin)
     }
 
-    fn d_set_net_of_shape(&mut self, shape_id: &<Self::D as LayoutBase>::ShapeId, net: Option<<Self::D as NetlistBase>::NetId>) -> Option<<Self::D as NetlistBase>::NetId> {
+    fn d_set_net_of_shape(
+        &mut self,
+        shape_id: &<Self::D as LayoutBase>::ShapeId,
+        net: Option<<Self::D as NetlistBase>::NetId>,
+    ) -> Option<<Self::D as NetlistBase>::NetId> {
         self.mut_base().set_net_of_shape(shape_id, net)
     }
 }
 
 impl<T, N> L2NEdit for T
-    where
-        T: HierarchyEdit<NameType=N::NameType, CellId=N::CellId, CellInstId=N::CellInstId>
-        + NetlistEdit<PinId=N::PinId, NetId=N::NetId, PinInstId=N::PinInstId>
-        + LayoutBase<Coord=N::Coord, LayerId=N::LayerId, ShapeId=N::ShapeId>
-        + LayoutEditDecorator<D=N>
-        + L2NEditDecorator<D=N>
-        + L2NBaseDecorator<D=N>,
-        N: L2NEdit + LayoutEdit + NetlistEdit + 'static
+where
+    T: HierarchyEdit<NameType = N::NameType, CellId = N::CellId, CellInstId = N::CellInstId>
+        + NetlistEdit<PinId = N::PinId, NetId = N::NetId, PinInstId = N::PinInstId>
+        + LayoutBase<Coord = N::Coord, LayerId = N::LayerId, ShapeId = N::ShapeId>
+        + LayoutEditDecorator<D = N>
+        + L2NEditDecorator<D = N>
+        + L2NBaseDecorator<D = N>,
+    N: L2NEdit + LayoutEdit + NetlistEdit + 'static,
 {
-    fn set_pin_of_shape(&mut self, shape_id: &Self::ShapeId, pin: Option<Self::PinId>) -> Option<Self::PinId> {
+    fn set_pin_of_shape(
+        &mut self,
+        shape_id: &Self::ShapeId,
+        pin: Option<Self::PinId>,
+    ) -> Option<Self::PinId> {
         self.d_set_pin_of_shape(shape_id, pin)
     }
 
-    fn set_net_of_shape(&mut self, shape_id: &Self::ShapeId, net: Option<Self::NetId>) -> Option<Self::NetId> {
+    fn set_net_of_shape(
+        &mut self,
+        shape_id: &Self::ShapeId,
+        net: Option<Self::NetId>,
+    ) -> Option<Self::NetId> {
         self.d_set_net_of_shape(shape_id, net)
     }
 }
 
 #[test]
 fn test_l2n_edit_decorator() {
-    use crate::chip::Chip;
-    use super::{Decorator, MutDecorator};
     use super::hierarchy::*;
+    use super::l2n::*;
     use super::layout::*;
     use super::netlist::*;
-    use super::l2n::*;
+    use super::{Decorator, MutDecorator};
+    use crate::chip::Chip;
     use crate::prelude::*;
 
     let mut chip = Chip::new();

@@ -5,8 +5,8 @@
 
 //! Generalization of pins and pin instances.
 
-use std::hash::{Hash, Hasher};
 use super::prelude::*;
+use std::hash::{Hash, Hasher};
 
 /// A terminal is a generalization of pins and pin instances.
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl<N: NetlistBase + ?Sized> Hash for TerminalId<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             TerminalId::PinId(p) => p.hash(state),
-            TerminalId::PinInstId(p) => p.hash(state)
+            TerminalId::PinInstId(p) => p.hash(state),
         }
     }
 }
@@ -33,13 +33,16 @@ impl<N: NetlistBase + ?Sized> PartialEq for TerminalId<N> {
         match (self, other) {
             (Self::PinId(p1), Self::PinId(p2)) => p1 == p2,
             (Self::PinInstId(p1), Self::PinInstId(p2)) => p1 == p2,
-            (_, _) => false
+            (_, _) => false,
         }
     }
 }
 
 impl<N: NetlistBase + ?Sized> Clone for TerminalId<N>
-    where N::PinId: Clone, N::PinInstId: Clone {
+where
+    N::PinId: Clone,
+    N::PinInstId: Clone,
+{
     fn clone(&self) -> Self {
         match self {
             TerminalId::PinId(p) => Self::PinId(p.clone()),

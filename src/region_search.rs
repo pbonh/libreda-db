@@ -218,6 +218,7 @@ where
     }
 
     /// Compute bounding box of all subcells, excluding shapes in the current cell.
+    #[allow(unused)]
     fn compute_subcell_bboxes(&self, cell_id: &T::CellId) -> Option<Rect<T::Coord>> {
         if let Some(instance_rtree) = self.instance_rtree.get(cell_id) {
             if instance_rtree.size() > 0 {

@@ -19,8 +19,8 @@ repository = "https://codeberg.org/libreda/libreda-db"
 log = "0.4"
 itertools = "0.10.0"
 num-traits = "0.2"
-iron-shapes = { version = "0.0.8", path = "../iron-shapes", features = ["serde"] }
-iron-shapes-booleanop = { version = "0.0.3", path = '../iron-shapes-booleanop' }
+iron-shapes = { version = "0.0.8", git = "https://github.com/pbonh/iron-shapes.git", features = ["serde"] }
+iron-shapes-booleanop = { version = "0.0.3", git = "https://github.com/pbonh/iron-shapes-booleanop.git" }
 serde = { version = "1", optional = true, features = ["derive", "rc"] }
 fnv = "1.0" # Fast hashing for small keys.
 rstar = "0.9" # Fast region queries.
